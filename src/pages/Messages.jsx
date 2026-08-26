@@ -907,6 +907,28 @@ export default function Messages() {
     );
   };
 
+  // Single Message Deletion state & handler
+  const [deleteMessageModal, setDeleteMessageModal] = useState(null);
+
+  const handleDeleteMessage = (chatId, messageId) => {
+    if (playingAudioId === messageId) {
+      setPlayingAudioId(null);
+    }
+    setConversations(prev =>
+      prev.map(c => {
+        if (c.id === chatId) {
+          return {
+            ...c,
+            messages: c.messages.filter(m => m.id !== messageId)
+          };
+        }
+        return c;
+      })
+    );
+    setDeleteMessageModal(null);
+    showToast('Deleted');
+  };
+
   // Filtering conversations (searches contact name, product title, and message content)
   const filteredConversations = conversations.filter(c => {
     const q = searchQuery.toLowerCase().trim();
@@ -1492,50 +1514,60 @@ export default function Messages() {
                         {!isMe && (
                           <img src={activeChat.contact.avatar} alt="avatar" className="msg-avatar-mini" />
                         )}
-                        <div className={`message-bubble ${isMe ? 'bubble-me' : 'bubble-them'} ${msg.isOffer ? 'bubble-offer' : ''} ${isMatch ? 'bubble-search-active' : ''}`}>
-                          {msg.isVoiceNote ? (
-                            <div className="voice-note-bubble-card">
-                              <button
-                                type="button"
-                                className="vn-play-btn"
-                                onClick={() => handleTogglePlayAudio(msg.id, msg.audioUrl)}
-                                title={playingAudioId === msg.id ? "Pause voice note" : "Play voice note"}
-                              >
-                                {playingAudioId === msg.id ? <Pause size={16} /> : <Play size={16} />}
-                              </button>
-                              <div className="vn-waveform-wrap">
-                                <div className={`vn-bars ${playingAudioId === msg.id ? 'playing' : ''}`}>
-                                  <span className="vn-bar" />
-                                  <span className="vn-bar" />
-                                  <span className="vn-bar" />
-                                  <span className="vn-bar" />
-                                  <span className="vn-bar" />
-                                  <span className="vn-bar" />
-                                  <span className="vn-bar" />
+                        <div className="msg-bubble-wrapper">
+                          <div className={`message-bubble ${isMe ? 'bubble-me' : 'bubble-them'} ${msg.isOffer ? 'bubble-offer' : ''} ${isMatch ? 'bubble-search-active' : ''}`}>
+                            {msg.isVoiceNote ? (
+                              <div className="voice-note-bubble-card">
+                                <button
+                                  type="button"
+                                  className="vn-play-btn"
+                                  onClick={() => handleTogglePlayAudio(msg.id, msg.audioUrl)}
+                                  title={playingAudioId === msg.id ? "Pause voice note" : "Play voice note"}
+                                >
+                                  {playingAudioId === msg.id ? <Pause size={16} /> : <Play size={16} />}
+                                </button>
+                                <div className="vn-waveform-wrap">
+                                  <div className={`vn-bars ${playingAudioId === msg.id ? 'playing' : ''}`}>
+                                    <span className="vn-bar" />
+                                    <span className="vn-bar" />
+                                    <span className="vn-bar" />
+                                    <span className="vn-bar" />
+                                    <span className="vn-bar" />
+                                    <span className="vn-bar" />
+                                    <span className="vn-bar" />
+                                  </div>
+                                  <span className="vn-duration">0:{msg.duration < 10 ? `0${msg.duration}` : msg.duration}</span>
                                 </div>
-                                <span className="vn-duration">0:{msg.duration < 10 ? `0${msg.duration}` : msg.duration}</span>
                               </div>
-                            </div>
-                          ) : msg.image ? (
-                            <div className="image-attachment-bubble">
-                              <img src={msg.image} alt="Attachment" className="msg-attachment-img" />
-                              {msg.text && (
-                                <p className="message-text margin-top-xs">
-                                  {renderHighlightedText(msg.text, isChatSearchOpen ? chatSearchQuery : searchQuery)}
-                                </p>
+                            ) : msg.image ? (
+                              <div className="image-attachment-bubble">
+                                <img src={msg.image} alt="Attachment" className="msg-attachment-img" />
+                                {msg.text && (
+                                  <p className="message-text margin-top-xs">
+                                    {renderHighlightedText(msg.text, isChatSearchOpen ? chatSearchQuery : searchQuery)}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="message-text">
+                                {renderHighlightedText(msg.text, isChatSearchOpen ? chatSearchQuery : searchQuery)}
+                              </p>
+                            )}
+                            <div className="message-meta">
+                              <span className="msg-time">{msg.time}</span>
+                              {isMe && (
+                                <CheckCheck size={14} className={`status-icon ${msg.status === 'read' ? 'status-read' : ''}`} />
                               )}
                             </div>
-                          ) : (
-                            <p className="message-text">
-                              {renderHighlightedText(msg.text, isChatSearchOpen ? chatSearchQuery : searchQuery)}
-                            </p>
-                          )}
-                          <div className="message-meta">
-                            <span className="msg-time">{msg.time}</span>
-                            {isMe && (
-                              <CheckCheck size={14} className={`status-icon ${msg.status === 'read' ? 'status-read' : ''}`} />
-                            )}
                           </div>
+                          <button
+                            type="button"
+                            className="delete-msg-btn"
+                            title={msg.isVoiceNote ? "Delete voice note" : "Delete message"}
+                            onClick={() => setDeleteMessageModal({ chatId: activeChat.id, messageId: msg.id, isVoiceNote: msg.isVoiceNote })}
+                          >
+                            <Trash2 size={13} />
+                          </button>
                         </div>
                       </div>
                     </React.Fragment>
@@ -1832,6 +1864,31 @@ export default function Messages() {
       {toastMessage && (
         <div className="toast-notification">
           <span>{toastMessage}</span>
+        </div>
+      )}
+      {/* Delete Single Message / Voice Note Modal */}
+      {deleteMessageModal && (
+        <div className="modal-backdrop" onClick={() => setDeleteMessageModal(null)}>
+          <div className="delete-dialog-card" onClick={e => e.stopPropagation()}>
+            <h3>Delete {deleteMessageModal.isVoiceNote ? 'Voice Note' : 'Message'}?</h3>
+            <p>Are you sure you want to delete this {deleteMessageModal.isVoiceNote ? 'voice note' : 'message'}? It will be removed from your chat history.</p>
+            <div className="delete-modal-actions">
+              <button 
+                type="button"
+                className="btn-confirm-delete" 
+                onClick={() => handleDeleteMessage(deleteMessageModal.chatId, deleteMessageModal.messageId)}
+              >
+                Delete
+              </button>
+              <button 
+                type="button"
+                className="btn-cancel-delete" 
+                onClick={() => setDeleteMessageModal(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

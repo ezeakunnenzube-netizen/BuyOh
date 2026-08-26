@@ -870,6 +870,48 @@ body {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
+.msg-bubble-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.row-me .msg-bubble-wrapper {
+  flex-direction: row-reverse;
+}
+
+.delete-msg-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 0.35rem;
+  border-radius: 50%;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.msg-bubble-wrapper:hover .delete-msg-btn {
+  opacity: 1;
+}
+
+.delete-msg-btn:hover {
+  background: #fef2f2;
+  color: #ef4444;
+  transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+  .delete-msg-btn {
+    opacity: 0.6;
+  }
+}
+
 .message-bubble {
   padding: 0.85rem 1.15rem;
   border-radius: 18px;

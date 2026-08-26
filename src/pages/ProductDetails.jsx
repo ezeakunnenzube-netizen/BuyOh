@@ -40,7 +40,16 @@ export default function ProductDetails() {
 
   // Find product details
   useEffect(() => {
-    const found = products.find(p => p.id === productId);
+    let found = products.find(p => p.id === productId);
+    if (!found) {
+      try {
+        const userListings = JSON.parse(localStorage.getItem('buyoh_my_listings_v1')) || [];
+        found = userListings.find(p => p.id === productId);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     if (found) {
       setProduct(found);
       setViewsCount(Math.floor(Math.random() * 500) + 120);
@@ -199,6 +208,23 @@ export default function ProductDetails() {
   };
 
   const getSpecs = () => {
+    if (product.specs) {
+      const customSpecs = [];
+      if (product.specs.brand) customSpecs.push({ label: 'BRAND', value: product.specs.brand });
+      if (product.specs.screenSize) customSpecs.push({ label: 'SCREEN SIZE', value: product.specs.screenSize });
+      if (product.specs.storage) customSpecs.push({ label: 'INTERNAL STORAGE', value: product.specs.storage });
+      if (product.specs.ram) customSpecs.push({ label: 'RAM MEMORY', value: product.specs.ram });
+      if (product.specs.operatingSystem) customSpecs.push({ label: 'OPERATING SYSTEM', value: product.specs.operatingSystem });
+      if (product.specs.year) customSpecs.push({ label: 'MANUFACTURE YEAR', value: product.specs.year });
+      if (product.specs.transmission) customSpecs.push({ label: 'TRANSMISSION', value: product.specs.transmission });
+      if (product.specs.mileage) customSpecs.push({ label: 'MILEAGE', value: product.specs.mileage });
+      if (product.specs.bedrooms) customSpecs.push({ label: 'BEDROOMS', value: `${product.specs.bedrooms} Bed` });
+      if (product.specs.size) customSpecs.push({ label: 'SIZE / FIT', value: product.specs.size });
+      if (product.specs.gender) customSpecs.push({ label: 'GENDER', value: product.specs.gender });
+      if (product.condition) customSpecs.push({ label: 'CONDITION', value: product.condition });
+      if (customSpecs.length > 1) return customSpecs;
+    }
+
     const nameLower = product.name.toLowerCase();
     
     // 1. PHONES & TABLETS / SMARTPHONES

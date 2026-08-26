@@ -7,6 +7,8 @@ import Messages from './pages/Messages'
 import Notifications from './pages/Notifications'
 import Profile from './pages/Profile'
 import ProductDetails from './pages/ProductDetails'
+import SellItem from './pages/SellItem'
+import MyAdverts from './pages/MyAdverts'
 import { AuthProvider } from './context/AuthContext'
 
 // Scroll to top on every route change
@@ -27,6 +29,8 @@ function App() {
         <Route path="/messages" element={<Messages/>}/>
         <Route path="/notifications" element={<Notifications/>}/>
         <Route path="/profile" element={<Profile/>}/>
+        <Route path="/adverts" element={<MyAdverts/>}/>
+        <Route path="/sell" element={<SellItem/>}/>
         <Route path="/product/:productId" element={<ProductDetails/>}/>
         <Route path="*" element={<Home/>}/>
       </Routes>

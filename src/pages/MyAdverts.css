@@ -1,0 +1,384 @@
+/* ── My Adverts Page ── */
+.adverts-page-wrapper {
+  font-family: 'Poppins', sans-serif;
+  color: #0f172a;
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+.adverts-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 5rem;
+}
+
+.adverts-desktop-nav {
+  display: flex;
+}
+
+.adverts-mobile-header {
+  display: none;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.adverts-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: transparent;
+  border: none;
+  color: #8b5cf6;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.adverts-mobile-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.adverts-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.adverts-title {
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #0f172a;
+  margin: 0 0 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.adverts-sub {
+  color: #64748b;
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.post-new-ad-btn {
+  background: linear-gradient(135deg, #ffa705, #e67600);
+  color: white;
+  border: none;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 0.65rem 1.25rem;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 3px 10px rgba(230, 118, 0, 0.2);
+}
+
+.post-new-ad-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Adverts Grid */
+.adverts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.advert-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.advert-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.advert-image-wrap {
+  position: relative;
+  width: 100%;
+  padding-top: 65%;
+  overflow: hidden;
+  background: #f1f5f9;
+}
+
+.advert-img {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+
+.advert-status-badge {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  background: #22c55e;
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.advert-body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.advert-name {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 0.35rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.35;
+}
+
+.advert-price {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: #e67600;
+  margin: 0 0 0.65rem;
+}
+
+.advert-meta {
+  display: flex;
+  gap: 0.85rem;
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+
+.advert-meta span {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.advert-actions {
+  display: flex;
+  gap: 0.65rem;
+  margin-top: auto;
+}
+
+.btn-view-ad {
+  flex: 1;
+  background: #f5f3ff;
+  color: #7c3aed;
+  border: 1px solid #c4b5fd;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.55rem;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: all 0.2s ease;
+}
+
+.btn-view-ad:hover {
+  background: #ede9fe;
+}
+
+.btn-delete-ad {
+  background: #fef2f2;
+  color: #ef4444;
+  border: 1px solid #fecaca;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.55rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.2s ease;
+}
+
+.btn-delete-ad:hover {
+  background: #fee2e2;
+}
+
+/* Empty Card */
+.adverts-empty-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 5rem 2rem;
+  text-align: center;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.adverts-empty-card h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin: 1rem 0 0.5rem;
+}
+
+.adverts-empty-card p {
+  color: #64748b;
+  font-size: 0.88rem;
+  margin-bottom: 1.5rem;
+}
+
+.empty-post-btn {
+  background: linear-gradient(135deg, #ffa705, #e67600);
+  color: white;
+  border: none;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+/* Delete Modal */
+.delete-dialog-card {
+  background: white;
+  width: 100%;
+  max-width: 400px;
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.delete-dialog-card h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.delete-dialog-card p {
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.45;
+  margin-bottom: 1.5rem;
+}
+
+.delete-modal-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn-confirm-delete {
+  flex: 1;
+  background: #ef4444;
+  color: white;
+  border: none;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 0.65rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-cancel-delete {
+  flex: 1;
+  background: #f1f5f9;
+  color: #475569;
+  border: none;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 0.65rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* Auth Prompt */
+.adverts-auth-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6rem 2rem;
+  text-align: center;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.adverts-auth-prompt h2 {
+  margin: 1rem 0 0.5rem;
+}
+
+.adverts-auth-prompt p {
+  color: #64748b;
+  margin-bottom: 1.5rem;
+}
+
+.adverts-signin-btn {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  color: white;
+  border: none;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 0.75rem 2rem;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+/* Toast */
+.adverts-toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 768px) {
+  .adverts-desktop-nav {
+    display: none !important;
+  }
+
+  .adverts-mobile-header {
+    display: flex;
+  }
+
+  .adverts-container {
+    padding: 1rem 1rem 6rem;
+  }
+
+  .adverts-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}

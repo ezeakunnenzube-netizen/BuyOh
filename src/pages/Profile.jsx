@@ -13,8 +13,9 @@ import './Profile.css';
 export default function Profile() {
   const navigate = useNavigate();
 
-  // Load followed sellers count from localStorage to show live count!
+  // Load followed sellers count & unread notifications count from localStorage!
   const [followingCount, setFollowingCount] = useState(0);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(2);
 
   useEffect(() => {
     try {
@@ -22,6 +23,14 @@ export default function Profile() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) setFollowingCount(parsed.length);
+      }
+      const savedNotifs = localStorage.getItem('buyoh_notifications_v1');
+      if (savedNotifs) {
+        const parsedNotifs = JSON.parse(savedNotifs);
+        if (Array.isArray(parsedNotifs)) {
+          const unread = parsedNotifs.filter(n => n.unread || n.read === false);
+          setUnreadNotifCount(unread.length);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -285,6 +294,23 @@ export default function Profile() {
                 <span className="p-stat-val">4.9 ★</span>
                 <span className="p-stat-label">User Rating</span>
               </div>
+            </div>
+          </div>
+
+          {/* Notifications Shortcut Card — Locked for quick access */}
+          <div className="profile-notifications-shortcut" onClick={() => navigate('/notifications')}>
+            <div className="p-notif-left">
+              <div className="p-notif-icon-wrap">
+                <BellRing size={20} className="p-notif-bell" />
+                {unreadNotifCount > 0 && <span className="p-notif-dot" />}
+              </div>
+              <div className="p-notif-text">
+                <h4 className="p-notif-title">Notifications Center</h4>
+                <p className="p-notif-sub">View recent alerts, offers, price drops, and system messages</p>
+              </div>
+            </div>
+            <div className="p-notif-right">
+              <span className="p-notif-badge">{unreadNotifCount} New</span>
             </div>
           </div>
 

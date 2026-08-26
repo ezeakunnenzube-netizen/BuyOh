@@ -228,6 +228,20 @@ export default function Home(){
   const [agricMenuOpen,     setAgricMenuOpen]     = useState(false)
   const [animalsMenuOpen,   setAnimalsMenuOpen]   = useState(false)
   const [jobsMenuOpen,      setJobsMenuOpen]      = useState(false)
+  const [allProducts, setAllProducts] = useState(products);
+
+  useEffect(() => {
+    try {
+      const userListings = JSON.parse(localStorage.getItem('buyoh_my_listings_v1')) || [];
+      if (Array.isArray(userListings) && userListings.length > 0) {
+        setAllProducts([...userListings, ...products]);
+      } else {
+        setAllProducts(products);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
 
   const handleAutoDetectLocation = () => {
     const locationPref = localStorage.getItem('buyoh_pref_location');
@@ -485,7 +499,7 @@ export default function Home(){
 
   /* ── filter products ── */
   const filteredProducts = useMemo(()=>{
-    return products.filter(product => {
+    return allProducts.filter(product => {
       const matchesSearch =
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -524,7 +538,7 @@ export default function Home(){
 
       return matchesSearch && matchesLocation && matchesCategory
     })
-  },[searchQuery, selectedLocation, activeCategory, activeSubcategory])
+  },[allProducts, searchQuery, selectedLocation, activeCategory, activeSubcategory])
 
   const formatPrice = (price) => '₦' + price.toLocaleString('en-NG')
 
