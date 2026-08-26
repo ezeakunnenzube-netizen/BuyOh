@@ -7,6 +7,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabaseClient';
 import './Profile.css';
 
 export default function Profile() {
@@ -42,18 +43,61 @@ export default function Profile() {
   const [editedPhone, setEditedPhone] = useState(userData.phone);
   const [editedLocation, setEditedLocation] = useState(userData.location);
 
-  // Settings Toggles
-  const [pushEnabled, setPushEnabled] = useState(true);
-  const [emailEnabled, setEmailEnabled] = useState(false);
-  const [privacyEnabled, setPrivacyEnabled] = useState(true);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  // Settings Toggles – load from localStorage on mount
+  const loadPref = (key, fallback) => {
+    try {
+      const saved = localStorage.getItem(`buyoh_pref_${key}`);
+      return saved !== null ? JSON.parse(saved) : fallback;
+    } catch { return fallback; }
+  };
+
+  const [pushEnabled, setPushEnabled] = useState(() => loadPref('push', true));
+  const [emailEnabled, setEmailEnabled] = useState(() => loadPref('email', false));
+  const [privacyEnabled, setPrivacyEnabled] = useState(() => loadPref('location', true));
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(() => loadPref('2fa', false));
+
+  // Persist preferences to localStorage + Supabase metadata
+  const updatePref = async (key, value, setter, toastOn, toastOff) => {
+    setter(value);
+    localStorage.setItem(`buyoh_pref_${key}`, JSON.stringify(value));
+    showToast(value ? toastOn : toastOff);
+    try {
+      await supabase.auth.updateUser({
+        data: { [`pref_${key}`]: value }
+      });
+    } catch (err) {
+      console.error('Failed to sync preference:', err);
+    }
+  };
 
   const [toastMessage, setToastMessage] = useState('');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
 
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Marketplace User';
+      const email = user.email || 'no-email@buyoh.com';
+      const phone = user.user_metadata?.phone || user.phone || 'No phone number';
+      const location = user.user_metadata?.location || 'Lagos, Nigeria';
+      const avatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
+
+      setUserData(prev => ({
+        ...prev,
+        name,
+        email,
+        phone,
+        location,
+        avatar
+      }));
+      setEditedName(name);
+      setEditedPhone(phone);
+      setEditedLocation(location);
+    }
+  }, [user]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -66,19 +110,33 @@ export default function Profile() {
   const [showPasswords, setShowPasswords] = useState(false);
   const [changePasswordExpanded, setChangePasswordExpanded] = useState(false);
 
-  const handleSaveProfile = (e) => {
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    setUserData(prev => ({
-      ...prev,
-      name: editedName,
-      phone: editedPhone,
-      location: editedLocation
-    }));
-    setIsEditing(false);
-    showToast('Profile updated successfully');
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        data: {
+          full_name: editedName,
+          phone: editedPhone,
+          location: editedLocation
+        }
+      });
+      if (error) throw error;
+
+      setUserData(prev => ({
+        ...prev,
+        name: editedName,
+        phone: editedPhone,
+        location: editedLocation
+      }));
+      setIsEditing(false);
+      showToast('Profile updated successfully');
+    } catch (err) {
+      console.error("Error updating user profile:", err);
+      showToast(err.message || 'Failed to update profile');
+    }
   };
 
-  const handleUpdatePassword = (e) => {
+  const handleUpdatePassword = async (e) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
       showToast("New passwords do not match!");
@@ -88,10 +146,21 @@ export default function Profile() {
       showToast("Password must be at least 6 characters");
       return;
     }
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    showToast("Password updated successfully!");
+
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      if (error) throw error;
+
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      showToast("Password updated successfully!");
+    } catch (err) {
+      console.error("Error updating password:", err);
+      showToast(err.message || "Failed to update password");
+    }
   };
 
   const handleLogout = async () => {
@@ -107,21 +176,33 @@ export default function Profile() {
     if (deleteConfirmationInput !== 'DELETE') return;
     setShowDeleteConfirm(false);
     setDeleteConfirmationInput('');
-    showToast('Account deleted permanently');
-    await logout();
-    // Simulate clearing local data
-    localStorage.removeItem('buyoh_messages_v1');
-    localStorage.removeItem('buyoh_notifications_v1');
-    localStorage.removeItem('buyoh_followed_sellers_v1');
-    setTimeout(() => {
-      navigate('/');
-    }, 1200);
+
+    try {
+      // Call the Supabase database function to permanently delete the user
+      const { error } = await supabase.rpc('delete_own_account');
+      if (error) throw error;
+
+      showToast('Account deleted permanently');
+      
+      // Clear all local data
+      localStorage.removeItem('buyoh_messages_v1');
+      localStorage.removeItem('buyoh_notifications_v1');
+      localStorage.removeItem('buyoh_followed_sellers_v1');
+      
+      await logout();
+      setTimeout(() => {
+        navigate('/');
+      }, 1200);
+    } catch (err) {
+      console.error("Error deleting account:", err);
+      showToast(err.message || 'Failed to delete account. Please try again.');
+    }
   };
 
   return (
     <div className="profile-page-wrapper">
-      {/* Top Header bar */}
-      <header className="home-nav-row">
+      {/* Top Header bar – desktop only */}
+      <header className="home-nav-row profile-desktop-nav">
         <NavLink to="/" replace className="home-nav-brand">
           <span className="logo-buy">Buy</span><span className="logo-oh">Oh!</span>
         </NavLink>
@@ -169,9 +250,7 @@ export default function Profile() {
         <div className="profile-card">
           {/* Cover Banner */}
           <div className="profile-banner" style={{ background: userData.banner }}>
-            <button className="back-arrow-btn header-back-btn" onClick={() => navigate(-1)} title="Go Back">
-              <ArrowLeft size={20} />
-            </button>
+            
             <h2 className="profile-page-title">My Account</h2>
           </div>
 
@@ -363,10 +442,7 @@ export default function Profile() {
                   <input 
                     type="checkbox" 
                     checked={pushEnabled} 
-                    onChange={e => {
-                      setPushEnabled(e.target.checked);
-                      showToast(e.target.checked ? 'Push alerts enabled' : 'Push alerts disabled');
-                    }} 
+                    onChange={e => updatePref('push', e.target.checked, setPushEnabled, 'Push alerts enabled', 'Push alerts disabled')} 
                   />
                   <span className="toggle-slider" />
                 </label>
@@ -382,10 +458,7 @@ export default function Profile() {
                   <input 
                     type="checkbox" 
                     checked={emailEnabled} 
-                    onChange={e => {
-                      setEmailEnabled(e.target.checked);
-                      showToast(e.target.checked ? 'Email alerts enabled' : 'Email alerts disabled');
-                    }} 
+                    onChange={e => updatePref('email', e.target.checked, setEmailEnabled, 'Email alerts enabled', 'Email alerts disabled')} 
                   />
                   <span className="toggle-slider" />
                 </label>
@@ -401,10 +474,7 @@ export default function Profile() {
                   <input 
                     type="checkbox" 
                     checked={privacyEnabled} 
-                    onChange={e => {
-                      setPrivacyEnabled(e.target.checked);
-                      showToast(e.target.checked ? 'Location privacy active' : 'Location privacy disabled');
-                    }} 
+                    onChange={e => updatePref('location', e.target.checked, setPrivacyEnabled, 'Location sharing active', 'Location sharing disabled')} 
                   />
                   <span className="toggle-slider" />
                 </label>
@@ -420,10 +490,7 @@ export default function Profile() {
                   <input 
                     type="checkbox" 
                     checked={twoFactorEnabled} 
-                    onChange={e => {
-                      setTwoFactorEnabled(e.target.checked);
-                      showToast(e.target.checked ? '2FA protection active' : '2FA deactivated');
-                    }} 
+                    onChange={e => updatePref('2fa', e.target.checked, setTwoFactorEnabled, '2FA protection active', '2FA deactivated')} 
                   />
                   <span className="toggle-slider" />
                 </label>

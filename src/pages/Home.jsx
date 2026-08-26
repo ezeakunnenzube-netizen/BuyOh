@@ -229,6 +229,34 @@ export default function Home(){
   const [animalsMenuOpen,   setAnimalsMenuOpen]   = useState(false)
   const [jobsMenuOpen,      setJobsMenuOpen]      = useState(false)
 
+  const handleAutoDetectLocation = () => {
+    const locationPref = localStorage.getItem('buyoh_pref_location');
+    const isLocationEnabled = locationPref !== null ? JSON.parse(locationPref) : true;
+
+    if (!isLocationEnabled) {
+      alert("Precise Location Sharing is disabled in your Profile Settings. Please enable it to use auto-detection.");
+      return;
+    }
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setSelectedLocation('Lagos');
+          setIsOpen(false);
+          alert("Location detected successfully: Lagos, Nigeria");
+        },
+        (error) => {
+          console.error("GPS detection error:", error);
+          alert("Could not detect precise coordinates. Defaulting to Abuja.");
+          setSelectedLocation('Abuja');
+          setIsOpen(false);
+        }
+      );
+    } else {
+      alert("Geolocation is not supported by your browser.");
+    }
+  };
+
   const containerRef    = useRef(null)
   const vehicleMenuRef  = useRef(null); const vehicleBtnRef   = useRef(null)
   const elecMenuRef     = useRef(null); const elecBtnRef      = useRef(null)
@@ -597,6 +625,15 @@ export default function Home(){
               </div>
             </div>
             <div className="location-options">
+              <div 
+                className="location-option" 
+                onClick={handleAutoDetectLocation}
+                style={{ borderBottom: '1px solid #f1f5f9' }}
+              >
+                <p className="location-option-text" style={{ color: '#3b82f6', fontWeight: 'bold' }}>
+                  📍 Auto-detect location
+                </p>
+              </div>
               {locations.map(loc=>(
                 <div className="location-option" key={loc.name} onClick={()=>{
                   setSelectedLocation(loc.name)
@@ -1102,15 +1139,19 @@ export default function Home(){
         <div className="products-grid">
           {filteredProducts.map(product=>(
             <div className="product-card" key={product.id}>
-              <div className="product-image-wrap">
-                <img src={product.image} alt={product.name} className="product-image" loading="lazy"/>
-                <span className={`product-condition-badge ${product.condition === 'Brand New' ? 'badge-new' : 'badge-used'}`}>
-                  {product.condition}
-                </span>
-                <span className="product-category-tag">{product.subcategory || product.category}</span>
-              </div>
+              <NavLink to={`/product/${product.id}`} className="product-card-media-link">
+                <div className="product-image-wrap">
+                  <img src={product.image} alt={product.name} className="product-image" loading="lazy"/>
+                  <span className={`product-condition-badge ${product.condition === 'Brand New' ? 'badge-new' : 'badge-used'}`}>
+                    {product.condition}
+                  </span>
+                  <span className="product-category-tag">{product.subcategory || product.category}</span>
+                </div>
+              </NavLink>
               <div className="product-info">
-                <p className="product-name">{product.name}</p>
+                <NavLink to={`/product/${product.id}`} className="product-card-info-link">
+                  <p className="product-name">{product.name}</p>
+                </NavLink>
                 <p className="product-price">{formatPrice(product.price)}</p>
                 <div className="product-meta">
                   <span className="product-location">

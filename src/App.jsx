@@ -6,16 +6,28 @@ import Home from './pages/Home'
 import Messages from './pages/Messages'
 import Notifications from './pages/Notifications'
 import Profile from './pages/Profile'
+import ProductDetails from './pages/ProductDetails'
 import { AuthProvider } from './context/AuthContext'
+
+// Scroll to top on every route change
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
 
 function App() {
   return(
     <AuthProvider>
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<Home/>}/>
         <Route path="/messages" element={<Messages/>}/>
         <Route path="/notifications" element={<Notifications/>}/>
         <Route path="/profile" element={<Profile/>}/>
+        <Route path="/product/:productId" element={<ProductDetails/>}/>
         <Route path="*" element={<Home/>}/>
       </Routes>
       <Footer/>

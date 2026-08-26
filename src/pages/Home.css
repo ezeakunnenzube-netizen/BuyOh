@@ -747,6 +747,12 @@
   transform:translateY(-6px);
   box-shadow: 0 12px 36px rgba(0,0,0,0.13);
 }
+.product-card-media-link,
+.product-card-info-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
 .product-image-wrap{
   position:relative;
   width:100%;

@@ -678,8 +678,10 @@ export default function Messages() {
       setConversations(prev => {
         const next = prev.map(c => {
           if (c.id === activeChatId) {
-            // Play notification tone only if conversation is not muted
-            if (!c.isMuted) {
+            // Play notification tone only if conversation is not muted and push notifications are active
+            const pushPref = localStorage.getItem('buyoh_pref_push');
+            const isPushActive = pushPref !== null ? JSON.parse(pushPref) : true;
+            if (!c.isMuted && isPushActive) {
               playAudioTone(750, 600, 0.15);
             }
             return {
@@ -975,8 +977,10 @@ export default function Messages() {
       setConversations(prev => {
         const next = prev.map(c => {
           if (c.id === activeChatId) {
-            // Play notification tone only if conversation is not muted
-            if (!c.isMuted) {
+            // Play notification tone only if conversation is not muted and push notifications are active
+            const pushPref = localStorage.getItem('buyoh_pref_push');
+            const isPushActive = pushPref !== null ? JSON.parse(pushPref) : true;
+            if (!c.isMuted && isPushActive) {
               playAudioTone(750, 600, 0.15);
             }
             return {
