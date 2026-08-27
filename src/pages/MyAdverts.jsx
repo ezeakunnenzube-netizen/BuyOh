@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   PanelTop, Trash2, Eye, MapPin, Tag, Plus, ArrowLeft, 
-  MessageSquareMore, BellRing, Bookmark, UserRound, Sparkles, CheckCircle
+  MessageSquareMore, BellRing, Bookmark, UserRound, Sparkles, CheckCircle,
+  Search, X, ShieldCheck, TrendingUp, Store
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './MyAdverts.css';
@@ -12,6 +13,7 @@ export default function MyAdverts() {
   const { user, setIsAuthOpen } = useAuth();
 
   const [myAdverts, setMyAdverts] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState('');
   const [deleteId, setDeleteId] = useState(null);
 
@@ -58,16 +60,33 @@ export default function MyAdverts() {
       style: 'currency',
       currency: 'NGN',
       maximumFractionDigits: 0
-    }).format(val);
+    }).format(val || 0);
   };
+
+  const totalValue = useMemo(() => {
+    return myAdverts.reduce((acc, ad) => acc + (Number(ad.price) || 0), 0);
+  }, [myAdverts]);
+
+  const filteredAdverts = useMemo(() => {
+    if (!searchQuery.trim()) return myAdverts;
+    const q = searchQuery.toLowerCase();
+    return myAdverts.filter(ad =>
+      (ad.name || '').toLowerCase().includes(q) ||
+      (ad.category || '').toLowerCase().includes(q) ||
+      (ad.subcategory || '').toLowerCase().includes(q) ||
+      (ad.location || '').toLowerCase().includes(q)
+    );
+  }, [myAdverts, searchQuery]);
 
   if (!user) {
     return (
       <div className="adverts-page-wrapper">
         <div className="adverts-auth-prompt">
-          <PanelTop size={48} color="#8b5cf6" />
-          <h2>My Adverts</h2>
-          <p>Sign in to view and manage your posted marketplace listings.</p>
+          <div className="adverts-auth-icon-glow">
+            <PanelTop size={40} color="#8b5cf6" />
+          </div>
+          <h2>My Adverts Dashboard</h2>
+          <p>Sign in to view, edit, and manage your posted marketplace listings.</p>
           <button className="adverts-signin-btn" onClick={() => setIsAuthOpen(true)}>
             Sign In / Register
           </button>
@@ -118,40 +137,102 @@ export default function MyAdverts() {
       </header>
 
       <div className="adverts-container">
-        {/* Mobile Header */}
+        {/* Mobile Navigation Bar */}
         <div className="adverts-mobile-header">
           <button onClick={() => navigate(-1)} className="adverts-back-btn">
-            <ArrowLeft size={20} /> Back
+            <ArrowLeft size={18} /> Back
           </button>
           <h2 className="adverts-mobile-title">My Adverts</h2>
         </div>
 
-        {/* Header Title */}
-        <div className="adverts-header">
-          <div>
-            <h1 className="adverts-title">
-              <PanelTop size={24} color="#8b5cf6" /> My Adverts ({myAdverts.length})
-            </h1>
-            <p className="adverts-sub">Manage, preview, and track your active marketplace listings</p>
+        {/* ── Modern Hero Header Banner ── */}
+        <div className="adverts-hero-banner">
+          <div className="adverts-hero-content">
+            <div className="adverts-hero-title-group">
+              <div className="adverts-hero-icon-wrap">
+                <PanelTop size={26} color="#c084fc" />
+              </div>
+              <div>
+                <div className="adverts-hero-badge-row">
+                  <span className="adverts-pill-badge">
+                    <Sparkles size={11} /> Seller Dashboard
+                  </span>
+                  <span className="adverts-pill-badge badge-verified">
+                    <ShieldCheck size={11} /> Verified Seller
+                  </span>
+                </div>
+                <h1 className="adverts-hero-main-title">
+                  My Active Adverts <span className="adverts-hero-count">({myAdverts.length})</span>
+                </h1>
+                <p className="adverts-hero-subtext">
+                  Manage, preview, and track your active marketplace listings in real time.
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Stats Pill Widgets */}
+            <div className="adverts-hero-stats-row">
+              <div className="adverts-stat-card">
+                <span className="adverts-stat-label">Active Listings</span>
+                <span className="adverts-stat-value">{myAdverts.length} {myAdverts.length === 1 ? 'Ad' : 'Ads'}</span>
+              </div>
+              <div className="adverts-stat-card">
+                <span className="adverts-stat-label">Portfolio Value</span>
+                <span className="adverts-stat-value adverts-stat-highlight">{formatPrice(totalValue)}</span>
+              </div>
+            </div>
           </div>
-          <button className="post-new-ad-btn" onClick={() => navigate('/sell')}>
-            <Plus size={16} /> Post New Ad
-          </button>
+
+          {/* Banner Toolbar (Search + Post Action) */}
+          <div className="adverts-hero-toolbar">
+            {myAdverts.length > 0 ? (
+              <div className="adverts-search-box">
+                <Search size={16} className="adverts-search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search my adverts by title, category, location..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="adverts-search-input"
+                />
+                {searchQuery && (
+                  <button className="adverts-search-clear" onClick={() => setSearchQuery('')}>
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            ) : <div />}
+
+            <button className="adverts-post-new-btn" onClick={() => navigate('/sell')}>
+              <Plus size={16} /> Post New Ad
+            </button>
+          </div>
         </div>
 
-        {/* Adverts List */}
+        {/* ── Adverts Grid or Empty State ── */}
         {myAdverts.length === 0 ? (
           <div className="adverts-empty-card">
-            <Sparkles size={48} color="#e67600" />
+            <div className="adverts-empty-icon-glow">
+              <Store size={42} color="#e67600" />
+            </div>
             <h3>No Active Adverts Yet</h3>
             <p>You haven't posted any listings on BuyOh! marketplace yet. Post your first ad today!</p>
             <button className="empty-post-btn" onClick={() => navigate('/sell')}>
-              + Sell Something Now
+              <Plus size={16} /> Sell Something Now
+            </button>
+          </div>
+        ) : filteredAdverts.length === 0 ? (
+          <div className="adverts-empty-card">
+            <Search size={38} color="#94a3b8" />
+            <h3>No matching adverts found</h3>
+            <p>We couldn't find any of your adverts matching "{searchQuery}".</p>
+            <button className="empty-post-btn" onClick={() => setSearchQuery('')}>
+              Clear Search Query
             </button>
           </div>
         ) : (
           <div className="adverts-grid">
-            {myAdverts.map((ad) => (
+            {filteredAdverts.map((ad) => (
               <div className="advert-card" key={ad.id}>
                 <div className="advert-image-wrap">
                   <img src={ad.image || "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=800&q=80"} alt={ad.name} className="advert-img" />
@@ -165,7 +246,7 @@ export default function MyAdverts() {
                   <p className="advert-price">{formatPrice(ad.price)}</p>
                   <div className="advert-meta">
                     <span><MapPin size={12} /> {ad.location}</span>
-                    <span><Tag size={12} /> {ad.category}</span>
+                    <span><Tag size={12} /> {ad.subcategory || ad.category}</span>
                   </div>
 
                   <div className="advert-actions">

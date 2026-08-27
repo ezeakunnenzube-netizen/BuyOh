@@ -9,10 +9,10 @@ import { useAuth } from '../context/AuthContext';
 import './SellItem.css';
 
 const CATEGORIES = [
-  { label: 'Electronics', emoji: '💻', subcategories: ['Laptops & Computers', 'TV & Video Equipment', 'Video Game Consoles', 'Audio & Music Equipment', 'Headphones', 'Photo & Video Cameras', 'Security & Surveillance', 'Networking Products', 'Printers & Scanners', 'Computer Monitors', 'Computer Hardware', 'Computer Accessories', 'Accessories & Supplies for Electronics', 'Video Games', 'Software'] },
+  { label: 'Electronics', emoji: '💻', subcategories: ['Laptops & Computers', 'TV & Video', 'Power Equipment', 'Video Games & Consoles'] },
   { label: 'Phones & Tablets', emoji: '📱', subcategories: ['Mobile Phones', 'Accessories for Phones & Tablets', 'Smart Watches', 'Tablets', 'Headphones'] },
-  { label: 'Vehicles', emoji: '🚗', subcategories: ['Vehicle Parts & Accessories', 'Cars', 'Motorcycles & Scooters', 'Buses & Microbuses', 'Trucks & Trailers', 'Construction & Heavy Machinery', 'Watercraft & Boats', 'Personal Mobility', 'Car Services'] },
-  { label: 'Property', emoji: '🏠', subcategories: ['New Builds', 'Houses & Apartments For Rent', 'Houses & Apartments For Sale', 'Short Let', 'Land & Plots for Rent', 'Land & Plots For Sale', 'Event Centres, Venues & Workstations', 'Commercial Property For Rent', 'Commercial Property For Sale'] },
+  { label: 'Vehicles', emoji: '🚗', subcategories: ['Cars', 'Buses & Microbuses', 'Trucks & Trailers', 'Motorcycles & Scooters', 'Vehicle Parts & Accessories'] },
+  { label: 'Property', emoji: '🏠', subcategories: ['Houses & Apartments for Rent', 'Houses & Apartments for Sale', 'Land & Plots', 'Commercial Property', 'Short Let'] },
   { label: 'Fashion', emoji: '👟', subcategories: ["Women's Fashion", "Men's Fashion", "Baby & Kids' Fashion"] },
   { label: 'Gaming', emoji: '🎮', subcategories: ['Video Games', 'Gaming Consoles', 'Gaming Accessories', 'Gaming PCs & Laptops', 'Gaming Chairs & Desks', 'VR & AR Devices'] },
   { label: 'Cameras', emoji: '📷', subcategories: ['Digital Cameras', 'Camera Lenses', 'Camera Accessories', 'Action Cameras', 'Drones', 'Tripods & Stabilizers', 'Binoculars & Telescopes'] },
@@ -269,7 +269,7 @@ export default function SellItem() {
       sellerPhone: contactPhone || user.user_metadata?.phone || '+234 809 123 4567',
       sellerWhatsApp: contactWhatsApp || contactPhone || '2348091234567',
       sellerLocation: location,
-      sellerAvatar: user.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+      sellerAvatar: user.user_metadata?.avatar_url || localStorage.getItem('buyoh_user_avatar_v1') || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
       sellerJoined: 'Joined August 2026',
       status: 'active'
     };

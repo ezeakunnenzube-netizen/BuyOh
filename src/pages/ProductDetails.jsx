@@ -182,16 +182,18 @@ export default function ProductDetails() {
     if (!user) { setIsAuthOpen(true); return; }
     try {
       let saved = JSON.parse(localStorage.getItem('buyoh_saved_items_v1')) || [];
-      if (isSaved) {
-        saved = saved.filter(id => id !== product.id);
+      const alreadySaved = saved.some(item => (typeof item === 'object' ? item.id : item) === product.id);
+      if (alreadySaved) {
+        saved = saved.filter(item => (typeof item === 'object' ? item.id : item) !== product.id);
         setIsSaved(false);
         showToast('Removed from saved items');
       } else {
-        saved.push(product.id);
+        saved = [product, ...saved.filter(item => typeof item === 'object')];
         setIsSaved(true);
         showToast('Saved to your collection ❤️');
       }
       localStorage.setItem('buyoh_saved_items_v1', JSON.stringify(saved));
+      window.dispatchEvent(new CustomEvent('buyoh_saved_updated'));
     } catch (e) { console.error(e); }
   };
 

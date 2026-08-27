@@ -59,7 +59,7 @@ export const products = [
     location: "Abuja (FCT)",
     condition: "Brand New",
     category: "Electronics",
-    subcategory: "TV & Video Equipment",
+    subcategory: "TV & Video",
     image: "https://images.unsplash.com/photo-1567690187548-f07b1d7bf5a9?auto=format&fit=crop&w=800&q=80"
   },
   {
@@ -99,7 +99,7 @@ export const products = [
     location: "Edo State",
     condition: "Used",
     category: "Electronics",
-    subcategory: "TV & Video Equipment",
+    subcategory: "TV & Video",
     image: "https://images.unsplash.com/photo-1593784991095-a205069470b6?auto=format&fit=crop&w=800&q=80"
   },
   {
@@ -539,7 +539,7 @@ export const products = [
     location: "Delta State",
     condition: "Used",
     category: "Vehicles",
-    subcategory: "Construction & Heavy Machinery",
+    subcategory: "Vehicle Parts & Accessories",
     image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=800&q=80"
   },
   {
@@ -549,7 +549,7 @@ export const products = [
     location: "Edo State",
     condition: "Used",
     category: "Vehicles",
-    subcategory: "Construction & Heavy Machinery",
+    subcategory: "Vehicle Parts & Accessories",
     image: "https://images.unsplash.com/photo-1558618047-3c8c6d4d09e5?auto=format&fit=crop&w=800&q=80"
   },
 
@@ -561,7 +561,7 @@ export const products = [
     location: "Lagos State",
     condition: "Used",
     category: "Vehicles",
-    subcategory: "Watercraft & Boats",
+    subcategory: "Vehicle Parts & Accessories",
     image: "https://images.unsplash.com/photo-1552084117-56a987666449?auto=format&fit=crop&w=800&q=80"
   },
   {
@@ -571,7 +571,7 @@ export const products = [
     location: "Ondo State",
     condition: "Used",
     category: "Vehicles",
-    subcategory: "Watercraft & Boats",
+    subcategory: "Vehicle Parts & Accessories",
     image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=800&q=80"
   },
 
@@ -583,7 +583,7 @@ export const products = [
     location: "Lagos State",
     condition: "Brand New",
     category: "Vehicles",
-    subcategory: "Personal Mobility",
+    subcategory: "Motorcycles & Scooters",
     image: "https://images.unsplash.com/photo-1571068316344-75bc76f77890?auto=format&fit=crop&w=800&q=80"
   },
   {
@@ -593,7 +593,7 @@ export const products = [
     location: "Abuja (FCT)",
     condition: "Brand New",
     category: "Vehicles",
-    subcategory: "Personal Mobility",
+    subcategory: "Motorcycles & Scooters",
     image: "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80"
   },
 
@@ -605,7 +605,7 @@ export const products = [
     location: "Lagos State",
     condition: "Brand New",
     category: "Vehicles",
-    subcategory: "Car Services",
+    subcategory: "Vehicle Parts & Accessories",
     image: "https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?auto=format&fit=crop&w=800&q=80"
   },
   {
@@ -615,7 +615,7 @@ export const products = [
     location: "Ogun State",
     condition: "Brand New",
     category: "Vehicles",
-    subcategory: "Car Services",
+    subcategory: "Vehicle Parts & Accessories",
     image: "https://images.unsplash.com/photo-1625047509168-a7026f36de04?auto=format&fit=crop&w=800&q=80"
   },
 
@@ -659,7 +659,7 @@ export const products = [
     location: "Lagos State",
     condition: "Brand New",
     category: "Property",
-    subcategory: "Houses & Apartments For Sale",
+    subcategory: "Houses & Apartments for Sale",
     image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=800&q=80"
   },
   {
@@ -669,7 +669,7 @@ export const products = [
     location: "Abuja (FCT)",
     condition: "Used",
     category: "Property",
-    subcategory: "Houses & Apartments For Rent",
+    subcategory: "Houses & Apartments for Rent",
     image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80"
   },
 
@@ -901,7 +901,7 @@ export const products = [
     location: "Lagos State",
     condition: "Brand New",
     category: "Electronics",
-    subcategory: "Video Game Consoles",
+    subcategory: "Video Games & Consoles",
     image: "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?auto=format&fit=crop&w=800&q=80"
   },
   {
@@ -1001,7 +1001,7 @@ export const products = [
     location: "Lagos State",
     condition: "Used",
     category: "Electronics",
-    subcategory: "Video Games",
+    subcategory: "Video Games & Consoles",
     image: "https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?auto=format&fit=crop&w=800&q=80"
   },
   {
@@ -1023,7 +1023,7 @@ export const products = [
     location: "Lagos State",
     condition: "Used",
     category: "Gaming",
-    subcategory: "Video Games",
+    subcategory: "Video Games & Consoles",
     image: "https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?auto=format&fit=crop&w=800&q=80"
   },
   {
@@ -1213,7 +1213,7 @@ export const products = [
     location: "Lagos State",
     condition: "Brand New",
     category: "Property",
-    subcategory: "Land & Plots For Sale",
+    subcategory: "Land & Plots",
     image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80"
   },
   {
@@ -1233,7 +1233,7 @@ export const products = [
     location: "Lagos State",
     condition: "Brand New",
     category: "Property",
-    subcategory: "New Builds",
+    subcategory: "Houses & Apartments for Sale",
     image: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=800&q=80"
   },
   {
@@ -1243,7 +1243,7 @@ export const products = [
     location: "Ogun State",
     condition: "Brand New",
     category: "Property",
-    subcategory: "Land & Plots for Rent",
+    subcategory: "Land & Plots",
     image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80"
   },
   {
@@ -1253,7 +1253,7 @@ export const products = [
     location: "Lagos State",
     condition: "Brand New",
     category: "Property",
-    subcategory: "Event Centres, Venues & Workstations",
+    subcategory: "Commercial Property",
     image: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=800&q=80"
   },
   {
@@ -1263,7 +1263,7 @@ export const products = [
     location: "Lagos State",
     condition: "Brand New",
     category: "Property",
-    subcategory: "Commercial Property For Rent",
+    subcategory: "Commercial Property",
     image: "https://images.unsplash.com/photo-1604754742629-3e5728249d73?auto=format&fit=crop&w=800&q=80"
   },
   {
@@ -1273,7 +1273,7 @@ export const products = [
     location: "Abuja (FCT)",
     condition: "Brand New",
     category: "Property",
-    subcategory: "Commercial Property For Sale",
+    subcategory: "Commercial Property",
     image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80"
   },
 

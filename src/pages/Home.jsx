@@ -27,33 +27,18 @@ const CATEGORIES = [
 ]
 
 const VEHICLE_SUBCATEGORIES = [
-  { label: 'Vehicle Parts & Accessories', emoji: '⚙️' },
   { label: 'Cars',                        emoji: '🚗' },
-  { label: 'Motorcycles & Scooters',      emoji: '🏍️' },
   { label: 'Buses & Microbuses',          emoji: '🚌' },
   { label: 'Trucks & Trailers',           emoji: '🚛' },
-  { label: 'Construction & Heavy Machinery', emoji: '🚜' },
-  { label: 'Watercraft & Boats',          emoji: '⛵' },
-  { label: 'Personal Mobility',           emoji: '🛴' },
-  { label: 'Car Services',               emoji: '🔧' },
+  { label: 'Motorcycles & Scooters',      emoji: '🏍️' },
+  { label: 'Vehicle Parts & Accessories', emoji: '⚙️' },
 ]
 
 const ELECTRONICS_SUBCATEGORIES = [
   { label: 'Laptops & Computers',              emoji: '💻' },
-  { label: 'TV & Video Equipment',             emoji: '📺' },
-  { label: 'Video Game Consoles',              emoji: '🎮' },
-  { label: 'Audio & Music Equipment',          emoji: '🎵' },
-  { label: 'Headphones',                       emoji: '🎧' },
-  { label: 'Photo & Video Cameras',            emoji: '📷' },
-  { label: 'Security & Surveillance',          emoji: '📹' },
-  { label: 'Networking Products',              emoji: '📡' },
-  { label: 'Printers & Scanners',              emoji: '🖨️' },
-  { label: 'Computer Monitors',                emoji: '🖥️' },
-  { label: 'Computer Hardware',                emoji: '🔩' },
-  { label: 'Computer Accessories',             emoji: '🖱️' },
-  { label: 'Accessories & Supplies for Electronics', emoji: '🔌' },
-  { label: 'Video Games',                      emoji: '🕹️' },
-  { label: 'Software',                         emoji: '💿' },
+  { label: 'TV & Video',                       emoji: '📺' },
+  { label: 'Power Equipment',                  emoji: '🔋' },
+  { label: 'Video Games & Consoles',           emoji: '🎮' },
 ]
 
 const PHONES_SUBCATEGORIES = [
@@ -65,15 +50,11 @@ const PHONES_SUBCATEGORIES = [
 ]
 
 const PROPERTY_SUBCATEGORIES = [
-  { label: 'New Builds',                         emoji: '🏗️' },
-  { label: 'Houses & Apartments For Rent',        emoji: '💼' },
-  { label: 'Houses & Apartments For Sale',        emoji: '💰' },
+  { label: 'Houses & Apartments for Rent',       emoji: '🏠' },
+  { label: 'Houses & Apartments for Sale',       emoji: '💰' },
+  { label: 'Land & Plots',                       emoji: '🌿' },
+  { label: 'Commercial Property',                emoji: '🏢' },
   { label: 'Short Let',                          emoji: '🗓️' },
-  { label: 'Land & Plots for Rent',              emoji: '🌱' },
-  { label: 'Land & Plots For Sale',              emoji: '🌿' },
-  { label: 'Event Centres, Venues & Workstations', emoji: '🏛️' },
-  { label: 'Commercial Property For Rent',       emoji: '🏪' },
-  { label: 'Commercial Property For Sale',       emoji: '🏢' },
 ]
 
 const FASHION_SUBCATEGORIES = [
@@ -229,6 +210,10 @@ export default function Home(){
   const [animalsMenuOpen,   setAnimalsMenuOpen]   = useState(false)
   const [jobsMenuOpen,      setJobsMenuOpen]      = useState(false)
   const [allProducts, setAllProducts] = useState(products);
+  const [minPrice, setMinPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState('')
+
+  const [savedItems, setSavedItems] = useState([]);
 
   useEffect(() => {
     const reloadListings = () => {
@@ -244,15 +229,53 @@ export default function Home(){
       }
     };
 
+    const reloadSaved = () => {
+      try {
+        const saved = JSON.parse(localStorage.getItem('buyoh_saved_items_v1')) || [];
+        setSavedItems(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
     reloadListings();
+    reloadSaved();
 
     window.addEventListener('buyoh_listings_updated', reloadListings);
+    window.addEventListener('buyoh_saved_updated', reloadSaved);
     window.addEventListener('storage', reloadListings);
+    window.addEventListener('storage', reloadSaved);
     return () => {
       window.removeEventListener('buyoh_listings_updated', reloadListings);
+      window.removeEventListener('buyoh_saved_updated', reloadSaved);
       window.removeEventListener('storage', reloadListings);
+      window.removeEventListener('storage', reloadSaved);
     };
   }, []);
+
+  const toggleSaveProduct = (product, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) {
+      setIsAuthOpen(true);
+      return;
+    }
+    try {
+      const existing = JSON.parse(localStorage.getItem('buyoh_saved_items_v1')) || [];
+      const isSaved = existing.some(item => (typeof item === 'object' ? item.id : item) === product.id);
+      let updated;
+      if (isSaved) {
+        updated = existing.filter(item => (typeof item === 'object' ? item.id : item) !== product.id);
+      } else {
+        updated = [product, ...existing.filter(item => typeof item === 'object')];
+      }
+      localStorage.setItem('buyoh_saved_items_v1', JSON.stringify(updated));
+      setSavedItems(updated);
+      window.dispatchEvent(new CustomEvent('buyoh_saved_updated'));
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleAutoDetectLocation = () => {
     const locationPref = localStorage.getItem('buyoh_pref_location');
@@ -547,9 +570,13 @@ export default function Home(){
         matchesCategory = product.category === activeCategory
       }
 
-      return matchesSearch && matchesLocation && matchesCategory
+      const matchesPrice =
+        (minPrice === '' || product.price >= Number(minPrice)) &&
+        (maxPrice === '' || product.price <= Number(maxPrice))
+
+      return matchesSearch && matchesLocation && matchesCategory && matchesPrice
     })
-  },[allProducts, searchQuery, selectedLocation, activeCategory, activeSubcategory])
+  },[allProducts, searchQuery, selectedLocation, activeCategory, activeSubcategory, minPrice, maxPrice])
 
   const formatPrice = (price) => '₦' + price.toLocaleString('en-NG')
 
@@ -558,13 +585,17 @@ export default function Home(){
     setActiveCategory('All')
     setActiveSubcategory('')
     setSelectedLocation(locations[0].name)
+    setMinPrice('')
+    setMaxPrice('')
     closeAllMenus()
   }
 
   const hasActiveFilters =
     searchQuery ||
     activeCategory !== 'All' ||
-    selectedLocation !== locations[0].name
+    selectedLocation !== locations[0].name ||
+    minPrice !== '' ||
+    maxPrice !== ''
 
   const sectionTitle = () => {
     if(searchQuery)          return `Results for "${searchQuery}"`
@@ -1108,6 +1139,39 @@ export default function Home(){
         ))}
       </div>
 
+      {/* ── Price Filter ── */}
+      <div className="price-filter-bar">
+        <span className="price-filter-label">💰 Price:</span>
+        <div className="price-input-group">
+          <span className="price-currency">₦</span>
+          <input
+            type="number"
+            className="price-input"
+            placeholder="Min"
+            value={minPrice}
+            onChange={e => setMinPrice(e.target.value)}
+            min="0"
+          />
+        </div>
+        <span className="price-separator">—</span>
+        <div className="price-input-group">
+          <span className="price-currency">₦</span>
+          <input
+            type="number"
+            className="price-input"
+            placeholder="Max"
+            value={maxPrice}
+            onChange={e => setMaxPrice(e.target.value)}
+            min="0"
+          />
+        </div>
+        {(minPrice || maxPrice) && (
+          <button className="price-clear-btn" onClick={() => { setMinPrice(''); setMaxPrice(''); }}>
+            <X size={14}/>
+          </button>
+        )}
+      </div>
+
       {/* Active filter chips */}
       {hasActiveFilters && (
         <div className="active-filters">
@@ -1138,6 +1202,12 @@ export default function Home(){
             <span className="filter-chip filter-chip-location">
               📍 {selectedLocation}
               <button className="chip-remove" onClick={()=>setSelectedLocation(locations[0].name)}><X size={12}/></button>
+            </span>
+          )}
+          {(minPrice || maxPrice) && (
+            <span className="filter-chip filter-chip-price">
+              💰 {minPrice ? `₦${Number(minPrice).toLocaleString('en-NG')}` : '₦0'} — {maxPrice ? `₦${Number(maxPrice).toLocaleString('en-NG')}` : '∞'}
+              <button className="chip-remove" onClick={() => { setMinPrice(''); setMaxPrice(''); }}><X size={12}/></button>
             </span>
           )}
           <button className="clear-all-btn" onClick={clearAllFilters}>Clear all</button>
@@ -1171,6 +1241,14 @@ export default function Home(){
                     {product.condition}
                   </span>
                   <span className="product-category-tag">{product.subcategory || product.category}</span>
+                  <button
+                    type="button"
+                    className={`card-save-btn ${savedItems.some(item => (typeof item === 'object' ? item.id : item) === product.id) ? 'card-save-active' : ''}`}
+                    onClick={(e) => toggleSaveProduct(product, e)}
+                    title={savedItems.some(item => (typeof item === 'object' ? item.id : item) === product.id) ? "Remove from Saved" : "Save Advert"}
+                  >
+                    <Bookmark size={15} fill={savedItems.some(item => (typeof item === 'object' ? item.id : item) === product.id) ? "#ffa705" : "none"} color={savedItems.some(item => (typeof item === 'object' ? item.id : item) === product.id) ? "#ffa705" : "#64748b"} />
+                  </button>
                 </div>
               </NavLink>
               <div className="product-info">

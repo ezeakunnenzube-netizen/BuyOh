@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
+import AvatarModal from '../components/AvatarModal';
 import './Profile.css';
 
 export default function Profile() {
@@ -55,15 +56,16 @@ export default function Profile() {
   }, []);
 
   // User Profile Data State
-  const [userData, setUserData] = useState({
+  const [userData, setUserData] = useState(() => ({
     name: 'Adebayo Johnson',
     email: 'adebayo.johnson@buyoh.com',
     phone: '+234 812 345 6789',
     location: 'Lekki, Lagos',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+    avatar: localStorage.getItem('buyoh_user_avatar_v1') || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
     banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
-  });
+  }));
 
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(userData.name);
   const [editedPhone, setEditedPhone] = useState(userData.phone);
@@ -103,13 +105,26 @@ export default function Profile() {
 
   const { user, logout } = useAuth();
 
+  // Listen for global avatar update events
   useEffect(() => {
+    const handleAvatarUpdated = (e) => {
+      const newAvatar = e.detail || localStorage.getItem('buyoh_user_avatar_v1');
+      if (newAvatar) {
+        setUserData(prev => ({ ...prev, avatar: newAvatar }));
+      }
+    };
+    window.addEventListener('buyoh_avatar_updated', handleAvatarUpdated);
+    return () => window.removeEventListener('buyoh_avatar_updated', handleAvatarUpdated);
+  }, []);
+
+  useEffect(() => {
+    const savedAvatar = localStorage.getItem('buyoh_user_avatar_v1');
     if (user) {
       const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Marketplace User';
       const email = user.email || 'no-email@buyoh.com';
       const phone = user.user_metadata?.phone || user.phone || 'No phone number';
       const location = user.user_metadata?.location || 'Lagos, Nigeria';
-      const avatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
+      const avatar = user.user_metadata?.avatar_url || savedAvatar || user.user_metadata?.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
 
       setUserData(prev => ({
         ...prev,
@@ -122,6 +137,8 @@ export default function Profile() {
       setEditedName(name);
       setEditedPhone(phone);
       setEditedLocation(location);
+    } else if (savedAvatar) {
+      setUserData(prev => ({ ...prev, avatar: savedAvatar }));
     }
   }, [user]);
 
@@ -283,8 +300,18 @@ export default function Profile() {
           {/* User Profile Card Summary */}
           <div className="profile-summary-section">
             <div className="avatar-holder">
-              <img src={userData.avatar} alt="User Avatar" className="profile-avatar-large" />
-              <button className="avatar-change-badge" title="Change Avatar" onClick={() => showToast('Avatar change coming soon')}>
+              <img 
+                src={userData.avatar} 
+                alt="User Avatar" 
+                className="profile-avatar-large clickable-avatar" 
+                onClick={() => setIsAvatarModalOpen(true)}
+                title="Click to change avatar"
+              />
+              <button 
+                className="avatar-change-badge" 
+                title="Change Avatar" 
+                onClick={() => setIsAvatarModalOpen(true)}
+              >
                 <Camera size={14} />
               </button>
             </div>
@@ -601,6 +628,17 @@ export default function Profile() {
           </div>
         </div>
       )}
+
+      {/* ── AVATAR SELECTION MODAL ── */}
+      <AvatarModal 
+        isOpen={isAvatarModalOpen}
+        onClose={() => setIsAvatarModalOpen(false)}
+        currentAvatar={userData.avatar}
+        onAvatarChanged={(newAvatarUrl) => {
+          setUserData(prev => ({ ...prev, avatar: newAvatarUrl }));
+          showToast('Avatar updated successfully!');
+        }}
+      />
 
       {/* Floating Toast Notification */}
       {toastMessage && (
