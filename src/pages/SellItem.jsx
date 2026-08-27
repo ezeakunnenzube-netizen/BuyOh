@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect} from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import { 
   Camera, X, MapPin, Tag, DollarSign, FileText, Layers, ChevronDown,
