@@ -54,18 +54,37 @@ export default function SellItem() {
   const [contactPhone, setContactPhone] = useState('');
   const [contactWhatsApp, setContactWhatsApp] = useState('');
 
-  // Category Specific Specs State
+  // Category Specific Specs State (all initialized to empty strings)
   const [brand, setBrand] = useState('');
+  const [modelName, setModelName] = useState('');
   const [screenSize, setScreenSize] = useState('');
   const [storage, setStorage] = useState('');
   const [ram, setRam] = useState('');
   const [operatingSystem, setOperatingSystem] = useState('');
+  const [battery, setBattery] = useState('');
+  const [color, setColor] = useState('');
+  const [processor, setProcessor] = useState('');
+  const [displayTech, setDisplayTech] = useState('');
+
+  // Vehicle specs
   const [year, setYear] = useState('');
-  const [transmission, setTransmission] = useState('Automatic');
+  const [transmission, setTransmission] = useState('');
+  const [fuelType, setFuelType] = useState('');
   const [mileage, setMileage] = useState('');
-  const [bedrooms, setBedrooms] = useState('2');
+
+  // Property specs
+  const [propertyType, setPropertyType] = useState('');
+  const [bedrooms, setBedrooms] = useState('');
+  const [bathrooms, setBathrooms] = useState('');
+  const [furnishing, setFurnishing] = useState('');
+
+  // Fashion specs
+  const [gender, setGender] = useState('');
   const [size, setSize] = useState('');
-  const [gender, setGender] = useState('Unisex');
+  const [material, setMaterial] = useState('');
+
+  // Gaming specs
+  const [gamingConsole, setGamingConsole] = useState('');
 
   // UI state
   const [currentStep, setCurrentStep] = useState(1);
@@ -81,7 +100,49 @@ export default function SellItem() {
   const selectedCatObj = CATEGORIES.find(c => c.label === category);
   const subcategories = selectedCatObj?.subcategories || [];
 
-  // Image handling
+  // Clean up any old spurious listing specs from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('buyoh_my_listings_v1');
+      if (saved) {
+        let listings = JSON.parse(saved);
+        if (Array.isArray(listings)) {
+          let modified = false;
+          listings = listings.map(item => {
+            if (item.specs) {
+              const cleanedSpecs = { ...item.specs };
+              if (item.category !== 'Vehicles') {
+                delete cleanedSpecs.transmission;
+                delete cleanedSpecs.mileage;
+                delete cleanedSpecs.year;
+                delete cleanedSpecs.fuelType;
+              }
+              if (item.category !== 'Property') {
+                delete cleanedSpecs.bedrooms;
+                delete cleanedSpecs.bathrooms;
+                delete cleanedSpecs.propertyType;
+                delete cleanedSpecs.furnishing;
+              }
+              if (item.category !== 'Fashion') {
+                delete cleanedSpecs.gender;
+                delete cleanedSpecs.size;
+                delete cleanedSpecs.material;
+              }
+              if (JSON.stringify(cleanedSpecs) !== JSON.stringify(item.specs)) {
+                modified = true;
+                return { ...item, specs: cleanedSpecs };
+              }
+            }
+            return item;
+          });
+          if (modified) {
+            localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(listings));
+            window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
+          }
+        }
+      }
+    } catch (e) { console.error(e); }
+  }, []);
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     if (images.length + files.length > 8) {
@@ -144,7 +205,10 @@ export default function SellItem() {
 
     setIsSubmitting(true);
 
-    // Build listing object
+    // Build full listing object with rich attributes
+    const imageUrls = images.map(img => img.preview);
+    const defaultPlaceholder = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
+
     const listing = {
       id: `listing-${Date.now()}`,
       name: title,
@@ -157,34 +221,69 @@ export default function SellItem() {
       negotiable,
       contactPhone,
       contactWhatsApp,
-      specs: {
-        brand,
-        screenSize,
-        storage,
-        ram,
-        operatingSystem,
-        year,
-        transmission,
-        mileage,
-        bedrooms,
-        size,
-        gender
-      },
+      specs: (() => {
+        const s = {};
+        if (brand.trim()) s.brand = brand.trim();
+        if (modelName.trim()) s.model = modelName.trim();
+        if (screenSize.trim()) s.screenSize = screenSize.trim();
+        if (storage.trim()) s.storage = storage.trim();
+        if (ram.trim()) s.ram = ram.trim();
+        if (operatingSystem.trim()) s.operatingSystem = operatingSystem.trim();
+        if (battery.trim()) s.battery = battery.trim();
+        if (color.trim()) s.color = color.trim();
+        if (processor.trim()) s.processor = processor.trim();
+        if (displayTech.trim()) s.displayTech = displayTech.trim();
+
+        if (category === 'Vehicles') {
+          if (year.trim()) s.year = year.trim();
+          if (transmission.trim()) s.transmission = transmission.trim();
+          if (fuelType.trim()) s.fuelType = fuelType.trim();
+          if (mileage.trim()) s.mileage = mileage.trim();
+        }
+
+        if (category === 'Property') {
+          if (propertyType.trim()) s.propertyType = propertyType.trim();
+          if (bedrooms.trim()) s.bedrooms = bedrooms.trim();
+          if (bathrooms.trim()) s.bathrooms = bathrooms.trim();
+          if (furnishing.trim()) s.furnishing = furnishing.trim();
+        }
+
+        if (category === 'Fashion') {
+          if (gender.trim()) s.gender = gender.trim();
+          if (size.trim()) s.size = size.trim();
+          if (material.trim()) s.material = material.trim();
+        }
+
+        if (category === 'Gaming') {
+          if (gamingConsole.trim()) s.console = gamingConsole.trim();
+        }
+        return s;
+      })(),
       imageCount: images.length,
-      image: images[0]?.preview || '',
+      image: imageUrls[0] || defaultPlaceholder,
+      images: imageUrls.length > 0 ? imageUrls : [defaultPlaceholder],
       createdAt: new Date().toISOString(),
       sellerId: user.id,
-      sellerName: user.user_metadata?.full_name || user.email,
+      sellerName: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Marketplace Seller',
+      sellerEmail: user.email,
+      sellerPhone: contactPhone || user.user_metadata?.phone || '+234 809 123 4567',
+      sellerWhatsApp: contactWhatsApp || contactPhone || '2348091234567',
+      sellerLocation: location,
+      sellerAvatar: user.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+      sellerJoined: 'Joined August 2026',
       status: 'active'
     };
 
-    // Save to localStorage
+    // Save to localStorage and dispatch event for real-time synchronization
     try {
       const existing = JSON.parse(localStorage.getItem('buyoh_my_listings_v1')) || [];
       existing.unshift(listing);
       localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(existing));
 
-      // Also add to notification
+      // Dispatch global sync event so Home feed and My Adverts update instantly
+      window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
+
+      // Also add to in-app notification list
       const notifications = JSON.parse(localStorage.getItem('buyoh_notifications_v1')) || [];
       notifications.unshift({
         id: `notif-${Date.now()}`,
@@ -387,19 +486,30 @@ export default function SellItem() {
             </div>
 
             {/* DYNAMIC CATEGORY-SPECIFIC SPECIFICATIONS */}
-            {(category === 'Phones & Tablets' || category === 'Electronics' || category === 'Gaming' || category === 'Cameras' || category === 'Audio') && (
+            {(category === 'Phones & Tablets' || category === 'Electronics' || category === 'Cameras' || category === 'Audio') && (
               <div className="spec-fields-box">
-                <h4 className="spec-fields-title">⚡ Specifications (Optional)</h4>
+                <h4 className="spec-fields-title">⚡ Item Specifications (Optional)</h4>
                 
                 <div className="spec-fields-grid">
                   <div className="form-group">
-                    <label className="form-label">Brand / Make</label>
+                    <label className="form-label">Brand / Manufacturer</label>
                     <input 
                       type="text" 
                       className="form-input" 
-                      placeholder="e.g. Apple, Samsung, Sony, Dell, HP"
+                      placeholder="e.g. Apple, Samsung, Google, Sony, Dell, HP"
                       value={brand}
                       onChange={e => setBrand(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Model Name</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      placeholder="e.g. Pixel 8, iPhone 15 Pro, XPS 13"
+                      value={modelName}
+                      onChange={e => setModelName(e.target.value)}
                     />
                   </div>
 
@@ -416,24 +526,34 @@ export default function SellItem() {
 
                   <div className="form-group">
                     <label className="form-label">Internal Storage / Capacity</label>
-                    <input 
-                      type="text" 
-                      className="form-input" 
-                      placeholder="e.g. 128 GB, 256 GB, 512 GB, 1 TB"
-                      value={storage}
-                      onChange={e => setStorage(e.target.value)}
-                    />
+                    <div className="form-select-wrap">
+                      <select className="form-select" value={storage} onChange={e => setStorage(e.target.value)}>
+                        <option value="">Select storage capacity</option>
+                        <option value="32 GB">32 GB</option>
+                        <option value="64 GB">64 GB</option>
+                        <option value="128 GB">128 GB</option>
+                        <option value="256 GB">256 GB</option>
+                        <option value="512 GB">512 GB</option>
+                        <option value="1 TB">1 TB</option>
+                      </select>
+                      <ChevronDown size={16} className="select-chevron" />
+                    </div>
                   </div>
 
                   <div className="form-group">
                     <label className="form-label">RAM Memory</label>
-                    <input 
-                      type="text" 
-                      className="form-input" 
-                      placeholder="e.g. 8 GB, 12 GB, 16 GB"
-                      value={ram}
-                      onChange={e => setRam(e.target.value)}
-                    />
+                    <div className="form-select-wrap">
+                      <select className="form-select" value={ram} onChange={e => setRam(e.target.value)}>
+                        <option value="">Select RAM</option>
+                        <option value="4 GB">4 GB</option>
+                        <option value="6 GB">6 GB</option>
+                        <option value="8 GB">8 GB</option>
+                        <option value="12 GB">12 GB</option>
+                        <option value="16 GB">16 GB</option>
+                        <option value="32 GB">32 GB</option>
+                      </select>
+                      <ChevronDown size={16} className="select-chevron" />
+                    </div>
                   </div>
 
                   <div className="form-group">
@@ -441,9 +561,20 @@ export default function SellItem() {
                     <input 
                       type="text" 
                       className="form-input" 
-                      placeholder="e.g. iOS, Android, macOS, Intel Core i7"
+                      placeholder="e.g. Android, iOS, Windows 11, Apple M1"
                       value={operatingSystem}
                       onChange={e => setOperatingSystem(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Color</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      placeholder="e.g. Obsidian, Titanium Gray, Midnight"
+                      value={color}
+                      onChange={e => setColor(e.target.value)}
                     />
                   </div>
                 </div>
@@ -459,37 +590,78 @@ export default function SellItem() {
                     <input 
                       type="text" 
                       className="form-input" 
-                      placeholder="e.g. Toyota, Honda, Mercedes-Benz"
+                      placeholder="e.g. Toyota, Honda, Mercedes-Benz, Lexus"
                       value={brand}
                       onChange={e => setBrand(e.target.value)}
                     />
                   </div>
+
                   <div className="form-group">
-                    <label className="form-label">Year of Manufacture</label>
+                    <label className="form-label">Model</label>
                     <input 
                       type="text" 
                       className="form-input" 
-                      placeholder="e.g. 2022, 2021, 2020"
-                      value={year}
-                      onChange={e => setYear(e.target.value)}
+                      placeholder="e.g. Camry XLE, Corolla, Civic, RX350"
+                      value={modelName}
+                      onChange={e => setModelName(e.target.value)}
                     />
                   </div>
+
                   <div className="form-group">
-                    <label className="form-label">Transmission</label>
+                    <label className="form-label">Year of Manufacture</label>
                     <div className="form-select-wrap">
-                      <select className="form-select" value={transmission} onChange={e => setTransmission(e.target.value)}>
-                        <option value="Automatic">Automatic</option>
-                        <option value="Manual">Manual</option>
+                      <select className="form-select" value={year} onChange={e => setYear(e.target.value)}>
+                        <option value="">Select year</option>
+                        <option value="2025">2025</option>
+                        <option value="2024">2024</option>
+                        <option value="2023">2023</option>
+                        <option value="2022">2022</option>
+                        <option value="2021">2021</option>
+                        <option value="2020">2020</option>
+                        <option value="2019">2019</option>
+                        <option value="2018">2018</option>
+                        <option value="2017">2017</option>
+                        <option value="2016">2016</option>
+                        <option value="2015">2015</option>
+                        <option value="Older">Older than 2015</option>
                       </select>
                       <ChevronDown size={16} className="select-chevron" />
                     </div>
                   </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Transmission</label>
+                    <div className="form-select-wrap">
+                      <select className="form-select" value={transmission} onChange={e => setTransmission(e.target.value)}>
+                        <option value="">Select transmission</option>
+                        <option value="Automatic">Automatic</option>
+                        <option value="Manual">Manual</option>
+                        <option value="CVT">CVT</option>
+                      </select>
+                      <ChevronDown size={16} className="select-chevron" />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Fuel Type</label>
+                    <div className="form-select-wrap">
+                      <select className="form-select" value={fuelType} onChange={e => setFuelType(e.target.value)}>
+                        <option value="">Select fuel type</option>
+                        <option value="Petrol">Petrol</option>
+                        <option value="Diesel">Diesel</option>
+                        <option value="Hybrid">Hybrid</option>
+                        <option value="Electric">Electric</option>
+                      </select>
+                      <ChevronDown size={16} className="select-chevron" />
+                    </div>
+                  </div>
+
                   <div className="form-group">
                     <label className="form-label">Mileage</label>
                     <input 
                       type="text" 
                       className="form-input" 
-                      placeholder="e.g. 64,000 km"
+                      placeholder="e.g. 45,000 km"
                       value={mileage}
                       onChange={e => setMileage(e.target.value)}
                     />
@@ -503,9 +675,25 @@ export default function SellItem() {
                 <h4 className="spec-fields-title">🏠 Property Details</h4>
                 <div className="spec-fields-grid">
                   <div className="form-group">
+                    <label className="form-label">Property Type</label>
+                    <div className="form-select-wrap">
+                      <select className="form-select" value={propertyType} onChange={e => setPropertyType(e.target.value)}>
+                        <option value="">Select property type</option>
+                        <option value="Flat / Apartment">Flat / Apartment</option>
+                        <option value="Duplex">Duplex</option>
+                        <option value="Terraced House">Terraced House</option>
+                        <option value="Commercial Shop">Commercial Shop</option>
+                        <option value="Land Plot">Land Plot</option>
+                      </select>
+                      <ChevronDown size={16} className="select-chevron" />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
                     <label className="form-label">Bedrooms</label>
                     <div className="form-select-wrap">
                       <select className="form-select" value={bedrooms} onChange={e => setBedrooms(e.target.value)}>
+                        <option value="">Select bedrooms</option>
                         <option value="1">1 Bedroom</option>
                         <option value="2">2 Bedrooms</option>
                         <option value="3">3 Bedrooms</option>
@@ -515,15 +703,33 @@ export default function SellItem() {
                       <ChevronDown size={16} className="select-chevron" />
                     </div>
                   </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Bathrooms</label>
+                    <div className="form-select-wrap">
+                      <select className="form-select" value={bathrooms} onChange={e => setBathrooms(e.target.value)}>
+                        <option value="">Select bathrooms</option>
+                        <option value="1">1 Bathroom</option>
+                        <option value="2">2 Bathrooms</option>
+                        <option value="3">3 Bathrooms</option>
+                        <option value="4">4 Bathrooms</option>
+                        <option value="5+">5+ Bathrooms</option>
+                      </select>
+                      <ChevronDown size={16} className="select-chevron" />
+                    </div>
+                  </div>
+
                   <div className="form-group">
                     <label className="form-label">Furnishing Status</label>
-                    <input 
-                      type="text" 
-                      className="form-input" 
-                      placeholder="e.g. Fully Serviced, Furnished, Unfurnished"
-                      value={storage}
-                      onChange={e => setStorage(e.target.value)}
-                    />
+                    <div className="form-select-wrap">
+                      <select className="form-select" value={furnishing} onChange={e => setFurnishing(e.target.value)}>
+                        <option value="">Select furnishing</option>
+                        <option value="Fully Furnished">Fully Furnished</option>
+                        <option value="Semi-Furnished">Semi-Furnished</option>
+                        <option value="Unfurnished">Unfurnished</option>
+                      </select>
+                      <ChevronDown size={16} className="select-chevron" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -534,9 +740,10 @@ export default function SellItem() {
                 <h4 className="spec-fields-title">👟 Fashion Specs</h4>
                 <div className="spec-fields-grid">
                   <div className="form-group">
-                    <label className="form-label">Gender</label>
+                    <label className="form-label">Gender / Department</label>
                     <div className="form-select-wrap">
                       <select className="form-select" value={gender} onChange={e => setGender(e.target.value)}>
+                        <option value="">Select gender</option>
                         <option value="Unisex">Unisex</option>
                         <option value="Men">Men</option>
                         <option value="Women">Women</option>
@@ -545,15 +752,49 @@ export default function SellItem() {
                       <ChevronDown size={16} className="select-chevron" />
                     </div>
                   </div>
+
                   <div className="form-group">
                     <label className="form-label">Size / Fit</label>
                     <input 
                       type="text" 
                       className="form-input" 
-                      placeholder="e.g. Medium, Large, EU 43"
+                      placeholder="e.g. Medium, Large, EU 43, Size 12"
                       value={size}
                       onChange={e => setSize(e.target.value)}
                     />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Material / Fabric</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      placeholder="e.g. Leather, Cotton, Denim, Silk, Gold"
+                      value={material}
+                      onChange={e => setMaterial(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {category === 'Gaming' && (
+              <div className="spec-fields-box">
+                <h4 className="spec-fields-title">🎮 Gaming Platform</h4>
+                <div className="spec-fields-grid">
+                  <div className="form-group">
+                    <label className="form-label">Platform / Console</label>
+                    <div className="form-select-wrap">
+                      <select className="form-select" value={gamingConsole} onChange={e => setGamingConsole(e.target.value)}>
+                        <option value="">Select platform</option>
+                        <option value="PlayStation 5">PlayStation 5</option>
+                        <option value="PlayStation 4">PlayStation 4</option>
+                        <option value="Xbox Series X/S">Xbox Series X/S</option>
+                        <option value="Nintendo Switch">Nintendo Switch</option>
+                        <option value="PC Gaming">PC Gaming</option>
+                      </select>
+                      <ChevronDown size={16} className="select-chevron" />
+                    </div>
                   </div>
                 </div>
               </div>

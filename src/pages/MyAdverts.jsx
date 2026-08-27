@@ -21,12 +21,23 @@ export default function MyAdverts() {
   };
 
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('buyoh_my_listings_v1')) || [];
-      setMyAdverts(saved);
-    } catch (e) {
-      console.error(e);
-    }
+    const loadAdverts = () => {
+      try {
+        const saved = JSON.parse(localStorage.getItem('buyoh_my_listings_v1')) || [];
+        setMyAdverts(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    loadAdverts();
+
+    window.addEventListener('buyoh_listings_updated', loadAdverts);
+    window.addEventListener('storage', loadAdverts);
+    return () => {
+      window.removeEventListener('buyoh_listings_updated', loadAdverts);
+      window.removeEventListener('storage', loadAdverts);
+    };
   }, []);
 
   const handleDeleteAd = (id) => {
@@ -34,6 +45,7 @@ export default function MyAdverts() {
       const updated = myAdverts.filter(ad => ad.id !== id);
       setMyAdverts(updated);
       localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
       setDeleteId(null);
       showToast('Ad deleted successfully');
     } catch (e) {

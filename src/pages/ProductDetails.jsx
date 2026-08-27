@@ -51,6 +51,34 @@ export default function ProductDetails() {
     }
 
     if (found) {
+      // Sanitize product.specs to scrub spurious historical keys
+      if (found.specs && typeof found.specs === 'object') {
+        const cat = found.category || '';
+        const cleanSpecs = { ...found.specs };
+
+        if (cat !== 'Vehicles') {
+          delete cleanSpecs.transmission;
+          delete cleanSpecs.mileage;
+          delete cleanSpecs.year;
+          delete cleanSpecs.fuelType;
+        }
+        if (cat !== 'Property') {
+          delete cleanSpecs.bedrooms;
+          delete cleanSpecs.bathrooms;
+          delete cleanSpecs.propertyType;
+          delete cleanSpecs.furnishing;
+        }
+        if (cat !== 'Fashion') {
+          delete cleanSpecs.gender;
+          delete cleanSpecs.size;
+          delete cleanSpecs.material;
+        }
+        if (cat !== 'Gaming') {
+          delete cleanSpecs.console;
+        }
+        found = { ...found, specs: cleanSpecs };
+      }
+
       setProduct(found);
       setViewsCount(Math.floor(Math.random() * 500) + 120);
       setLikesCount(Math.floor(Math.random() * 40) + 5);
@@ -208,21 +236,52 @@ export default function ProductDetails() {
   };
 
   const getSpecs = () => {
-    if (product.specs) {
+    if (product.specs && typeof product.specs === 'object') {
       const customSpecs = [];
-      if (product.specs.brand) customSpecs.push({ label: 'BRAND', value: product.specs.brand });
-      if (product.specs.screenSize) customSpecs.push({ label: 'SCREEN SIZE', value: product.specs.screenSize });
-      if (product.specs.storage) customSpecs.push({ label: 'INTERNAL STORAGE', value: product.specs.storage });
-      if (product.specs.ram) customSpecs.push({ label: 'RAM MEMORY', value: product.specs.ram });
-      if (product.specs.operatingSystem) customSpecs.push({ label: 'OPERATING SYSTEM', value: product.specs.operatingSystem });
-      if (product.specs.year) customSpecs.push({ label: 'MANUFACTURE YEAR', value: product.specs.year });
-      if (product.specs.transmission) customSpecs.push({ label: 'TRANSMISSION', value: product.specs.transmission });
-      if (product.specs.mileage) customSpecs.push({ label: 'MILEAGE', value: product.specs.mileage });
-      if (product.specs.bedrooms) customSpecs.push({ label: 'BEDROOMS', value: `${product.specs.bedrooms} Bed` });
-      if (product.specs.size) customSpecs.push({ label: 'SIZE / FIT', value: product.specs.size });
-      if (product.specs.gender) customSpecs.push({ label: 'GENDER', value: product.specs.gender });
+      const s = product.specs;
+      const cat = product.category || '';
+
+      if (s.brand) customSpecs.push({ label: 'BRAND', value: s.brand });
+      if (s.model) customSpecs.push({ label: 'MODEL', value: s.model });
+      if (s.screenSize) customSpecs.push({ label: 'SCREEN SIZE', value: s.screenSize });
+      if (s.storage) customSpecs.push({ label: 'INTERNAL STORAGE', value: s.storage });
+      if (s.ram) customSpecs.push({ label: 'RAM MEMORY', value: s.ram });
+      if (s.operatingSystem) customSpecs.push({ label: 'OPERATING SYSTEM', value: s.operatingSystem });
+      if (s.battery) customSpecs.push({ label: 'BATTERY CAPACITY', value: s.battery });
+      if (s.processor) customSpecs.push({ label: 'PROCESSOR', value: s.processor });
+      if (s.displayTech) customSpecs.push({ label: 'DISPLAY TECH', value: s.displayTech });
+      if (s.color) customSpecs.push({ label: 'COLOR', value: s.color });
+
+      // Vehicles specs only
+      if (cat === 'Vehicles') {
+        if (s.year) customSpecs.push({ label: 'MANUFACTURE YEAR', value: s.year });
+        if (s.transmission) customSpecs.push({ label: 'TRANSMISSION', value: s.transmission });
+        if (s.fuelType) customSpecs.push({ label: 'FUEL TYPE', value: s.fuelType });
+        if (s.mileage) customSpecs.push({ label: 'MILEAGE', value: s.mileage });
+      }
+
+      // Property specs only
+      if (cat === 'Property') {
+        if (s.propertyType) customSpecs.push({ label: 'PROPERTY TYPE', value: s.propertyType });
+        if (s.bedrooms) customSpecs.push({ label: 'BEDROOMS', value: `${s.bedrooms} Bed` });
+        if (s.bathrooms) customSpecs.push({ label: 'BATHROOMS', value: `${s.bathrooms} Bath` });
+        if (s.furnishing) customSpecs.push({ label: 'FURNISHING', value: s.furnishing });
+      }
+
+      // Fashion specs only
+      if (cat === 'Fashion') {
+        if (s.gender) customSpecs.push({ label: 'GENDER', value: s.gender });
+        if (s.size) customSpecs.push({ label: 'SIZE / FIT', value: s.size });
+        if (s.material) customSpecs.push({ label: 'MATERIAL', value: s.material });
+      }
+
+      // Gaming specs only
+      if (cat === 'Gaming' && s.console) {
+        customSpecs.push({ label: 'PLATFORM', value: s.console });
+      }
+
       if (product.condition) customSpecs.push({ label: 'CONDITION', value: product.condition });
-      if (customSpecs.length > 1) return customSpecs;
+      if (customSpecs.length > 0) return customSpecs;
     }
 
     const nameLower = product.name.toLowerCase();
@@ -361,10 +420,9 @@ export default function ProductDetails() {
     ];
   };
 
-  const thumbnails = [
-    product.image,
-    "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=800&q=80"
-  ];
+  const thumbnails = (product.images && Array.isArray(product.images) && product.images.length > 0)
+    ? product.images
+    : [product.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80"];
 
   // Similar products from same category
   const similarProducts = products
@@ -588,14 +646,18 @@ export default function ProductDetails() {
             {/* Seller details card */}
             <div className="detail-seller-card">
               <div className="seller-profile-row">
-                <div className="seller-avatar-icon">P</div>
+                {product.sellerAvatar ? (
+                  <img src={product.sellerAvatar} alt="Seller Avatar" className="seller-avatar-img" />
+                ) : (
+                  <div className="seller-avatar-icon">{(product.sellerName || 'P')[0].toUpperCase()}</div>
+                )}
                 <div className="seller-name-info">
-                  <h4>PHONEMART</h4>
+                  <h4>{product.sellerName || 'PHONEMART'}</h4>
                   <div className="seller-badges">
-                    <span>👤 5+ years on BuyOh</span>
-                    <span>🛡️ Verified ID</span>
+                    <span>👤 {product.sellerJoined || '5+ years on BuyOh'}</span>
+                    <span>🛡️ Verified Seller</span>
                   </div>
-                  <span className="reply-rate-sub">⚡ Typically replies within a few hours</span>
+                  <span className="reply-rate-sub">⚡ Typically replies within a few minutes</span>
                 </div>
               </div>
 
@@ -605,7 +667,7 @@ export default function ProductDetails() {
                   onClick={() => setShowContactNumber(prev => !prev)}
                 >
                   <Phone size={16} /> 
-                  {showContactNumber ? '+234 809 123 4567' : 'Show contact'}
+                  {showContactNumber ? (product.sellerPhone || product.contactPhone || '+234 809 123 4567') : 'Show contact'}
                 </button>
                 
                 {user ? (

@@ -231,16 +231,27 @@ export default function Home(){
   const [allProducts, setAllProducts] = useState(products);
 
   useEffect(() => {
-    try {
-      const userListings = JSON.parse(localStorage.getItem('buyoh_my_listings_v1')) || [];
-      if (Array.isArray(userListings) && userListings.length > 0) {
-        setAllProducts([...userListings, ...products]);
-      } else {
-        setAllProducts(products);
+    const reloadListings = () => {
+      try {
+        const userListings = JSON.parse(localStorage.getItem('buyoh_my_listings_v1')) || [];
+        if (Array.isArray(userListings) && userListings.length > 0) {
+          setAllProducts([...userListings, ...products]);
+        } else {
+          setAllProducts(products);
+        }
+      } catch (e) {
+        console.error(e);
       }
-    } catch (e) {
-      console.error(e);
-    }
+    };
+
+    reloadListings();
+
+    window.addEventListener('buyoh_listings_updated', reloadListings);
+    window.addEventListener('storage', reloadListings);
+    return () => {
+      window.removeEventListener('buyoh_listings_updated', reloadListings);
+      window.removeEventListener('storage', reloadListings);
+    };
   }, []);
 
   const handleAutoDetectLocation = () => {

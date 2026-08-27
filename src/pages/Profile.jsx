@@ -16,25 +16,42 @@ export default function Profile() {
   // Load followed sellers count & unread notifications count from localStorage!
   const [followingCount, setFollowingCount] = useState(0);
   const [unreadNotifCount, setUnreadNotifCount] = useState(2);
+  const [myListingsCount, setMyListingsCount] = useState(0);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('buyoh_followed_sellers_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) setFollowingCount(parsed.length);
-      }
-      const savedNotifs = localStorage.getItem('buyoh_notifications_v1');
-      if (savedNotifs) {
-        const parsedNotifs = JSON.parse(savedNotifs);
-        if (Array.isArray(parsedNotifs)) {
-          const unread = parsedNotifs.filter(n => n.unread || n.read === false);
-          setUnreadNotifCount(unread.length);
+    const loadCounts = () => {
+      try {
+        const saved = localStorage.getItem('buyoh_followed_sellers_v1');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) setFollowingCount(parsed.length);
         }
+        const savedNotifs = localStorage.getItem('buyoh_notifications_v1');
+        if (savedNotifs) {
+          const parsedNotifs = JSON.parse(savedNotifs);
+          if (Array.isArray(parsedNotifs)) {
+            const unread = parsedNotifs.filter(n => n.unread || n.read === false);
+            setUnreadNotifCount(unread.length);
+          }
+        }
+        const savedListings = localStorage.getItem('buyoh_my_listings_v1');
+        if (savedListings) {
+          const parsedListings = JSON.parse(savedListings);
+          if (Array.isArray(parsedListings)) setMyListingsCount(parsedListings.length);
+        }
+      } catch (e) {
+        console.error(e);
       }
-    } catch (e) {
-      console.error(e);
-    }
+    };
+
+    loadCounts();
+
+    window.addEventListener('buyoh_listings_updated', loadCounts);
+    window.addEventListener('storage', loadCounts);
+    return () => {
+      window.removeEventListener('buyoh_listings_updated', loadCounts);
+      window.removeEventListener('storage', loadCounts);
+    };
   }, []);
 
   // User Profile Data State
@@ -282,8 +299,8 @@ export default function Profile() {
 
             {/* Profile Statistics Grid */}
             <div className="profile-stats-grid">
-              <div className="p-stat-box">
-                <span className="p-stat-val">8</span>
+              <div className="p-stat-box" style={{ cursor: 'pointer' }} onClick={() => navigate('/adverts')}>
+                <span className="p-stat-val">{myListingsCount}</span>
                 <span className="p-stat-label">My Listings</span>
               </div>
               <div className="p-stat-box">
