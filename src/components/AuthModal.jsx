@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Mail, Lock, User, Eye, EyeOff, X, ShieldAlert, Sparkles, Check, Phone } from 'lucide-react';
 import './AuthModal.css';
 
-export default function AuthModal({ isOpen, onClose, onSuccess }) {
+export default function AuthModal({ isOpen, onClose, onSuccess, initialError }) {
   if (!isOpen) return null;
 
   const [isSignUp, setIsSignUp] = useState(false);
@@ -14,8 +14,14 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
   const [showPassword, setShowPassword] = useState(false);
   
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState(initialError || '');
   const [successMessage, setSuccessMessage] = useState('');
+
+  useEffect(() => {
+    if (initialError) {
+      setErrorMessage(initialError);
+    }
+  }, [initialError]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
