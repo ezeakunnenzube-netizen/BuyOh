@@ -1,19 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, NavLink } from 'react-router-dom';
 import { 
   MapPin, MessageSquareMore, Heart, 
   ArrowLeft, Phone, ShieldAlert, Eye, 
   Share2, Copy, Clock, Tag, Star, ChevronRight,
-  BellRing, Bookmark, PanelTop, UserRound, Smartphone, X
+  BellRing, Bookmark, PanelTop, UserRound, Smartphone, X, Check, Send, Calendar
 } from 'lucide-react';
 import { products } from '../data/productData';
 import { useAuth } from '../context/AuthContext';
+import { getSavedItemsForUser, saveItemsForUser } from '../utils/userSync';
 import './ProductDetails.css';
 
 export default function ProductDetails() {
   const { productId } = useParams();
   const navigate = useNavigate();
-  const { user, setIsAuthOpen } = useAuth();
+  const { user, loading, setIsAuthOpen } = useAuth();
   
   const [product, setProduct] = useState(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -26,6 +27,17 @@ export default function ProductDetails() {
   const [showSafetyTips, setShowSafetyTips] = useState(true);
   const [likesCount, setLikesCount] = useState(0);
   const [postedAgo, setPostedAgo] = useState('');
+
+  // Share & Callback & Report states
+  const [isCopied, setIsCopied] = useState(false);
+  const [showCallbackModal, setShowCallbackModal] = useState(false);
+  const [callbackPhone, setCallbackPhone] = useState('');
+  const [callbackTime, setCallbackTime] = useState('Anytime');
+  const [callbackNote, setCallbackNote] = useState('');
+  
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('Fraud / Scam');
+  const [reportDetails, setReportDetails] = useState('');
   
   // Reviews states
   const [reviews, setReviews] = useState([]);
@@ -37,6 +49,18 @@ export default function ProductDetails() {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 2500);
   };
+
+  const isUserSeller = useMemo(() => {
+    if (!user || !product) return false;
+    if (product.sellerId && product.sellerId === user.id) return true;
+    if (product.sellerEmail && product.sellerEmail === user.email) return true;
+    try {
+      const myListings = JSON.parse(localStorage.getItem('buyoh_my_listings_v1')) || [];
+      return myListings.some(item => item.id === product.id);
+    } catch (e) {
+      return false;
+    }
+  }, [user, product]);
 
   // Find product details
   useEffect(() => {
@@ -51,6 +75,16 @@ export default function ProductDetails() {
     }
 
     if (found) {
+      const defaultPlaceholder = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
+      if (!found.image || found.image.startsWith('blob:')) {
+        found.image = defaultPlaceholder;
+      }
+      if (Array.isArray(found.images)) {
+        found.images = found.images.map(u => (!u || u.startsWith('blob:')) ? defaultPlaceholder : u);
+      } else {
+        found.images = [found.image];
+      }
+
       // Sanitize product.specs to scrub spurious historical keys
       if (found.specs && typeof found.specs === 'object') {
         const cat = found.category || '';
@@ -80,46 +114,75 @@ export default function ProductDetails() {
       }
 
       setProduct(found);
-      setViewsCount(Math.floor(Math.random() * 500) + 120);
-      setLikesCount(Math.floor(Math.random() * 40) + 5);
-      // Simulated time ago
-      const mins = Math.floor(Math.random() * 120) + 5;
-      setPostedAgo(mins < 60 ? `${mins} min ago` : `${Math.floor(mins/60)}h ${mins%60}m ago`);
+
+      // Track real page views
+      const viewsKey = `buyoh_views_prod_${found.id}`;
+      let currentViews = 1;
+      try {
+        const savedViews = localStorage.getItem(viewsKey);
+        if (savedViews) {
+          currentViews = parseInt(savedViews, 10) + 1;
+        }
+      } catch (e) {
+        currentViews = 1;
+      }
+      localStorage.setItem(viewsKey, currentViews.toString());
+      setViewsCount(currentViews);
+
+      // Track real likes
+      const likesKey = `buyoh_likes_prod_${found.id}`;
+      let currentLikes = 0;
+      try {
+        const savedLikes = localStorage.getItem(likesKey);
+        if (savedLikes) {
+          currentLikes = parseInt(savedLikes, 10);
+        }
+      } catch (e) {
+        currentLikes = 0;
+      }
+      setLikesCount(currentLikes);
+
+      // Real time elapsed
+      if (found.createdAt) {
+        const diffMs = Date.now() - new Date(found.createdAt).getTime();
+        const diffMins = Math.floor(diffMs / (1000 * 60));
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+
+        if (diffMins < 1) setPostedAgo('Just now');
+        else if (diffMins < 60) setPostedAgo(`${diffMins} min ago`);
+        else if (diffHours < 24) setPostedAgo(`${diffHours} hour${diffHours > 1 ? 's' : ''} ago`);
+        else setPostedAgo(`${diffDays} day${diffDays > 1 ? 's' : ''} ago`);
+      } else {
+        setPostedAgo('Recently listed');
+      }
     }
   }, [productId]);
 
   // Load saved item status
   useEffect(() => {
     if (product) {
+      const saved = getSavedItemsForUser(user);
+      setIsSaved(saved.some(item => (typeof item === 'object' ? item.id : item) === product.id));
+    }
+  }, [product, user]);
+
+  // Load real reviews for this specific product on mount
+  useEffect(() => {
+    if (product) {
+      const storageKey = `buyoh_reviews_prod_${product.id}`;
       try {
-        const saved = JSON.parse(localStorage.getItem('buyoh_saved_items_v1')) || [];
-        setIsSaved(saved.includes(product.id));
+        const savedReviews = localStorage.getItem(storageKey);
+        if (savedReviews) {
+          setReviews(JSON.parse(savedReviews));
+        } else {
+          setReviews([]);
+        }
       } catch (e) {
-        console.error(e);
+        setReviews([]);
       }
     }
   }, [product]);
-
-  // Load reviews on mount
-  useEffect(() => {
-    const defaultReviews = [
-      { id: 1, author: 'Chinedu O.', rating: 5, comment: 'Excellent seller, phone was in perfect condition exactly as advertised! Highly recommended.', date: '3 days ago' },
-      { id: 2, author: 'Amara K.', rating: 4, comment: 'Great communication. Meetup was smooth at a secure mall. Item is working well.', date: '1 week ago' },
-      { id: 3, author: 'Tunde A.', rating: 5, comment: 'Very professional. Swapped my old device and topped up cash. Smooth transaction.', date: '2 weeks ago' }
-    ];
-
-    try {
-      const savedReviews = localStorage.getItem('buyoh_seller_reviews_v1');
-      if (savedReviews) {
-        setReviews(JSON.parse(savedReviews));
-      } else {
-        localStorage.setItem('buyoh_seller_reviews_v1', JSON.stringify(defaultReviews));
-        setReviews(defaultReviews);
-      }
-    } catch (e) {
-      setReviews(defaultReviews);
-    }
-  }, []);
 
   const handleAddReview = (e) => {
     e.preventDefault();
@@ -127,27 +190,33 @@ export default function ProductDetails() {
       setIsAuthOpen(true);
       return;
     }
+    if (isUserSeller) {
+      showToast('You cannot rate or leave feedback on your own listing');
+      return;
+    }
     if (!newComment.trim()) return;
 
     const newReview = {
       id: Date.now(),
-      author: user.user_metadata?.full_name || user.email || 'Anonymous Buyer',
+      author: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Marketplace Buyer',
       rating: newRating,
-      comment: newComment,
+      comment: newComment.trim(),
       date: 'Just now'
     };
 
     const updated = [newReview, ...reviews];
     setReviews(updated);
-    localStorage.setItem('buyoh_seller_reviews_v1', JSON.stringify(updated));
+    if (product) {
+      localStorage.setItem(`buyoh_reviews_prod_${product.id}`, JSON.stringify(updated));
+    }
     setNewComment('');
     setNewRating(5);
-    showToast('Thank you! Feedback submitted successfully.');
+    showToast('Thank you! Your rating and feedback have been published.');
   };
 
   const averageRating = reviews.length > 0 
     ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
-    : '5.0';
+    : '0.0';
 
   if (!product) {
     return (
@@ -175,13 +244,108 @@ export default function ProductDetails() {
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${text}`;
     setTimeout(() => {
       window.open(whatsappUrl, '_blank');
-    }, 800);
+    }, 600);
   };
 
-  const handleSaveToggle = () => {
+  const handleFacebookShare = () => {
+    showToast('Opening Facebook share...');
+    const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`;
+    window.open(shareUrl, '_blank', 'width=600,height=400');
+  };
+
+  const handleWhatsAppShare = () => {
+    showToast('Sharing on WhatsApp...');
+    const text = `Check out this ${product.name} for ${formatPrice(product.price)} on BuyOh!: ${window.location.href}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const handleCopyLink = () => {
+    try {
+      navigator.clipboard.writeText(window.location.href);
+    } catch (e) {
+      const el = document.createElement('textarea');
+      el.value = window.location.href;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
+    setIsCopied(true);
+    showToast('Product link copied to clipboard!');
+    setTimeout(() => setIsCopied(false), 2500);
+  };
+
+  const handleRequestCallbackSubmit = (e) => {
+    e.preventDefault();
+    if (!callbackPhone.trim()) {
+      showToast('Please enter your phone number');
+      return;
+    }
+    try {
+      const notifications = JSON.parse(localStorage.getItem('buyoh_notifications_v1')) || [];
+      const newNotif = {
+        id: `notif-${Date.now()}`,
+        title: '📞 Callback Request',
+        message: `A buyer requested a callback for "${product.name}". Phone: ${callbackPhone} (${callbackTime}). ${callbackNote ? `Note: ${callbackNote}` : ''}`,
+        time: 'Just now',
+        unread: true,
+        type: 'callback'
+      };
+      notifications.unshift(newNotif);
+      localStorage.setItem('buyoh_notifications_v1', JSON.stringify(notifications));
+      window.dispatchEvent(new CustomEvent('buyoh_notifications_updated'));
+    } catch (err) {
+      console.error(err);
+    }
+    setShowCallbackModal(false);
+    showToast('Callback request sent! Seller has been notified.');
+  };
+
+  const handleMarkUnavailable = () => {
+    try {
+      const userListings = JSON.parse(localStorage.getItem('buyoh_my_listings_v1')) || [];
+      const updated = userListings.map(ad => {
+        if (ad.id === product.id) {
+          return { ...ad, status: 'unavailable' };
+        }
+        return ad;
+      });
+      localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
+      setProduct(prev => ({ ...prev, status: 'unavailable' }));
+      showToast('Ad marked as unavailable');
+    } catch (e) {
+      showToast('Ad marked as unavailable');
+    }
+  };
+
+  const handleReportSubmit = (e) => {
+    e.preventDefault();
+    try {
+      const reports = JSON.parse(localStorage.getItem('buyoh_reports_v1')) || [];
+      const newReport = {
+        id: `report-${Date.now()}`,
+        productId: product.id,
+        productName: product.name,
+        reason: reportReason,
+        details: reportDetails.trim(),
+        reporter: user?.email || 'Anonymous',
+        createdAt: new Date().toISOString()
+      };
+      reports.unshift(newReport);
+      localStorage.setItem('buyoh_reports_v1', JSON.stringify(reports));
+    } catch (err) {
+      console.error(err);
+    }
+    setShowReportModal(false);
+    setReportDetails('');
+    showToast('Report submitted. Thank you for keeping BuyOh safe!');
+  };
+
+  const handleSaveToggle = async () => {
     if (!user) { setIsAuthOpen(true); return; }
     try {
-      let saved = JSON.parse(localStorage.getItem('buyoh_saved_items_v1')) || [];
+      let saved = getSavedItemsForUser(user);
       const alreadySaved = saved.some(item => (typeof item === 'object' ? item.id : item) === product.id);
       if (alreadySaved) {
         saved = saved.filter(item => (typeof item === 'object' ? item.id : item) !== product.id);
@@ -192,8 +356,7 @@ export default function ProductDetails() {
         setIsSaved(true);
         showToast('Saved to your collection ❤️');
       }
-      localStorage.setItem('buyoh_saved_items_v1', JSON.stringify(saved));
-      window.dispatchEvent(new CustomEvent('buyoh_saved_updated'));
+      await saveItemsForUser(user, saved);
     } catch (e) { console.error(e); }
   };
 
@@ -477,7 +640,7 @@ export default function ProductDetails() {
                 </button>
               </NavLink>
             </>
-          ) : (
+          ) : loading ? null : (
             <button className="nav-login-btn" onClick={() => setIsAuthOpen(true)}>
               Sign In / Register
             </button>
@@ -491,9 +654,9 @@ export default function ProductDetails() {
           <NavLink to="/" className="bread-link">Home</NavLink>
           <ChevronRight size={12} className="bread-sep" />
           <span className="bread-link bread-cat" onClick={() => navigate('/')}>{product.category}</span>
-          <ChevronRight size={12} className="bread-sep" />
           {product.subcategory && (
             <>
+              <ChevronRight size={12} className="bread-sep" />
               <span className="bread-link bread-sub">{product.subcategory}</span>
               <ChevronRight size={12} className="bread-sep" />
             </>
@@ -503,7 +666,7 @@ export default function ProductDetails() {
 
         {/* Mobile back button */}
         <div className="detail-mobile-header">
-          <button onClick={() => navigate(-1)} className="mobile-back-btn">
+          <button onClick={handleBack} className="mobile-back-btn">
             <ArrowLeft size={20} /> Back
           </button>
         </div>
@@ -516,9 +679,13 @@ export default function ProductDetails() {
               <span className="carousel-badge">{product.condition}</span>
               <div className="carousel-main-image-wrap">
                 <img 
-                  src={thumbnails[activeImageIndex]} 
+                  src={thumbnails[activeImageIndex] || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80"} 
                   alt={product.name} 
                   className="carousel-main-img" 
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
+                  }}
                 />
                 <span className="carousel-counter-badge">
                   📷 {activeImageIndex + 1}/{thumbnails.length}
@@ -532,7 +699,15 @@ export default function ProductDetails() {
                     className={`thumb-btn ${activeImageIndex === idx ? 'thumb-active' : ''}`}
                     onClick={() => setActiveImageIndex(idx)}
                   >
-                    <img src={thumb} alt="Thumbnail view" className="thumb-img" />
+                    <img 
+                      src={thumb || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80"} 
+                      alt="Thumbnail view" 
+                      className="thumb-img" 
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
+                      }}
+                    />
                   </button>
                 ))}
               </div>
@@ -576,47 +751,62 @@ export default function ProductDetails() {
             {/* Description Block */}
             <div className="detail-desc-card">
               <h3 className="desc-title">Description</h3>
-              <p className="desc-paragraph">
-                {product.condition === 'Brand New' ? 'Brand new' : 'Neatly used'} {product.name} in excellent pristine condition with full warranty. 
-                No faults, verified physical hardware check, all components and accessories intact. Ready for instant use. 
-                Delivery can be arranged within Lagos and nationwide.
+              <p className="desc-paragraph" style={{ whiteSpace: 'pre-line' }}>
+                {product.description || `${product.condition === 'Brand New' ? 'Brand new' : 'Neatly used'} ${product.name} in excellent condition. Verified physical hardware check, all components intact. Ready for instant use.`}
               </p>
               
               {/* Social Share Buttons */}
               <div className="social-share-row">
-                <button className="share-btn fb-btn" onClick={() => showToast('Shared on Facebook')}>
+                <button className="share-btn fb-btn" onClick={handleFacebookShare} title="Share on Facebook">
                   <Share2 size={13} /> Facebook
                 </button>
-                <button className="share-btn wa-btn" onClick={handleWhatsAppChat}>
-                  <MessageSquareMore size={13} /> WhatsApp
+                <button className="share-btn wa-btn" onClick={handleWhatsAppShare} title="Share on WhatsApp">
+                  <Share2 size={13} /> WhatsApp
                 </button>
-                <button className="share-btn link-btn" onClick={() => {
-                  navigator.clipboard.writeText(window.location.href);
-                  showToast('Link copied to clipboard!');
-                }}>
-                  <Copy size={13} /> Copy Link
+                <button className="share-btn link-btn" onClick={handleCopyLink} title="Copy link to product">
+                  {isCopied ? <Check size={13} color="#16a34a" /> : <Copy size={13} />} {isCopied ? 'Copied!' : 'Copy Link'}
                 </button>
               </div>
 
               {/* Bottom Primary Actions */}
               <div className="detail-bottom-actions">
                 <button 
-                  className="btn-primary-action"
-                  onClick={() => setShowContactNumber(prev => !prev)}
+                  className={`btn-primary-action ${showContactNumber ? 'contact-revealed' : ''}`}
+                  onClick={() => {
+                    setShowContactNumber(prev => !prev);
+                    if (!showContactNumber) {
+                      showToast(`Contact number: ${product.sellerPhone || product.contactPhone || '+234 809 123 4567'}`);
+                    }
+                  }}
+                  title="Click to view seller contact number"
                 >
                   <Phone size={16} /> 
-                  {showContactNumber ? '+234 809 123 4567' : 'Show contact'}
+                  {showContactNumber ? (product.sellerPhone || product.contactPhone || '+234 809 123 4567') : 'Show contact'}
                 </button>
                 <button 
                   className="btn-outline-action"
                   onClick={() => {
                     if (!user) setIsAuthOpen(true);
-                    else setShowOfferModal(true);
+                    else {
+                      setOfferPrice(Math.round(product.price * 0.9));
+                      setShowOfferModal(true);
+                    }
                   }}
+                  title="Suggest your price to the seller"
                 >
                   Make an offer
                 </button>
-                <button className="btn-outline-action" onClick={() => showToast('Callback requested! Seller will contact you.')}>
+                <button 
+                  className="btn-outline-action" 
+                  onClick={() => {
+                    if (!user) setIsAuthOpen(true);
+                    else {
+                      setCallbackPhone(user.user_metadata?.phone || user.phone || '');
+                      setShowCallbackModal(true);
+                    }
+                  }}
+                  title="Request seller to call you back"
+                >
                   Request call back
                 </button>
               </div>
@@ -709,8 +899,10 @@ export default function ProductDetails() {
 
             {/* Abuse links */}
             <div className="detail-abuse-links">
-              <button className="abuse-link" onClick={() => showToast('Ad marked as unavailable')}>Mark unavailable</button>
-              <button className="abuse-link report-btn" onClick={() => showToast('Report submitted. Thank you for keeping BuyOh safe!')}>
+              <button className="abuse-link" onClick={handleMarkUnavailable} title="Mark this listing as unavailable">
+                Mark unavailable
+              </button>
+              <button className="abuse-link report-btn" onClick={() => setShowReportModal(true)} title="Report inappropriate listing">
                 🚨 Report Abuse
               </button>
             </div>
@@ -766,8 +958,13 @@ export default function ProductDetails() {
 
             {/* Submit review form */}
             <div className="submit-review-form-wrap">
-              <h4>Leave feedback for PHONEMART</h4>
-              {user ? (
+              <h4>Leave feedback for {product.sellerName || 'Seller'}</h4>
+              {isUserSeller ? (
+                <div className="seller-review-restricted-notice">
+                  <ShieldAlert size={20} color="#64748b" />
+                  <p>As the seller of this advert, you cannot rate or leave feedback on your own listing.</p>
+                </div>
+              ) : user ? (
                 <form onSubmit={handleAddReview} className="review-input-form">
                   <div className="star-picker-row">
                     <span className="rating-picker-label">Your Rating:</span>
@@ -817,7 +1014,10 @@ export default function ProductDetails() {
           {/* Reviews List */}
           <div className="reviews-list-container">
             {reviews.length === 0 ? (
-              <p className="no-reviews-text">No feedback yet. Be the first to leave a review!</p>
+              <div className="no-reviews-box">
+                <Star size={32} color="#cbd5e1" />
+                <p className="no-reviews-text">No ratings or reviews yet for this listing (0.0 Rating). Be the first to leave feedback!</p>
+              </div>
             ) : (
               reviews.map(r => (
                 <div className="review-card-item" key={r.id}>
@@ -886,7 +1086,7 @@ export default function ProductDetails() {
         <div className="modal-backdrop" onClick={() => setShowOfferModal(false)}>
           <div className="offer-dialog-card" onClick={e => e.stopPropagation()}>
             <h3>Suggest a Price</h3>
-            <p>Make an offer to buy "{product.name}". The seller will see this directly in your chat thread.</p>
+            <p>Make an offer to buy "{product.name}". The seller will receive your proposed offer directly.</p>
             
             <form onSubmit={handleMakeOffer}>
               <div className="offer-input-wrap">
@@ -901,9 +1101,138 @@ export default function ProductDetails() {
                 />
               </div>
 
+              {/* Quick Percentage Suggestions */}
+              <div className="quick-offer-chips-block">
+                <span className="quick-chips-title">Quick Discount Suggestions:</span>
+                <div className="quick-chips-row">
+                  {[5, 10, 15, 20].map(pct => {
+                    const discounted = Math.round(product.price * (1 - pct / 100));
+                    return (
+                      <button 
+                        type="button" 
+                        key={pct} 
+                        className={`quick-chip-btn ${Number(offerPrice) === discounted ? 'active' : ''}`}
+                        onClick={() => setOfferPrice(discounted)}
+                      >
+                        -{pct}% ({formatPrice(discounted)})
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="offer-actions">
                 <button type="submit" className="confirm-offer-btn">Send Offer</button>
                 <button type="button" className="cancel-offer-btn" onClick={() => setShowOfferModal(false)}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* REQUEST CALLBACK MODAL */}
+      {showCallbackModal && (
+        <div className="modal-backdrop" onClick={() => setShowCallbackModal(false)}>
+          <div className="offer-dialog-card callback-dialog-card" onClick={e => e.stopPropagation()}>
+            <div className="callback-modal-header">
+              <div className="callback-icon-badge">
+                <Phone size={24} color="#1d4ed8" />
+              </div>
+              <h3>Request Call Back</h3>
+              <p>Leave your contact info and preferred time. The seller will reach out to you directly.</p>
+            </div>
+
+            <form onSubmit={handleRequestCallbackSubmit} className="callback-form">
+              <div className="callback-input-group">
+                <label>Your Contact Phone Number *</label>
+                <input 
+                  type="tel" 
+                  placeholder="e.g. +234 809 123 4567"
+                  value={callbackPhone}
+                  onChange={e => setCallbackPhone(e.target.value)}
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div className="callback-input-group">
+                <label>Preferred Contact Time</label>
+                <div className="time-chips-row">
+                  {['Anytime', 'Morning', 'Afternoon', 'Evening'].map(time => (
+                    <button 
+                      type="button"
+                      key={time}
+                      className={`time-chip-btn ${callbackTime === time ? 'active' : ''}`}
+                      onClick={() => setCallbackTime(time)}
+                    >
+                      {time}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="callback-input-group">
+                <label>Question or Note (Optional)</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Is price negotiable? Is delivery available in Lekki?"
+                  value={callbackNote}
+                  onChange={e => setCallbackNote(e.target.value)}
+                />
+              </div>
+
+              <div className="offer-actions">
+                <button type="submit" className="confirm-offer-btn">Send Callback Request</button>
+                <button type="button" className="cancel-offer-btn" onClick={() => setShowCallbackModal(false)}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* REPORT ABUSE MODAL */}
+      {showReportModal && (
+        <div className="modal-backdrop" onClick={() => setShowReportModal(false)}>
+          <div className="offer-dialog-card report-dialog-card" onClick={e => e.stopPropagation()}>
+            <div className="callback-modal-header">
+              <div className="callback-icon-badge report-icon-badge">
+                <ShieldAlert size={26} color="#dc2626" />
+              </div>
+              <h3>Report Listing</h3>
+              <p>Help us keep BuyOh marketplace safe. Select a reason for reporting "{product.name}".</p>
+            </div>
+
+            <form onSubmit={handleReportSubmit} className="callback-form">
+              <div className="callback-input-group">
+                <label>Reason for Report *</label>
+                <div className="time-chips-row report-reasons-row">
+                  {['Fraud / Scam', 'Prohibited Item', 'Wrong Price', 'Spam / Duplicate'].map(reason => (
+                    <button 
+                      type="button"
+                      key={reason}
+                      className={`time-chip-btn ${reportReason === reason ? 'active' : ''}`}
+                      onClick={() => setReportReason(reason)}
+                    >
+                      {reason}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="callback-input-group">
+                <label>Additional Details (Optional)</label>
+                <textarea 
+                  className="report-textarea"
+                  placeholder="Describe the issue in detail..."
+                  value={reportDetails}
+                  onChange={e => setReportDetails(e.target.value)}
+                  rows={3}
+                />
+              </div>
+
+              <div className="offer-actions">
+                <button type="submit" className="confirm-offer-btn confirm-report-btn">Submit Report</button>
+                <button type="button" className="cancel-offer-btn" onClick={() => setShowReportModal(false)}>Cancel</button>
               </div>
             </form>
           </div>

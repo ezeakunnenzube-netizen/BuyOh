@@ -426,8 +426,8 @@
 
 /* ── RESPONSIVE MOBILE BREAKPOINTS ── */
 @media (max-width: 768px) {
-  .notifications-page-wrapper .home-nav-row {
-    padding: 0.4rem 0.8rem;
+  .notif-desktop-nav {
+    display: none !important;
   }
 
   .notifications-container {

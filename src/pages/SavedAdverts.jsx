@@ -6,11 +6,12 @@ import {
   Search, X, ShoppingBag, TrendingUp, ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { getSavedItemsForUser, saveItemsForUser } from '../utils/userSync';
 import './SavedAdverts.css';
 
 export default function SavedAdverts() {
   const navigate = useNavigate();
-  const { user, setIsAuthOpen } = useAuth();
+  const { user, loading, setIsAuthOpen } = useAuth();
 
   const [savedItems, setSavedItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,12 +26,8 @@ export default function SavedAdverts() {
 
   useEffect(() => {
     const loadSaved = () => {
-      try {
-        const saved = JSON.parse(localStorage.getItem('buyoh_saved_items_v1')) || [];
-        setSavedItems(saved);
-      } catch (e) {
-        console.error(e);
-      }
+      const saved = getSavedItemsForUser(user);
+      setSavedItems(saved);
     };
 
     loadSaved();
@@ -41,14 +38,13 @@ export default function SavedAdverts() {
       window.removeEventListener('buyoh_saved_updated', loadSaved);
       window.removeEventListener('storage', loadSaved);
     };
-  }, []);
+  }, [user]);
 
-  const handleRemove = (id) => {
+  const handleRemove = async (id) => {
     try {
       const updated = savedItems.filter(item => item.id !== id);
       setSavedItems(updated);
-      localStorage.setItem('buyoh_saved_items_v1', JSON.stringify(updated));
-      window.dispatchEvent(new CustomEvent('buyoh_saved_updated'));
+      await saveItemsForUser(user, updated);
       setRemoveId(null);
       showToast('Removed from saved items');
     } catch (e) {
@@ -56,11 +52,10 @@ export default function SavedAdverts() {
     }
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     try {
       setSavedItems([]);
-      localStorage.setItem('buyoh_saved_items_v1', JSON.stringify([]));
-      window.dispatchEvent(new CustomEvent('buyoh_saved_updated'));
+      await saveItemsForUser(user, []);
       setShowClearAllModal(false);
       showToast('All saved items cleared');
     } catch (e) {
@@ -91,6 +86,16 @@ export default function SavedAdverts() {
     );
   }, [savedItems, searchQuery]);
 
+  if (loading) {
+    return (
+      <div className="saved-page-wrapper">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+          <div style={{ width: '36px', height: '36px', border: '3px solid #e2e8f0', borderTopColor: '#f59e0b', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        </div>
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <div className="saved-page-wrapper">
@@ -107,6 +112,14 @@ export default function SavedAdverts() {
       </div>
     );
   }
+
+  const handleBack = () => {
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/', { replace: true });
+    }
+  };
 
   return (
     <div className="saved-page-wrapper">
@@ -152,7 +165,7 @@ export default function SavedAdverts() {
       <div className="saved-container">
         {/* Mobile Navigation Bar */}
         <div className="saved-mobile-header">
-          <button onClick={() => navigate(-1)} className="saved-back-btn">
+          <button onClick={handleBack} className="saved-back-btn">
             <ArrowLeft size={18} /> Back
           </button>
           <h2 className="saved-mobile-title">Saved Items</h2>
@@ -254,7 +267,16 @@ export default function SavedAdverts() {
               <div className="saved-card" key={item.id}>
                 <NavLink to={`/product/${item.id}`} className="saved-card-link">
                   <div className="saved-image-wrap">
-                    <img src={item.image} alt={item.name} className="saved-img" loading="lazy" />
+                    <img 
+                      src={item.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80"} 
+                      alt={item.name} 
+                      className="saved-img" 
+                      loading="lazy"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
+                      }}
+                    />
                     <span className={`saved-condition-badge ${item.condition === 'Brand New' ? 'badge-new' : 'badge-used'}`}>
                       {item.condition}
                     </span>

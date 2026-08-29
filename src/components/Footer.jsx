@@ -6,7 +6,7 @@ import {useAuth} from "../context/AuthContext"
 export default function Footer(){
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { user, setIsAuthOpen } = useAuth();
+  const { user, loading, setIsAuthOpen } = useAuth();
 
   // Hide mobile tab footer when viewing an individual conversation in messages
   const isInIndividualChat = 
@@ -18,7 +18,7 @@ export default function Footer(){
   }
 
   const handleTabClick = (e, path) => {
-    if (!user && path !== '/') {
+    if (!loading && !user && path !== '/') {
       e.preventDefault();
       setIsAuthOpen(true);
     }
@@ -55,7 +55,7 @@ export default function Footer(){
         )}
       </NavLink>
 
-      <NavLink to="/adverts" className="tab-item" onClick={(e) => handleTabClick(e, '/adverts')} replace>
+      <NavLink to="/saved" className="tab-item" onClick={(e) => handleTabClick(e, '/saved')} replace>
         {({isActive})=>(
           <>
             <Bookmark size={22} className={`tab-icon ${isActive ? 'tab-icon-active' : ''}`}/>

@@ -127,10 +127,18 @@ export default function Notifications() {
     }
   };
 
+  const handleBack = () => {
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/', { replace: true });
+    }
+  };
+
   return (
     <div className="notifications-page-wrapper">
       {/* Header bar */}
-      <header className="home-nav-row">
+      <header className="home-nav-row notif-desktop-nav">
         <NavLink to="/" replace className="home-nav-brand">
           <span className="logo-buy">Buy</span><span className="logo-oh">Oh!</span>
         </NavLink>
@@ -179,7 +187,7 @@ export default function Notifications() {
           {/* Header Actions */}
           <div className="notif-header">
             <div className="notif-title-area">
-              <button className="back-arrow-btn" onClick={() => navigate(-1)} title="Go Back">
+              <button className="back-arrow-btn" onClick={handleBack} title="Go Back">
                 <ArrowLeft size={20} />
               </button>
               <h2 className="notif-page-title">Notifications</h2>

@@ -3,17 +3,19 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   PanelTop, Trash2, Eye, MapPin, Tag, Plus, ArrowLeft, 
   MessageSquareMore, BellRing, Bookmark, UserRound, Sparkles, CheckCircle,
-  Search, X, ShieldCheck, TrendingUp, Store
+  Search, X, ShieldCheck, Store, Clock, Layers
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { getMyListingsForUser, saveMyListingsForUser } from '../utils/userSync';
 import './MyAdverts.css';
 
 export default function MyAdverts() {
   const navigate = useNavigate();
-  const { user, setIsAuthOpen } = useAuth();
+  const { user, loading, setIsAuthOpen } = useAuth();
 
   const [myAdverts, setMyAdverts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('All'); // 'All' | 'Active'
   const [toastMessage, setToastMessage] = useState('');
   const [deleteId, setDeleteId] = useState(null);
 
@@ -25,8 +27,17 @@ export default function MyAdverts() {
   useEffect(() => {
     const loadAdverts = () => {
       try {
-        const saved = JSON.parse(localStorage.getItem('buyoh_my_listings_v1')) || [];
-        setMyAdverts(saved);
+        const saved = getMyListingsForUser(user);
+        const defaultPlaceholder = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
+        const cleaned = saved.map(ad => {
+          let img = ad.image;
+          if (!img || img.startsWith('blob:')) {
+            img = defaultPlaceholder;
+          }
+          let imgs = Array.isArray(ad.images) ? ad.images.map(u => (!u || u.startsWith('blob:')) ? defaultPlaceholder : u) : [img];
+          return { ...ad, image: img, images: imgs };
+        });
+        setMyAdverts(cleaned);
       } catch (e) {
         console.error(e);
       }
@@ -40,14 +51,13 @@ export default function MyAdverts() {
       window.removeEventListener('buyoh_listings_updated', loadAdverts);
       window.removeEventListener('storage', loadAdverts);
     };
-  }, []);
+  }, [user]);
 
-  const handleDeleteAd = (id) => {
+  const handleDeleteAd = async (id) => {
     try {
       const updated = myAdverts.filter(ad => ad.id !== id);
       setMyAdverts(updated);
-      localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(updated));
-      window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
+      await saveMyListingsForUser(user, updated);
       setDeleteId(null);
       showToast('Ad deleted successfully');
     } catch (e) {
@@ -67,6 +77,11 @@ export default function MyAdverts() {
     return myAdverts.reduce((acc, ad) => acc + (Number(ad.price) || 0), 0);
   }, [myAdverts]);
 
+  const avgPrice = useMemo(() => {
+    if (myAdverts.length === 0) return 0;
+    return Math.round(totalValue / myAdverts.length);
+  }, [myAdverts, totalValue]);
+
   const filteredAdverts = useMemo(() => {
     if (!searchQuery.trim()) return myAdverts;
     const q = searchQuery.toLowerCase();
@@ -78,15 +93,25 @@ export default function MyAdverts() {
     );
   }, [myAdverts, searchQuery]);
 
+  if (loading) {
+    return (
+      <div className="adverts-page-wrapper">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+          <div style={{ width: '36px', height: '36px', border: '3px solid #e2e8f0', borderTopColor: '#1d4ed8', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        </div>
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <div className="adverts-page-wrapper">
         <div className="adverts-auth-prompt">
           <div className="adverts-auth-icon-glow">
-            <PanelTop size={40} color="#8b5cf6" />
+            <PanelTop size={42} color="#1d4ed8" />
           </div>
-          <h2>My Adverts Dashboard</h2>
-          <p>Sign in to view, edit, and manage your posted marketplace listings.</p>
+          <h2>Seller Adverts Dashboard</h2>
+          <p>Sign in to view, edit, and manage your posted marketplace listings in real time.</p>
           <button className="adverts-signin-btn" onClick={() => setIsAuthOpen(true)}>
             Sign In / Register
           </button>
@@ -94,6 +119,14 @@ export default function MyAdverts() {
       </div>
     );
   }
+
+  const handleBack = () => {
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/', { replace: true });
+    }
+  };
 
   return (
     <div className="adverts-page-wrapper">
@@ -137,9 +170,9 @@ export default function MyAdverts() {
       </header>
 
       <div className="adverts-container">
-        {/* Mobile Navigation Bar */}
+        {/* Mobile Navigation Header Bar */}
         <div className="adverts-mobile-header">
-          <button onClick={() => navigate(-1)} className="adverts-back-btn">
+          <button onClick={handleBack} className="adverts-back-btn">
             <ArrowLeft size={18} /> Back
           </button>
           <h2 className="adverts-mobile-title">My Adverts</h2>
@@ -150,7 +183,7 @@ export default function MyAdverts() {
           <div className="adverts-hero-content">
             <div className="adverts-hero-title-group">
               <div className="adverts-hero-icon-wrap">
-                <PanelTop size={26} color="#c084fc" />
+                <PanelTop size={28} color="#93c5fd" />
               </div>
               <div>
                 <div className="adverts-hero-badge-row">
@@ -165,7 +198,7 @@ export default function MyAdverts() {
                   My Active Adverts <span className="adverts-hero-count">({myAdverts.length})</span>
                 </h1>
                 <p className="adverts-hero-subtext">
-                  Manage, preview, and track your active marketplace listings in real time.
+                  Track performance, preview listings, and manage your marketplace offers.
                 </p>
               </div>
             </div>
@@ -177,53 +210,53 @@ export default function MyAdverts() {
                 <span className="adverts-stat-value">{myAdverts.length} {myAdverts.length === 1 ? 'Ad' : 'Ads'}</span>
               </div>
               <div className="adverts-stat-card">
-                <span className="adverts-stat-label">Portfolio Value</span>
+                <span className="adverts-stat-label">Total Value</span>
                 <span className="adverts-stat-value adverts-stat-highlight">{formatPrice(totalValue)}</span>
+              </div>
+              <div className="adverts-stat-card desktop-only-stat">
+                <span className="adverts-stat-label">Avg. Price / Ad</span>
+                <span className="adverts-stat-value">{formatPrice(avgPrice)}</span>
               </div>
             </div>
           </div>
 
-          {/* Banner Toolbar (Search + Post Action) */}
-          <div className="adverts-hero-toolbar">
-            {myAdverts.length > 0 ? (
+          {/* Clean Search Bar Toolbar (Single search without redundant duplicate button) */}
+          {myAdverts.length > 0 && (
+            <div className="adverts-hero-toolbar">
               <div className="adverts-search-box">
-                <Search size={16} className="adverts-search-icon" />
+                <Search size={17} className="adverts-search-icon" />
                 <input
                   type="text"
-                  placeholder="Search my adverts by title, category, location..."
+                  placeholder="Filter my adverts by title, category, location..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="adverts-search-input"
                 />
                 {searchQuery && (
-                  <button className="adverts-search-clear" onClick={() => setSearchQuery('')}>
+                  <button className="adverts-search-clear" onClick={() => setSearchQuery('')} aria-label="Clear search">
                     <X size={14} />
                   </button>
                 )}
               </div>
-            ) : <div />}
-
-            <button className="adverts-post-new-btn" onClick={() => navigate('/sell')}>
-              <Plus size={16} /> Post New Ad
-            </button>
-          </div>
+            </div>
+          )}
         </div>
 
         {/* ── Adverts Grid or Empty State ── */}
         {myAdverts.length === 0 ? (
           <div className="adverts-empty-card">
             <div className="adverts-empty-icon-glow">
-              <Store size={42} color="#e67600" />
+              <Store size={44} color="#1d4ed8" />
             </div>
             <h3>No Active Adverts Yet</h3>
-            <p>You haven't posted any listings on BuyOh! marketplace yet. Post your first ad today!</p>
+            <p>You haven't posted any listings on BuyOh! marketplace yet. Create your first listing today to start receiving buyer offers.</p>
             <button className="empty-post-btn" onClick={() => navigate('/sell')}>
-              <Plus size={16} /> Sell Something Now
+              <Plus size={16} /> Post Your First Ad
             </button>
           </div>
         ) : filteredAdverts.length === 0 ? (
           <div className="adverts-empty-card">
-            <Search size={38} color="#94a3b8" />
+            <Search size={40} color="#94a3b8" />
             <h3>No matching adverts found</h3>
             <p>We couldn't find any of your adverts matching "{searchQuery}".</p>
             <button className="empty-post-btn" onClick={() => setSearchQuery('')}>
@@ -235,23 +268,32 @@ export default function MyAdverts() {
             {filteredAdverts.map((ad) => (
               <div className="advert-card" key={ad.id}>
                 <div className="advert-image-wrap">
-                  <img src={ad.image || "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=800&q=80"} alt={ad.name} className="advert-img" />
+                  <img 
+                    src={ad.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80"} 
+                    alt={ad.name} 
+                    className="advert-img" 
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
+                    }}
+                  />
                   <span className="advert-status-badge">
-                    <CheckCircle size={10} /> Active
+                    <CheckCircle size={11} /> Active
                   </span>
                 </div>
 
                 <div className="advert-body">
-                  <h3 className="advert-name">{ad.name}</h3>
+                  <h3 className="advert-name" title={ad.name}>{ad.name}</h3>
                   <p className="advert-price">{formatPrice(ad.price)}</p>
-                  <div className="advert-meta">
-                    <span><MapPin size={12} /> {ad.location}</span>
-                    <span><Tag size={12} /> {ad.subcategory || ad.category}</span>
+                  
+                  <div className="advert-meta-tags">
+                    <span className="meta-tag"><MapPin size={12} /> {ad.location || 'Lagos'}</span>
+                    <span className="meta-tag"><Tag size={12} /> {ad.subcategory || ad.category || 'General'}</span>
                   </div>
 
                   <div className="advert-actions">
                     <button className="btn-view-ad" onClick={() => navigate(`/product/${ad.id}`)}>
-                      <Eye size={14} /> View Ad
+                      <Eye size={14} /> View Listing
                     </button>
                     <button className="btn-delete-ad" onClick={() => setDeleteId(ad.id)}>
                       <Trash2 size={14} /> Delete
@@ -268,11 +310,14 @@ export default function MyAdverts() {
       {deleteId && (
         <div className="modal-backdrop" onClick={() => setDeleteId(null)}>
           <div className="delete-dialog-card" onClick={e => e.stopPropagation()}>
+            <div className="delete-icon-circle">
+              <Trash2 size={24} color="#ef4444" />
+            </div>
             <h3>Delete Listing?</h3>
-            <p>Are you sure you want to remove this ad from BuyOh! marketplace? This action cannot be undone.</p>
+            <p>Are you sure you want to remove this listing from BuyOh! marketplace? This action cannot be undone.</p>
             <div className="delete-modal-actions">
               <button className="btn-confirm-delete" onClick={() => handleDeleteAd(deleteId)}>
-                Yes, Delete Ad
+                Delete Listing
               </button>
               <button className="btn-cancel-delete" onClick={() => setDeleteId(null)}>
                 Cancel
@@ -282,7 +327,7 @@ export default function MyAdverts() {
         </div>
       )}
 
-      {/* Toast */}
+      {/* Floating Toast Notification */}
       {toastMessage && (
         <div className="adverts-toast">{toastMessage}</div>
       )}

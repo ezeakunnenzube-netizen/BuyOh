@@ -6,6 +6,7 @@ import {
   BellRing, Bookmark, PanelTop, UserRound, ArrowLeft, Info
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { getMyListingsForUser, saveMyListingsForUser } from '../utils/userSync';
 import './SellItem.css';
 
 const CATEGORIES = [
@@ -38,7 +39,7 @@ const NIGERIAN_STATES = [
 
 export default function SellItem() {
   const navigate = useNavigate();
-  const { user, setIsAuthOpen } = useAuth();
+  const { user, loading, setIsAuthOpen } = useAuth();
   const fileInputRef = useRef(null);
 
   // Form state
@@ -143,18 +144,67 @@ export default function SellItem() {
       }
     } catch (e) { console.error(e); }
   }, []);
-  const handleImageUpload = (e) => {
+  // Helper to compress uploaded image files into persistent base64 data URLs
+  const compressImageFile = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxWidth = 800;
+          const maxHeight = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+          resolve(dataUrl);
+        };
+        img.onerror = () => resolve(e.target.result);
+        img.src = e.target.result;
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (images.length + files.length > 8) {
       showToast('Maximum 8 images allowed');
       return;
     }
-    const newImages = files.map(file => ({
-      file,
-      preview: URL.createObjectURL(file),
-      id: Date.now() + Math.random()
-    }));
-    setImages(prev => [...prev, ...newImages]);
+
+    const processedImages = await Promise.all(
+      files.map(async (file) => {
+        const dataUrl = await compressImageFile(file);
+        return {
+          file,
+          preview: dataUrl || URL.createObjectURL(file),
+          dataUrl: dataUrl || null,
+          id: Date.now() + Math.random()
+        };
+      })
+    );
+
+    setImages(prev => [...prev, ...processedImages]);
   };
 
   const removeImage = (id) => {
@@ -197,7 +247,7 @@ export default function SellItem() {
   };
 
   // Submit listing
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!user) {
       setIsAuthOpen(true);
       return;
@@ -205,9 +255,16 @@ export default function SellItem() {
 
     setIsSubmitting(true);
 
-    // Build full listing object with rich attributes
-    const imageUrls = images.map(img => img.preview);
     const defaultPlaceholder = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
+    
+    // Ensure all image URLs are persistent data URLs or valid HTTP URLs, not temporary blob: URLs
+    const imageUrls = images.map(img => {
+      const url = img.dataUrl || img.preview;
+      if (!url || url.startsWith('blob:')) {
+        return defaultPlaceholder;
+      }
+      return url;
+    });
 
     const listing = {
       id: `listing-${Date.now()}`,
@@ -276,12 +333,9 @@ export default function SellItem() {
 
     // Save to localStorage and dispatch event for real-time synchronization
     try {
-      const existing = JSON.parse(localStorage.getItem('buyoh_my_listings_v1')) || [];
+      const existing = getMyListingsForUser(user);
       existing.unshift(listing);
-      localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(existing));
-
-      // Dispatch global sync event so Home feed and My Adverts update instantly
-      window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
+      await saveMyListingsForUser(user, existing);
 
       // Also add to in-app notification list
       const notifications = JSON.parse(localStorage.getItem('buyoh_notifications_v1')) || [];
@@ -310,6 +364,16 @@ export default function SellItem() {
     return new Intl.NumberFormat('en-NG').format(val);
   };
 
+  if (loading) {
+    return (
+      <div className="sell-page-wrapper">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+          <div style={{ width: '36px', height: '36px', border: '3px solid #e2e8f0', borderTopColor: '#e67600', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        </div>
+      </div>
+    );
+  }
+
   // If not logged in, show auth prompt
   if (!user) {
     return (
@@ -321,7 +385,7 @@ export default function SellItem() {
           <button className="sell-signin-btn" onClick={() => setIsAuthOpen(true)}>
             Sign In / Register
           </button>
-          <button className="sell-back-btn" onClick={() => navigate('/')}>
+          <button className="sell-back-btn" onClick={handleBack}>
             ← Back to Home
           </button>
         </div>
@@ -337,29 +401,29 @@ export default function SellItem() {
           <span className="logo-buy">Buy</span><span className="logo-oh">Oh!</span>
         </NavLink>
         <div className="home-nav-links">
-          <NavLink to="/messages" replace className={({isActive})=>isActive?"home-nav-item home-nav-item-active":"home-nav-item"}>
-            {({isActive})=>(<button className="home-nav-icon-btn">
-              <MessageSquareMore className="home-nav-icon" color={isActive?"#1d4ed8":"white"}/>
-            </button>)}
+          <NavLink to="/messages" replace className="home-nav-item">
+            <button className="home-nav-icon-btn">
+              <MessageSquareMore className="home-nav-icon" color="white" />
+            </button>
           </NavLink>
-          <NavLink to="/notifications" replace className={({isActive})=>isActive?"home-nav-item home-nav-item-active":"home-nav-item"}>
-            {({isActive})=>(<button className="home-nav-icon-btn">
-              <BellRing className="home-nav-icon" color={isActive?"#1d4ed8":"white"}/>
-            </button>)}
+          <NavLink to="/notifications" replace className="home-nav-item">
+            <button className="home-nav-icon-btn">
+              <BellRing className="home-nav-icon" color="white" />
+            </button>
           </NavLink>
-          <NavLink to="/saved" replace className={({isActive})=>isActive?"home-nav-item home-nav-item-active":"home-nav-item"}>
-            {({isActive})=>(<button className="home-nav-icon-btn">
-              <Bookmark className="home-nav-icon" color={isActive?"#1d4ed8":"white"}/>
-            </button>)}
+          <NavLink to="/saved" replace className="home-nav-item">
+            <button className="home-nav-icon-btn">
+              <Bookmark className="home-nav-icon" color="white" />
+            </button>
           </NavLink>
-          <NavLink to="/profile" replace className={({isActive})=>isActive?"home-nav-item home-nav-item-active":"home-nav-item"}>
-            {({isActive})=>(<button className="home-nav-icon-btn">
-              <UserRound className="home-nav-icon" color={isActive?"#1d4ed8":"white"}/>
-            </button>)}
+          <NavLink to="/adverts" replace className="home-nav-item">
+            <button className="home-nav-icon-btn">
+              <PanelTop className="home-nav-icon" color="white" />
+            </button>
           </NavLink>
-          <NavLink to="/sell" replace className="home-nav-item">
-            <button className="home-sell-btn">
-              <p className="home-sell-btn-text" style={{color: '#e67600'}}>+ Sell</p>
+          <NavLink to="/profile" replace className="home-nav-item">
+            <button className="home-nav-icon-btn">
+              <UserRound className="home-nav-icon" color="white" />
             </button>
           </NavLink>
         </div>
@@ -368,7 +432,7 @@ export default function SellItem() {
       <div className="sell-container">
         {/* Mobile Header */}
         <div className="sell-mobile-header">
-          <button onClick={() => navigate(-1)} className="sell-mobile-back">
+          <button onClick={handleBack} className="sell-mobile-back">
             <ArrowLeft size={20} /> Back
           </button>
           <h2 className="sell-mobile-title">Post Ad</h2>

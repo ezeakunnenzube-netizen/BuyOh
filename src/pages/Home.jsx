@@ -5,6 +5,7 @@ import {NavLink} from "react-router-dom"
 import {locations} from "../data/statesData.js"
 import {products} from "../data/productData.js"
 import {useAuth} from "../context/AuthContext"
+import {getSavedItemsForUser, saveItemsForUser} from "../utils/userSync"
 
 const CATEGORIES = [
   { label: 'All',                    emoji: '🛒' },
@@ -185,7 +186,7 @@ const JOBS_SUBCATEGORIES = [
 
 
 export default function Home(){
-  const { user, setIsAuthOpen } = useAuth();
+  const { user, loading, setIsAuthOpen } = useAuth();
   const [isOpen, setIsOpen]                     = useState(false)
   const [selectedLocation, setSelectedLocation] = useState(locations[0].name)
   const [searchQuery, setSearchQuery]           = useState('')
@@ -220,7 +221,16 @@ export default function Home(){
       try {
         const userListings = JSON.parse(localStorage.getItem('buyoh_my_listings_v1')) || [];
         if (Array.isArray(userListings) && userListings.length > 0) {
-          setAllProducts([...userListings, ...products]);
+          const defaultPlaceholder = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
+          const cleanedListings = userListings.map(item => {
+            let img = item.image;
+            if (!img || img.startsWith('blob:')) {
+              img = defaultPlaceholder;
+            }
+            let imgs = Array.isArray(item.images) ? item.images.map(u => (!u || u.startsWith('blob:')) ? defaultPlaceholder : u) : [img];
+            return { ...item, image: img, images: imgs };
+          });
+          setAllProducts([...cleanedListings, ...products]);
         } else {
           setAllProducts(products);
         }
@@ -230,12 +240,8 @@ export default function Home(){
     };
 
     const reloadSaved = () => {
-      try {
-        const saved = JSON.parse(localStorage.getItem('buyoh_saved_items_v1')) || [];
-        setSavedItems(saved);
-      } catch (e) {
-        console.error(e);
-      }
+      const saved = getSavedItemsForUser(user);
+      setSavedItems(saved);
     };
 
     reloadListings();
@@ -251,9 +257,9 @@ export default function Home(){
       window.removeEventListener('storage', reloadListings);
       window.removeEventListener('storage', reloadSaved);
     };
-  }, []);
+  }, [user]);
 
-  const toggleSaveProduct = (product, e) => {
+  const toggleSaveProduct = async (product, e) => {
     e.preventDefault();
     e.stopPropagation();
     if (!user) {
@@ -261,7 +267,7 @@ export default function Home(){
       return;
     }
     try {
-      const existing = JSON.parse(localStorage.getItem('buyoh_saved_items_v1')) || [];
+      const existing = getSavedItemsForUser(user);
       const isSaved = existing.some(item => (typeof item === 'object' ? item.id : item) === product.id);
       let updated;
       if (isSaved) {
@@ -269,41 +275,14 @@ export default function Home(){
       } else {
         updated = [product, ...existing.filter(item => typeof item === 'object')];
       }
-      localStorage.setItem('buyoh_saved_items_v1', JSON.stringify(updated));
       setSavedItems(updated);
-      window.dispatchEvent(new CustomEvent('buyoh_saved_updated'));
+      await saveItemsForUser(user, updated);
     } catch (err) {
       console.error(err);
     }
   };
 
-  const handleAutoDetectLocation = () => {
-    const locationPref = localStorage.getItem('buyoh_pref_location');
-    const isLocationEnabled = locationPref !== null ? JSON.parse(locationPref) : true;
 
-    if (!isLocationEnabled) {
-      alert("Precise Location Sharing is disabled in your Profile Settings. Please enable it to use auto-detection.");
-      return;
-    }
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setSelectedLocation('Lagos');
-          setIsOpen(false);
-          alert("Location detected successfully: Lagos, Nigeria");
-        },
-        (error) => {
-          console.error("GPS detection error:", error);
-          alert("Could not detect precise coordinates. Defaulting to Abuja.");
-          setSelectedLocation('Abuja');
-          setIsOpen(false);
-        }
-      );
-    } else {
-      alert("Geolocation is not supported by your browser.");
-    }
-  };
 
   const containerRef    = useRef(null)
   const vehicleMenuRef  = useRef(null); const vehicleBtnRef   = useRef(null)
@@ -532,51 +511,33 @@ export default function Home(){
   const selectSub = (cat, sub) => { setActiveSubcategory(p=>p===sub?'':sub); setActiveCategory(cat) }
 
   /* ── filter products ── */
-  const filteredProducts = useMemo(()=>{
+  const filteredProducts = useMemo(() => {
     return allProducts.filter(product => {
       const matchesSearch =
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (product.subcategory || '').toLowerCase().includes(searchQuery.toLowerCase())
+        (product.subcategory || '').toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesLocation =
-        selectedLocation === locations[0].name || product.location === selectedLocation
+        selectedLocation === locations[0].name || product.location === selectedLocation;
 
-      let matchesCategory
-      if(activeCategory === 'All'){
-        matchesCategory = true
-      } else if(activeCategory === 'Vehicles'){
-        matchesCategory =
-          product.category === 'Vehicles' &&
-          (activeSubcategory === '' || product.subcategory === activeSubcategory)
-      } else if(activeCategory === 'Electronics'){
-        matchesCategory =
-          product.category === 'Electronics' &&
-          (activeSubcategory === '' || product.subcategory === activeSubcategory)
-      } else if(activeCategory === 'Phones & Tablets'){
-        matchesCategory =
-          product.category === 'Phones & Tablets' &&
-          (activeSubcategory === '' || product.subcategory === activeSubcategory)
-      } else if(activeCategory === 'Property' || activeCategory === 'Fashion' || activeCategory === 'Beauty & Personal Care'
-             || activeCategory === 'Gaming'   || activeCategory === 'Cameras'  || activeCategory === 'Audio'
-             || activeCategory === 'Furniture' || activeCategory === 'Services' || activeCategory === 'Repair & Construction'
-             || activeCategory === 'Babies & Kids' || activeCategory === 'Agriculture' || activeCategory === 'Animals'
-             || activeCategory === 'Jobs'){
+      let matchesCategory;
+      if (activeCategory === 'All') {
+        matchesCategory = true;
+      } else {
         matchesCategory =
           product.category === activeCategory &&
-          (activeSubcategory === '' || product.subcategory === activeSubcategory)
-      } else {
-        matchesCategory = product.category === activeCategory
+          (activeSubcategory === '' || product.subcategory === activeSubcategory);
       }
 
       const matchesPrice =
         (minPrice === '' || product.price >= Number(minPrice)) &&
-        (maxPrice === '' || product.price <= Number(maxPrice))
+        (maxPrice === '' || product.price <= Number(maxPrice));
 
-      return matchesSearch && matchesLocation && matchesCategory && matchesPrice
-    })
-  },[allProducts, searchQuery, selectedLocation, activeCategory, activeSubcategory, minPrice, maxPrice])
+      return matchesSearch && matchesLocation && matchesCategory && matchesPrice;
+    });
+  }, [allProducts, searchQuery, selectedLocation, activeCategory, activeSubcategory, minPrice, maxPrice]);
 
   const formatPrice = (price) => '₦' + price.toLocaleString('en-NG')
 
@@ -650,7 +611,7 @@ export default function Home(){
               </button>)}
             </NavLink>
           </>
-        ) : (
+        ) : loading ? null : (
           <button className="nav-login-btn" onClick={() => setIsAuthOpen(true)}>
             Sign In / Register
           </button>
@@ -681,15 +642,6 @@ export default function Home(){
               </div>
             </div>
             <div className="location-options">
-              <div 
-                className="location-option" 
-                onClick={handleAutoDetectLocation}
-                style={{ borderBottom: '1px solid #f1f5f9' }}
-              >
-                <p className="location-option-text" style={{ color: '#3b82f6', fontWeight: 'bold' }}>
-                  📍 Auto-detect location
-                </p>
-              </div>
               {locations.map(loc=>(
                 <div className="location-option" key={loc.name} onClick={()=>{
                   setSelectedLocation(loc.name)
@@ -1236,7 +1188,16 @@ export default function Home(){
             <div className="product-card" key={product.id}>
               <NavLink to={`/product/${product.id}`} className="product-card-media-link">
                 <div className="product-image-wrap">
-                  <img src={product.image} alt={product.name} className="product-image" loading="lazy"/>
+                  <img 
+                    src={product.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80"} 
+                    alt={product.name} 
+                    className="product-image" 
+                    loading="lazy"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
+                    }}
+                  />
                   <span className={`product-condition-badge ${product.condition === 'Brand New' ? 'badge-new' : 'badge-used'}`}>
                     {product.condition}
                   </span>

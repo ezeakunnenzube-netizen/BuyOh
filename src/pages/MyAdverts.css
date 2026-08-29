@@ -1,4 +1,4 @@
-/* ── My Adverts Page ── */
+/* ── MY ADVERTS MODERN DASHBOARD ── */
 .adverts-page-wrapper {
   font-family: 'Poppins', sans-serif;
   color: #0f172a;
@@ -7,7 +7,7 @@
 }
 
 .adverts-container {
-  max-width: 1120px;
+  max-width: 1160px;
   margin: 0 auto;
   padding: 2rem 1.5rem 5rem;
 }
@@ -29,7 +29,7 @@
   gap: 0.4rem;
   background: transparent;
   border: none;
-  color: #8b5cf6;
+  color: #2563eb;
   font-weight: 700;
   font-size: 0.9rem;
   cursor: pointer;
@@ -39,29 +39,31 @@
   font-size: 1.2rem;
   font-weight: 800;
   margin: 0;
+  color: #0f172a;
 }
 
 /* ── Modern Hero Header Banner ── */
 .adverts-hero-banner {
-  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 55%, #4c1d95 100%);
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #090d16 100%);
   border-radius: 24px;
-  padding: 2.25rem;
-  color: white;
+  padding: 2.25rem 2.5rem;
+  color: #ffffff;
   margin-bottom: 2.5rem;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.25), 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 
+    0 20px 40px -15px rgba(15, 23, 42, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .adverts-hero-banner::before {
   content: '';
   position: absolute;
-  top: -40%;
+  top: -50%;
   right: -10%;
-  width: 380px;
-  height: 380px;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.28) 0%, rgba(139, 92, 246, 0) 70%);
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.3) 0%, transparent 70%);
   border-radius: 50%;
   pointer-events: none;
 }
@@ -82,14 +84,14 @@
 }
 
 .adverts-hero-icon-wrap {
-  background: rgba(139, 92, 246, 0.18);
-  border: 1.5px solid rgba(192, 132, 252, 0.35);
-  padding: 0.85rem;
-  border-radius: 18px;
+  background: rgba(37, 99, 235, 0.2);
+  border: 1.5px solid rgba(147, 197, 253, 0.35);
+  padding: 0.9rem;
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.15);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.2);
   backdrop-filter: blur(8px);
 }
 
@@ -104,14 +106,15 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  background: rgba(192, 132, 252, 0.18);
-  border: 1px solid rgba(192, 132, 252, 0.35);
-  color: #e9d5ff;
+  background: rgba(147, 197, 253, 0.18);
+  border: 1px solid rgba(147, 197, 253, 0.35);
+  color: #bfdbfe;
   font-size: 0.72rem;
   font-weight: 700;
   padding: 0.2rem 0.65rem;
   border-radius: 99px;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .badge-verified {
@@ -121,26 +124,26 @@
 }
 
 .adverts-hero-main-title {
-  font-size: 1.85rem;
+  font-size: 1.95rem;
   font-weight: 900;
   margin: 0 0 0.4rem;
   color: #ffffff;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .adverts-hero-count {
-  color: #c084fc;
+  color: #60a5fa;
   font-weight: 800;
 }
 
 .adverts-hero-subtext {
-  color: #cbd5e1;
+  color: #94a3b8;
   font-size: 0.92rem;
   margin: 0;
-  max-width: 500px;
+  max-width: 520px;
   line-height: 1.5;
 }
 
@@ -151,23 +154,29 @@
 }
 
 .adverts-stat-card {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   padding: 0.85rem 1.35rem;
-  border-radius: 16px;
+  border-radius: 18px;
   display: flex;
   flex-direction: column;
-  min-width: 145px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  min-width: 140px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: transform 0.2s ease;
+}
+
+.adverts-stat-card:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .adverts-stat-label {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: #94a3b8;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   margin-bottom: 0.25rem;
 }
 
@@ -181,28 +190,25 @@
   color: #ffa705;
 }
 
-/* Banner Toolbar */
+/* Banner Toolbar Search */
 .adverts-hero-toolbar {
   margin-top: 1.75rem;
   padding-top: 1.5rem;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 1.25rem;
   position: relative;
   z-index: 2;
 }
 
 .adverts-search-box {
   position: relative;
-  flex: 1;
-  max-width: 520px;
+  width: 100%;
 }
 
 .adverts-search-icon {
   position: absolute;
-  left: 1rem;
+  left: 1.1rem;
   top: 50%;
   transform: translateY(-50%);
   color: #94a3b8;
@@ -214,11 +220,11 @@
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border: 1.5px solid rgba(255, 255, 255, 0.18);
-  border-radius: 12px;
-  padding: 0.7rem 2.6rem 0.7rem 2.75rem;
+  border-radius: 14px;
+  padding: 0.8rem 2.75rem 0.8rem 2.85rem;
   color: #ffffff;
   font-family: inherit;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   outline: none;
   transition: all 0.2s ease;
 }
@@ -229,48 +235,30 @@
 
 .adverts-search-input:focus {
   background: rgba(255, 255, 255, 0.16);
-  border-color: #c084fc;
-  box-shadow: 0 0 0 4px rgba(192, 132, 252, 0.18);
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.2);
 }
 
 .adverts-search-clear {
   position: absolute;
-  right: 0.75rem;
+  right: 0.85rem;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.18);
   border: none;
   color: white;
   border-radius: 50%;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: background 0.2s ease;
 }
 
-.adverts-post-new-btn {
-  background: linear-gradient(135deg, #ffa705, #e67600);
-  color: white;
-  border: none;
-  font-family: inherit;
-  font-size: 0.88rem;
-  font-weight: 700;
-  padding: 0.7rem 1.4rem;
-  border-radius: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 14px rgba(230, 118, 0, 0.3);
-  white-space: nowrap;
-}
-
-.adverts-post-new-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(230, 118, 0, 0.4);
+.adverts-search-clear:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* Adverts Grid */
@@ -281,18 +269,19 @@
 }
 
 .advert-card {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 20px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
 .advert-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.09);
+  box-shadow: 0 16px 36px -8px rgba(15, 23, 42, 0.12);
   border-color: #cbd5e1;
 }
 
@@ -309,68 +298,75 @@
   top: 0; left: 0;
   width: 100%; height: 100%;
   object-fit: cover;
-  transition: transform 0.35s ease;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .advert-card:hover .advert-img {
-  transform: scale(1.04);
+  transform: scale(1.05);
 }
 
 .advert-status-badge {
   position: absolute;
-  top: 0.65rem;
-  right: 0.65rem;
-  background: #22c55e;
-  color: white;
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 0.2rem 0.55rem;
-  border-radius: 6px;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.25rem 0.65rem;
+  border-radius: 20px;
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  gap: 0.3rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+  letter-spacing: 0.02em;
 }
 
 .advert-body {
-  padding: 1.25rem;
+  padding: 1.35rem;
   display: flex;
   flex-direction: column;
   flex: 1;
 }
 
 .advert-name {
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 800;
   color: #0f172a;
-  margin: 0 0 0.35rem;
+  margin: 0 0 0.4rem;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  line-height: 1.35;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
 }
 
 .advert-price {
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   font-weight: 900;
-  color: #e67600;
-  margin: 0 0 0.65rem;
+  color: #2563eb;
+  margin: 0 0 0.85rem;
+  letter-spacing: -0.01em;
 }
 
-.advert-meta {
+.advert-meta-tags {
   display: flex;
-  gap: 0.85rem;
-  font-size: 0.75rem;
-  color: #64748b;
-  font-weight: 600;
-  margin-bottom: 1.25rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.35rem;
 }
 
-.advert-meta span {
-  display: flex;
+.meta-tag {
+  display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: 0.35rem;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: 8px;
 }
 
 .advert-actions {
@@ -381,158 +377,192 @@
 
 .btn-view-ad {
   flex: 1;
-  background: #f5f3ff;
-  color: #7c3aed;
-  border: 1px solid #c4b5fd;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
   font-family: inherit;
-  font-size: 0.8rem;
+  font-size: 0.825rem;
   font-weight: 700;
-  padding: 0.55rem;
-  border-radius: 8px;
+  padding: 0.65rem;
+  border-radius: 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
   transition: all 0.2s ease;
 }
 
 .btn-view-ad:hover {
-  background: #ede9fe;
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1d4ed8;
 }
 
 .btn-delete-ad {
   background: #fef2f2;
-  color: #ef4444;
+  color: #dc2626;
   border: 1px solid #fecaca;
   font-family: inherit;
-  font-size: 0.8rem;
+  font-size: 0.825rem;
   font-weight: 700;
-  padding: 0.55rem 0.85rem;
-  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+  border-radius: 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
   transition: all 0.2s ease;
 }
 
 .btn-delete-ad:hover {
   background: #fee2e2;
+  border-color: #fca5a5;
 }
 
-/* Empty Card */
+/* Empty State Card */
 .adverts-empty-card {
-  background: white;
-  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
   border-radius: 24px;
   padding: 5rem 2rem;
   text-align: center;
   max-width: 520px;
   margin: 0 auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
 }
 
 .adverts-empty-icon-glow {
-  background: rgba(230, 118, 0, 0.1);
-  border: 1.5px solid rgba(230, 118, 0, 0.2);
-  width: 72px;
-  height: 72px;
+  background: #eff6ff;
+  border: 2px solid #dbeafe;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 1.25rem;
+  margin: 0 auto 1.5rem;
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.15);
 }
 
 .adverts-empty-card h3 {
-  font-size: 1.35rem;
+  font-size: 1.4rem;
   font-weight: 800;
   color: #0f172a;
   margin: 0 0 0.5rem;
+  letter-spacing: -0.02em;
 }
 
 .adverts-empty-card p {
   color: #64748b;
-  font-size: 0.9rem;
+  font-size: 0.925rem;
   margin-bottom: 1.75rem;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .empty-post-btn {
-  background: linear-gradient(135deg, #ffa705, #e67600);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: white;
   border: none;
   font-family: inherit;
   font-size: 0.9rem;
-  font-weight: 700;
-  padding: 0.8rem 1.75rem;
+  font-weight: 800;
+  padding: 0.85rem 2rem;
   border-radius: 12px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  box-shadow: 0 4px 14px rgba(230, 118, 0, 0.25);
-  transition: transform 0.15s ease;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+  transition: all 0.2s ease;
 }
 
 .empty-post-btn:hover {
-  transform: translateY(-1px);
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.45);
 }
 
-/* Delete Modal */
+/* Delete Modal Dialog */
 .delete-dialog-card {
-  background: white;
+  background: #ffffff;
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   padding: 2rem;
   border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.delete-icon-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #fef2f2;
+  border: 2px solid #fecaca;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
 }
 
 .delete-dialog-card h3 {
   margin: 0 0 0.5rem;
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   font-weight: 800;
   color: #0f172a;
 }
 
 .delete-dialog-card p {
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   color: #64748b;
   line-height: 1.5;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.75rem;
 }
 
 .delete-modal-actions {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.85rem;
+  width: 100%;
 }
 
 .btn-confirm-delete {
   flex: 1;
-  background: #ef4444;
+  background: #dc2626;
   color: white;
   border: none;
   font-family: inherit;
-  font-size: 0.88rem;
+  font-size: 0.875rem;
   font-weight: 700;
-  padding: 0.7rem;
-  border-radius: 10px;
+  padding: 0.75rem;
+  border-radius: 12px;
   cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn-confirm-delete:hover {
+  background: #b91c1c;
 }
 
 .btn-cancel-delete {
   flex: 1;
   background: #f1f5f9;
   color: #475569;
-  border: none;
+  border: 1px solid #cbd5e1;
   font-family: inherit;
-  font-size: 0.88rem;
+  font-size: 0.875rem;
   font-weight: 700;
-  padding: 0.7rem;
-  border-radius: 10px;
+  padding: 0.75rem;
+  border-radius: 12px;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel-delete:hover {
+  background: #e2e8f0;
+  color: #0f172a;
 }
 
 /* Auth Prompt */
@@ -542,45 +572,54 @@
   align-items: center;
   padding: 6rem 2rem;
   text-align: center;
-  max-width: 460px;
+  max-width: 480px;
   margin: 0 auto;
 }
 
 .adverts-auth-icon-glow {
-  background: rgba(139, 92, 246, 0.12);
-  border: 1.5px solid rgba(139, 92, 246, 0.25);
-  width: 80px;
-  height: 80px;
+  background: #eff6ff;
+  border: 2px solid #dbeafe;
+  width: 84px;
+  height: 84px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.2);
 }
 
 .adverts-auth-prompt h2 {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   font-weight: 800;
+  color: #0f172a;
   margin: 0 0 0.5rem;
 }
 
 .adverts-auth-prompt p {
   color: #64748b;
   margin-bottom: 1.75rem;
-  font-size: 0.9rem;
+  font-size: 0.925rem;
+  line-height: 1.5;
 }
 
 .adverts-signin-btn {
-  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: white;
   border: none;
   font-family: inherit;
-  font-size: 0.92rem;
-  font-weight: 700;
-  padding: 0.8rem 2.25rem;
+  font-size: 0.925rem;
+  font-weight: 800;
+  padding: 0.85rem 2.5rem;
   border-radius: 12px;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(109, 40, 217, 0.25);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+  transition: all 0.2s ease;
+}
+
+.adverts-signin-btn:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.45);
 }
 
 /* Toast */
@@ -589,7 +628,7 @@
   bottom: 2rem;
   left: 50%;
   transform: translateX(-50%);
-  background: #1e293b;
+  background: #0f172a;
   color: white;
   padding: 0.75rem 1.5rem;
   border-radius: 12px;
@@ -600,7 +639,13 @@
 }
 
 /* Mobile Responsive */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
+  .adverts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
   .adverts-desktop-nav {
     display: none !important;
   }
@@ -626,7 +671,7 @@
   }
 
   .adverts-hero-main-title {
-    font-size: 1.4rem;
+    font-size: 1.45rem;
   }
 
   .adverts-hero-stats-row {
@@ -635,24 +680,13 @@
     display: grid;
   }
 
+  .desktop-only-stat {
+    display: none;
+  }
+
   .adverts-stat-card {
     min-width: unset;
     padding: 0.65rem 1rem;
-  }
-
-  .adverts-hero-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.85rem;
-  }
-
-  .adverts-search-box {
-    max-width: 100%;
-  }
-
-  .adverts-post-new-btn {
-    width: 100%;
-    justify-content: center;
   }
 
   .adverts-grid {

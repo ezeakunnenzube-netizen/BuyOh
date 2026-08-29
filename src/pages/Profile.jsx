@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import AvatarModal from '../components/AvatarModal';
+import { getSavedItemsForUser, getMyListingsForUser } from '../utils/userSync';
 import './Profile.css';
 
 export default function Profile() {
@@ -18,6 +19,9 @@ export default function Profile() {
   const [followingCount, setFollowingCount] = useState(0);
   const [unreadNotifCount, setUnreadNotifCount] = useState(2);
   const [myListingsCount, setMyListingsCount] = useState(0);
+  const [savedCount, setSavedCount] = useState(0);
+
+  const { user, loading, logout } = useAuth();
 
   useEffect(() => {
     const loadCounts = () => {
@@ -35,11 +39,11 @@ export default function Profile() {
             setUnreadNotifCount(unread.length);
           }
         }
-        const savedListings = localStorage.getItem('buyoh_my_listings_v1');
-        if (savedListings) {
-          const parsedListings = JSON.parse(savedListings);
-          if (Array.isArray(parsedListings)) setMyListingsCount(parsedListings.length);
-        }
+        const userListings = getMyListingsForUser(user);
+        setMyListingsCount(userListings.length);
+
+        const savedItems = getSavedItemsForUser(user);
+        setSavedCount(savedItems.length);
       } catch (e) {
         console.error(e);
       }
@@ -48,6 +52,7 @@ export default function Profile() {
     loadCounts();
 
     window.addEventListener('buyoh_listings_updated', loadCounts);
+    window.addEventListener('buyoh_saved_updated', loadCounts);
     window.addEventListener('storage', loadCounts);
     return () => {
       window.removeEventListener('buyoh_listings_updated', loadCounts);
@@ -81,7 +86,6 @@ export default function Profile() {
 
   const [pushEnabled, setPushEnabled] = useState(() => loadPref('push', true));
   const [emailEnabled, setEmailEnabled] = useState(() => loadPref('email', false));
-  const [privacyEnabled, setPrivacyEnabled] = useState(() => loadPref('location', true));
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(() => loadPref('2fa', false));
 
   // Persist preferences to localStorage + Supabase metadata
@@ -102,8 +106,6 @@ export default function Profile() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
-
-  const { user, logout } = useAuth();
 
   // Listen for global avatar update events
   useEffect(() => {
@@ -341,6 +343,38 @@ export default function Profile() {
             </div>
           </div>
 
+          {/* My Posted Adverts Shortcut Card */}
+          <div className="profile-notifications-shortcut" style={{ marginTop: '1rem', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', borderColor: 'rgba(59, 130, 246, 0.3)', cursor: 'pointer' }} onClick={() => navigate('/adverts')}>
+            <div className="p-notif-left">
+              <div className="p-notif-icon-wrap" style={{ background: 'rgba(59, 130, 246, 0.2)', borderColor: 'rgba(59, 130, 246, 0.4)' }}>
+                <PanelTop size={20} color="#60a5fa" />
+              </div>
+              <div className="p-notif-text">
+                <h4 className="p-notif-title" style={{ color: '#ffffff' }}>My Posted Adverts</h4>
+                <p className="p-notif-sub" style={{ color: '#cbd5e1' }}>Manage your active marketplace listings, view stats, and delete ads</p>
+              </div>
+            </div>
+            <div className="p-notif-right">
+              <span className="p-notif-badge" style={{ background: '#2563eb', color: '#ffffff' }}>{myListingsCount} Active</span>
+            </div>
+          </div>
+
+          {/* Saved Collection Shortcut Card */}
+          <div className="profile-notifications-shortcut" style={{ marginTop: '1rem', background: 'linear-gradient(135deg, #1e1b4b 0%, #311b92 100%)', borderColor: 'rgba(245, 158, 11, 0.3)', cursor: 'pointer' }} onClick={() => navigate('/saved')}>
+            <div className="p-notif-left">
+              <div className="p-notif-icon-wrap" style={{ background: 'rgba(245, 158, 11, 0.2)', borderColor: 'rgba(245, 158, 11, 0.4)' }}>
+                <Bookmark size={20} color="#fbbf24" />
+              </div>
+              <div className="p-notif-text">
+                <h4 className="p-notif-title" style={{ color: '#ffffff' }}>Saved Collection</h4>
+                <p className="p-notif-sub" style={{ color: '#cbd5e1' }}>View your bookmarked marketplace listings and track price drops</p>
+              </div>
+            </div>
+            <div className="p-notif-right">
+              <span className="p-notif-badge" style={{ background: '#f59e0b', color: '#ffffff' }}>{savedCount} Saved</span>
+            </div>
+          </div>
+
           {/* Notifications Shortcut Card — Locked for quick access */}
           <div className="profile-notifications-shortcut" onClick={() => navigate('/notifications')}>
             <div className="p-notif-left">
@@ -534,21 +568,7 @@ export default function Profile() {
                 </label>
               </div>
 
-              {/* Location sharing switch */}
-              <div className="setting-toggle-row">
-                <div className="toggle-label-wrap">
-                  <span className="toggle-title">Precise Location Sharing</span>
-                  <span className="toggle-desc">Enhances nearby product searches and distance estimates.</span>
-                </div>
-                <label className="switch-toggle">
-                  <input 
-                    type="checkbox" 
-                    checked={privacyEnabled} 
-                    onChange={e => updatePref('location', e.target.checked, setPrivacyEnabled, 'Location sharing active', 'Location sharing disabled')} 
-                  />
-                  <span className="toggle-slider" />
-                </label>
-              </div>
+
 
               {/* Two factor switch */}
               <div className="setting-toggle-row">
