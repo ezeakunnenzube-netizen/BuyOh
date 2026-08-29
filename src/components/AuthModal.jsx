@@ -26,13 +26,12 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
     try {
       if (isSignUp) {
         // Sign Up Flow
-        if (!whatsapp.trim()) {
-          throw new Error('WhatsApp Number is mandatory for registration');
-        }
         if (password.length < 6) {
           throw new Error('Password must be at least 6 characters long');
         }
-        localStorage.setItem('buyoh_user_whatsapp_v1', whatsapp.trim());
+        if (whatsapp.trim()) {
+          localStorage.setItem('buyoh_user_whatsapp_v1', whatsapp.trim());
+        }
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -196,15 +195,14 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
                 </div>
               </div>
               <div className="auth-input-group">
-                <label>WhatsApp Number <span style={{color: '#ef4444'}}>*</span></label>
+                <label>WhatsApp Number (Optional)</label>
                 <div className="auth-input-wrapper">
                   <Phone size={18} className="auth-field-icon" />
                   <input 
                     type="tel" 
-                    placeholder="+234 809 123 4567" 
+                    placeholder="e.g. +234 809 123 4567" 
                     value={whatsapp}
                     onChange={e => setWhatsapp(e.target.value)}
-                    required
                   />
                 </div>
               </div>

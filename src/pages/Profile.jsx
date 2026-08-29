@@ -141,19 +141,17 @@ export default function Profile() {
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
-    if (!editedWhatsapp.trim()) {
-      showToast("WhatsApp Number is mandatory!");
-      return;
-    }
-
     try {
-      localStorage.setItem('buyoh_user_whatsapp_v1', editedWhatsapp.trim());
+      const cleanWhatsapp = editedWhatsapp ? editedWhatsapp.trim() : '';
+      if (cleanWhatsapp) {
+        localStorage.setItem('buyoh_user_whatsapp_v1', cleanWhatsapp);
+      }
 
       const { data, error } = await supabase.auth.updateUser({
         data: {
           full_name: editedName,
           phone: editedPhone,
-          whatsapp: editedWhatsapp.trim(),
+          whatsapp: cleanWhatsapp,
           location: editedLocation
         }
       });
@@ -163,7 +161,7 @@ export default function Profile() {
         ...prev,
         name: editedName,
         phone: editedPhone,
-        whatsapp: editedWhatsapp.trim(),
+        whatsapp: cleanWhatsapp || 'Not provided',
         location: editedLocation
       }));
       setIsEditing(false);
@@ -404,8 +402,8 @@ export default function Profile() {
                       <span className="info-val">{userData.phone}</span>
                     </div>
                     <div className="info-row">
-                      <span className="info-label">WhatsApp Number <span style={{color: '#ef4444', fontWeight: 800}}>*</span></span>
-                      <span className="info-val">{userData.whatsapp}</span>
+                      <span className="info-label">WhatsApp Number</span>
+                      <span className="info-val">{userData.whatsapp || 'Not provided'}</span>
                     </div>
                     <div className="info-row">
                       <span className="info-label">Location</span>
@@ -436,13 +434,12 @@ export default function Profile() {
                       />
                     </div>
                     <div className="input-group">
-                      <label>WhatsApp Number <span style={{color: '#ef4444', fontWeight: 800}}>* (Mandatory)</span></label>
+                      <label>WhatsApp Number (Optional)</label>
                       <input 
                         type="tel" 
                         value={editedWhatsapp} 
                         onChange={e => setEditedWhatsapp(e.target.value)} 
-                        placeholder="+234 809 123 4567"
-                        required 
+                        placeholder="e.g. +234 809 123 4567"
                       />
                     </div>
                     <div className="input-group">
