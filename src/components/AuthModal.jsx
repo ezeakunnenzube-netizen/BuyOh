@@ -80,21 +80,23 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialError }) 
   };
 
   const handleGoogleSignIn = async () => {
+    if (loading) return;
     setLoading(true);
     setErrorMessage('');
     setSuccessMessage('');
     try {
       const redirectUrl = window.location.origin;
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: redirectUrl
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
         }
       });
       if (error) throw error;
-      if (data?.url) {
-        window.location.href = data.url;
-      }
     } catch (err) {
       console.error("Google Sign-In Error:", err);
       setErrorMessage(err.message || 'Google Sign-In failed. Please try again.');
@@ -200,6 +202,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialError }) 
                     placeholder="e.g. Adebayo Johnson" 
                     value={fullName}
                     onChange={e => setFullName(e.target.value)}
+                    autoComplete="name"
                     required
                   />
                 </div>
@@ -213,6 +216,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialError }) 
                     placeholder="e.g. +234 809 123 4567" 
                     value={whatsapp}
                     onChange={e => setWhatsapp(e.target.value)}
+                    autoComplete="tel"
                   />
                 </div>
               </div>
@@ -229,6 +233,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialError }) 
                 placeholder="you@example.com" 
                 value={email}
                 onChange={e => setEmail(e.target.value)}
+                autoComplete="email"
                 required
               />
             </div>
@@ -244,6 +249,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialError }) 
                 placeholder="••••••••" 
                 value={password}
                 onChange={e => setPassword(e.target.value)}
+                autoComplete={isSignUp ? "new-password" : "current-password"}
                 required
               />
               <button 
