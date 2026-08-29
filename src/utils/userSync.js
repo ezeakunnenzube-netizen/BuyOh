@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
+import { products } from '../data/productData';
 
 /**
  * Utility functions to manage user-scoped data (saved adverts, my listings, etc.)
@@ -188,7 +189,7 @@ export const registerPublicListing = (newListing) => {
     if (!Array.isArray(publicListings)) publicListings = [];
     
     // Deduplicate by ID
-    const existsIndex = publicListings.findIndex(p => p.id === newListing.id);
+    const existsIndex = publicListings.findIndex(p => String(p.id) === String(newListing.id));
     if (existsIndex >= 0) {
       publicListings[existsIndex] = newListing;
     } else {
@@ -221,7 +222,7 @@ export const getAllPublicListings = (user) => {
     if (Array.isArray(userListings) && userListings.length > 0) {
       let updated = false;
       userListings.forEach(item => {
-        if (!publicPool.some(p => p.id === item.id)) {
+        if (!publicPool.some(p => String(p.id) === String(item.id))) {
           publicPool.unshift(item);
           updated = true;
         }
@@ -235,4 +236,29 @@ export const getAllPublicListings = (user) => {
   }
 
   return publicPool;
+};
+
+// --- GENERAL PRODUCT POOL (SINGLE SOURCE OF TRUTH) ---
+
+export const getGeneralProductPool = (user) => {
+  const publicListings = getAllPublicListings(user);
+  const defaultPlaceholder = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
+  
+  const cleanedListings = publicListings.map(item => {
+    let img = item.image;
+    if (!img || img.startsWith('blob:')) {
+      img = defaultPlaceholder;
+    }
+    let imgs = Array.isArray(item.images) ? item.images.map(u => (!u || u.startsWith('blob:')) ? defaultPlaceholder : u) : [img];
+    return { ...item, image: img, images: imgs };
+  });
+
+  const pool = [...cleanedListings];
+  products.forEach(p => {
+    if (!pool.some(existing => String(existing.id) === String(p.id))) {
+      pool.push(p);
+    }
+  });
+
+  return pool;
 };

@@ -5,7 +5,7 @@ import {NavLink} from "react-router-dom"
 import {locations} from "../data/statesData.js"
 import {products} from "../data/productData.js"
 import {useAuth} from "../context/AuthContext"
-import {getSavedItemsForUser, saveItemsForUser, getAllPublicListings} from "../utils/userSync"
+import {getSavedItemsForUser, saveItemsForUser, getAllPublicListings, getGeneralProductPool} from "../utils/userSync"
 
 const CATEGORIES = [
   { label: 'All',                    emoji: '🛒' },
@@ -210,7 +210,7 @@ export default function Home(){
   const [agricMenuOpen,     setAgricMenuOpen]     = useState(false)
   const [animalsMenuOpen,   setAnimalsMenuOpen]   = useState(false)
   const [jobsMenuOpen,      setJobsMenuOpen]      = useState(false)
-  const [allProducts, setAllProducts] = useState(products);
+  const [allProducts, setAllProducts] = useState(() => getGeneralProductPool(null));
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
 
@@ -219,24 +219,8 @@ export default function Home(){
   useEffect(() => {
     const reloadListings = () => {
       try {
-        const publicListings = getAllPublicListings(user);
-        const defaultPlaceholder = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
-        const cleanedListings = publicListings.map(item => {
-          let img = item.image;
-          if (!img || img.startsWith('blob:')) {
-            img = defaultPlaceholder;
-          }
-          let imgs = Array.isArray(item.images) ? item.images.map(u => (!u || u.startsWith('blob:')) ? defaultPlaceholder : u) : [img];
-          return { ...item, image: img, images: imgs };
-        });
-
-        const combined = [...cleanedListings];
-        products.forEach(p => {
-          if (!combined.some(existing => existing.id === p.id)) {
-            combined.push(p);
-          }
-        });
-        setAllProducts(combined);
+        const pool = getGeneralProductPool(user);
+        setAllProducts(pool);
       } catch (e) {
         console.error(e);
       }

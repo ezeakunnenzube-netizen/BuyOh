@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { products } from '../data/productData';
 import { useAuth } from '../context/AuthContext';
-import { getSavedItemsForUser, saveItemsForUser } from '../utils/userSync';
+import { getSavedItemsForUser, saveItemsForUser, getAllPublicListings, getGeneralProductPool } from '../utils/userSync';
 import './ProductDetails.css';
 
 export default function ProductDetails() {
@@ -64,14 +64,12 @@ export default function ProductDetails() {
 
   // Find product details
   useEffect(() => {
-    let found = products.find(p => p.id === productId);
-    if (!found) {
-      try {
-        const userListings = JSON.parse(localStorage.getItem('buyoh_my_listings_v1')) || [];
-        found = userListings.find(p => p.id === productId);
-      } catch (e) {
-        console.error(e);
-      }
+    let found = null;
+    try {
+      const pool = getGeneralProductPool(user);
+      found = pool.find(p => String(p.id) === String(productId));
+    } catch (e) {
+      console.error("Error looking up product from general pool:", e);
     }
 
     if (found) {
