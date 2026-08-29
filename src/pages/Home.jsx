@@ -263,18 +263,27 @@ export default function Home(){
   }, [user]);
 
   const toggleSaveProduct = async (product, e) => {
-    e.preventDefault();
-    e.stopPropagation();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (!user) {
       setIsAuthOpen(true);
       return;
     }
     try {
       const existing = getSavedItemsForUser(user);
-      const isSaved = existing.some(item => (typeof item === 'object' ? item.id : item) === product.id);
+      const isSaved = existing.some(item => {
+        const itemId = typeof item === 'object' ? item.id : item;
+        return String(itemId) === String(product.id);
+      });
+
       let updated;
       if (isSaved) {
-        updated = existing.filter(item => (typeof item === 'object' ? item.id : item) !== product.id);
+        updated = existing.filter(item => {
+          const itemId = typeof item === 'object' ? item.id : item;
+          return String(itemId) !== String(product.id);
+        });
       } else {
         updated = [product, ...existing.filter(item => typeof item === 'object')];
       }
@@ -1207,14 +1216,22 @@ export default function Home(){
                     {product.condition}
                   </span>
                   <span className="product-category-tag">{product.subcategory || product.category}</span>
-                  <button
-                    type="button"
-                    className={`card-save-btn ${savedItems.some(item => (typeof item === 'object' ? item.id : item) === product.id) ? 'card-save-active' : ''}`}
-                    onClick={(e) => toggleSaveProduct(product, e)}
-                    title={savedItems.some(item => (typeof item === 'object' ? item.id : item) === product.id) ? "Remove from Saved" : "Save Advert"}
-                  >
-                    <Bookmark size={15} fill={savedItems.some(item => (typeof item === 'object' ? item.id : item) === product.id) ? "#ffa705" : "none"} color={savedItems.some(item => (typeof item === 'object' ? item.id : item) === product.id) ? "#ffa705" : "#64748b"} />
-                  </button>
+                  {(() => {
+                    const isProductSaved = savedItems.some(item => {
+                      const itemId = typeof item === 'object' ? item.id : item;
+                      return String(itemId) === String(product.id);
+                    });
+                    return (
+                      <button
+                        type="button"
+                        className={`card-save-btn ${isProductSaved ? 'card-save-active' : ''}`}
+                        onClick={(e) => toggleSaveProduct(product, e)}
+                        title={isProductSaved ? "Remove from Saved" : "Save Advert"}
+                      >
+                        <Bookmark size={15} fill={isProductSaved ? "#ffa705" : "none"} color={isProductSaved ? "#ffa705" : "#64748b"} />
+                      </button>
+                    );
+                  })()}
                 </div>
               </NavLink>
               <div className="product-info">

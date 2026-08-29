@@ -42,7 +42,10 @@ export default function SavedAdverts() {
 
   const handleRemove = async (id) => {
     try {
-      const updated = savedItems.filter(item => item.id !== id);
+      const updated = savedItems.filter(item => {
+        const itemId = typeof item === 'object' ? item.id : item;
+        return String(itemId) !== String(id);
+      });
       setSavedItems(updated);
       await saveItemsForUser(user, updated);
       setRemoveId(null);

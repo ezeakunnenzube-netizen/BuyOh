@@ -163,9 +163,47 @@ export default function ProductDetails() {
   useEffect(() => {
     if (product) {
       const saved = getSavedItemsForUser(user);
-      setIsSaved(saved.some(item => (typeof item === 'object' ? item.id : item) === product.id));
+      const isItemSaved = saved.some(item => {
+        const itemId = typeof item === 'object' ? item.id : item;
+        return String(itemId) === String(product.id);
+      });
+      setIsSaved(isItemSaved);
     }
   }, [product, user]);
+
+  const handleSaveToggle = async () => {
+    if (!user) {
+      setIsAuthOpen(true);
+      return;
+    }
+    try {
+      const existing = getSavedItemsForUser(user);
+      const isCurrentlySaved = existing.some(item => {
+        const itemId = typeof item === 'object' ? item.id : item;
+        return String(itemId) === String(product.id);
+      });
+
+      let updated;
+      if (isCurrentlySaved) {
+        updated = existing.filter(item => {
+          const itemId = typeof item === 'object' ? item.id : item;
+          return String(itemId) !== String(product.id);
+        });
+        setIsSaved(false);
+        setLikesCount(prev => Math.max(0, prev - 1));
+        showToast('Removed from Saved Collection');
+      } else {
+        updated = [product, ...existing.filter(item => typeof item === 'object')];
+        setIsSaved(true);
+        setLikesCount(prev => prev + 1);
+        showToast('Saved to your collection!');
+      }
+
+      await saveItemsForUser(user, updated);
+    } catch (err) {
+      console.error("Error toggling saved item:", err);
+    }
+  };
 
   // Load real reviews for this specific product on mount
   useEffect(() => {
@@ -340,24 +378,6 @@ export default function ProductDetails() {
     setShowReportModal(false);
     setReportDetails('');
     showToast('Report submitted. Thank you for keeping BuyOh safe!');
-  };
-
-  const handleSaveToggle = async () => {
-    if (!user) { setIsAuthOpen(true); return; }
-    try {
-      let saved = getSavedItemsForUser(user);
-      const alreadySaved = saved.some(item => (typeof item === 'object' ? item.id : item) === product.id);
-      if (alreadySaved) {
-        saved = saved.filter(item => (typeof item === 'object' ? item.id : item) !== product.id);
-        setIsSaved(false);
-        showToast('Removed from saved items');
-      } else {
-        saved = [product, ...saved.filter(item => typeof item === 'object')];
-        setIsSaved(true);
-        showToast('Saved to your collection ❤️');
-      }
-      await saveItemsForUser(user, saved);
-    } catch (e) { console.error(e); }
   };
 
   const handleMakeOffer = (e) => {
