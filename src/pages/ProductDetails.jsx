@@ -445,7 +445,9 @@ export default function ProductDetails() {
         customSpecs.push({ label: 'PLATFORM', value: s.console });
       }
 
-      if (product.condition) customSpecs.push({ label: 'CONDITION', value: product.condition });
+      if (product.condition && product.category !== 'Services' && product.category !== 'Jobs' && product.condition !== 'Service' && product.condition !== 'N/A') {
+        customSpecs.push({ label: 'CONDITION', value: product.condition });
+      }
       if (customSpecs.length > 0) return customSpecs;
     }
 
@@ -594,6 +596,14 @@ export default function ProductDetails() {
     .filter(p => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
 
+  const handleBack = () => {
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/', { replace: true });
+    }
+  };
+
   return (
     <div className="detail-page-wrapper">
       {/* ── Sticky Desktop Navigation (same as Home) ── */}
@@ -676,7 +686,9 @@ export default function ProductDetails() {
           <div className="detail-left-col">
             {/* Cover Carousel */}
             <div className="detail-carousel-card">
-              <span className="carousel-badge">{product.condition}</span>
+              {product.category !== 'Services' && product.category !== 'Jobs' && product.condition && product.condition !== 'Service' && product.condition !== 'N/A' && (
+                <span className="carousel-badge">{product.condition}</span>
+              )}
               <div className="carousel-main-image-wrap">
                 <img 
                   src={thumbnails[activeImageIndex] || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80"} 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   User, ShieldCheck, MapPin, Phone, Mail, Bell, Lock, Eye, LogOut, 
-  Trash2, ArrowLeft, Camera, Check, Settings, MessageSquareMore, 
+  Trash2, ArrowLeft, Camera, Check, MessageSquareMore, 
   BellRing, PanelTop, UserRound, Bookmark, ShieldAlert, KeyRound,
   ChevronDown
 } from 'lucide-react';
@@ -75,32 +75,6 @@ export default function Profile() {
   const [editedName, setEditedName] = useState(userData.name);
   const [editedPhone, setEditedPhone] = useState(userData.phone);
   const [editedLocation, setEditedLocation] = useState(userData.location);
-
-  // Settings Toggles – load from localStorage on mount
-  const loadPref = (key, fallback) => {
-    try {
-      const saved = localStorage.getItem(`buyoh_pref_${key}`);
-      return saved !== null ? JSON.parse(saved) : fallback;
-    } catch { return fallback; }
-  };
-
-  const [pushEnabled, setPushEnabled] = useState(() => loadPref('push', true));
-  const [emailEnabled, setEmailEnabled] = useState(() => loadPref('email', false));
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(() => loadPref('2fa', false));
-
-  // Persist preferences to localStorage + Supabase metadata
-  const updatePref = async (key, value, setter, toastOn, toastOff) => {
-    setter(value);
-    localStorage.setItem(`buyoh_pref_${key}`, JSON.stringify(value));
-    showToast(value ? toastOn : toastOff);
-    try {
-      await supabase.auth.updateUser({
-        data: { [`pref_${key}`]: value }
-      });
-    } catch (err) {
-      console.error('Failed to sync preference:', err);
-    }
-  };
 
   const [toastMessage, setToastMessage] = useState('');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -529,61 +503,6 @@ export default function Profile() {
                     </button>
                   </form>
                 )}
-              </div>
-            </div>
-
-            {/* Column 2: Notification & Security preferences */}
-            <div className="settings-panel">
-              <h3 className="panel-title"><Settings size={18} className="panel-icon" /> App Preferences</h3>
-
-              {/* Push notifications switch */}
-              <div className="setting-toggle-row">
-                <div className="toggle-label-wrap">
-                  <span className="toggle-title">Push Notifications</span>
-                  <span className="toggle-desc">Get instant alerts for messages, bids, and offers.</span>
-                </div>
-                <label className="switch-toggle">
-                  <input 
-                    type="checkbox" 
-                    checked={pushEnabled} 
-                    onChange={e => updatePref('push', e.target.checked, setPushEnabled, 'Push alerts enabled', 'Push alerts disabled')} 
-                  />
-                  <span className="toggle-slider" />
-                </label>
-              </div>
-
-              {/* Email Alerts switch */}
-              <div className="setting-toggle-row">
-                <div className="toggle-label-wrap">
-                  <span className="toggle-title">Email Notifications</span>
-                  <span className="toggle-desc">Receive email summaries for new platform items.</span>
-                </div>
-                <label className="switch-toggle">
-                  <input 
-                    type="checkbox" 
-                    checked={emailEnabled} 
-                    onChange={e => updatePref('email', e.target.checked, setEmailEnabled, 'Email alerts enabled', 'Email alerts disabled')} 
-                  />
-                  <span className="toggle-slider" />
-                </label>
-              </div>
-
-
-
-              {/* Two factor switch */}
-              <div className="setting-toggle-row">
-                <div className="toggle-label-wrap">
-                  <span className="toggle-title">Two-Factor Authentication</span>
-                  <span className="toggle-desc">Secure logins with verification codes.</span>
-                </div>
-                <label className="switch-toggle">
-                  <input 
-                    type="checkbox" 
-                    checked={twoFactorEnabled} 
-                    onChange={e => updatePref('2fa', e.target.checked, setTwoFactorEnabled, '2FA protection active', '2FA deactivated')} 
-                  />
-                  <span className="toggle-slider" />
-                </label>
               </div>
             </div>
           </div>

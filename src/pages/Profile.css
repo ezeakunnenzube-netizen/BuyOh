@@ -309,9 +309,9 @@
 /* Multi-column app settings details */
 .profile-settings-columns {
   padding: 2rem;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
   background: #f8fafc;
 }
 

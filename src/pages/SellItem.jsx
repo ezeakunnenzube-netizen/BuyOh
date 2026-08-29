@@ -28,7 +28,7 @@ const CATEGORIES = [
   { label: 'Jobs', emoji: '💼', subcategories: ['Accounting & Finance', 'Admin & Office', 'Engineering', 'Healthcare', 'IT & Software', 'Sales & Marketing', 'Teaching & Education', 'Driving & Logistics', 'Construction & Skilled Trades'] },
 ];
 
-const CONDITIONS = ['Brand New', 'Used', 'Refurbished'];
+const CONDITIONS = ['Brand New', 'Used'];
 
 const NIGERIAN_STATES = [
   'Lagos State', 'Abuja (FCT)', 'Rivers State', 'Oyo State', 'Kano State',
@@ -86,6 +86,14 @@ export default function SellItem() {
 
   // Gaming specs
   const [gamingConsole, setGamingConsole] = useState('');
+
+  // Services, Jobs, Agriculture, Appliances specs
+  const [billingType, setBillingType] = useState('');
+  const [experienceLevel, setExperienceLevel] = useState('');
+  const [jobType, setJobType] = useState('');
+  const [experienceRequired, setExperienceRequired] = useState('');
+  const [unitQuantity, setUnitQuantity] = useState('');
+  const [powerSource, setPowerSource] = useState('');
 
   // UI state
   const [currentStep, setCurrentStep] = useState(1);
@@ -219,7 +227,7 @@ export default function SellItem() {
       if (title.trim().length < 5) errs.title = 'Title must be at least 5 characters';
       if (!category) errs.category = 'Select a category';
       if (!subcategory) errs.subcategory = 'Select a subcategory';
-      if (!condition) errs.condition = 'Select item condition';
+      if (category !== 'Services' && category !== 'Jobs' && !condition) errs.condition = 'Select item condition';
     }
     if (step === 2) {
       if (!price || Number(price) <= 0) errs.price = 'Enter a valid price';
@@ -272,7 +280,7 @@ export default function SellItem() {
       price: Number(price),
       category,
       subcategory,
-      condition,
+      condition: (category === 'Services' || category === 'Jobs') ? '' : (condition || 'Used'),
       location,
       description,
       negotiable,
@@ -314,6 +322,23 @@ export default function SellItem() {
         if (category === 'Gaming') {
           if (gamingConsole.trim()) s.console = gamingConsole.trim();
         }
+
+        if (category === 'Services') {
+          if (billingType.trim()) s.billingType = billingType.trim();
+          if (experienceLevel.trim()) s.experienceLevel = experienceLevel.trim();
+        }
+
+        if (category === 'Jobs') {
+          if (jobType.trim()) s.jobType = jobType.trim();
+          if (experienceRequired.trim()) s.experienceRequired = experienceRequired.trim();
+        }
+
+        if (category === 'Agriculture') {
+          if (unitQuantity.trim()) s.unitQuantity = unitQuantity.trim();
+        }
+
+        if (powerSource.trim()) s.powerSource = powerSource.trim();
+
         return s;
       })(),
       imageCount: images.length,
@@ -362,6 +387,14 @@ export default function SellItem() {
   const formatPrice = (val) => {
     if (!val) return '';
     return new Intl.NumberFormat('en-NG').format(val);
+  };
+
+  const handleBack = () => {
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/', { replace: true });
+    }
   };
 
   if (loading) {
@@ -531,23 +564,25 @@ export default function SellItem() {
               </div>
             )}
 
-            {/* Condition */}
-            <div className="form-group">
-              <label className="form-label">Condition <span className="required">*</span></label>
-              <div className="condition-pills">
-                {CONDITIONS.map(cond => (
-                  <button 
-                    key={cond}
-                    type="button"
-                    className={`condition-pill ${condition === cond ? 'pill-active' : ''}`}
-                    onClick={() => setCondition(cond)}
-                  >
-                    {cond}
-                  </button>
-                ))}
+            {/* Condition (Only for physical items, not Services or Jobs) */}
+            {category !== 'Services' && category !== 'Jobs' && (
+              <div className="form-group">
+                <label className="form-label">Condition <span className="required">*</span></label>
+                <div className="condition-pills">
+                  {CONDITIONS.map(cond => (
+                    <button 
+                      key={cond}
+                      type="button"
+                      className={`condition-pill ${condition === cond ? 'pill-active' : ''}`}
+                      onClick={() => setCondition(cond)}
+                    >
+                      {cond}
+                    </button>
+                  ))}
+                </div>
+                {errors.condition && <span className="error-text"><AlertCircle size={12} /> {errors.condition}</span>}
               </div>
-              {errors.condition && <span className="error-text"><AlertCircle size={12} /> {errors.condition}</span>}
-            </div>
+            )}
 
             {/* DYNAMIC CATEGORY-SPECIFIC SPECIFICATIONS */}
             {(category === 'Phones & Tablets' || category === 'Electronics' || category === 'Cameras' || category === 'Audio') && (
@@ -864,6 +899,115 @@ export default function SellItem() {
               </div>
             )}
 
+            {category === 'Services' && (
+              <div className="spec-fields-box">
+                <h4 className="spec-fields-title">🛠️ Service Specifications</h4>
+                <div className="spec-fields-grid">
+                  <div className="form-group">
+                    <label className="form-label">Pricing / Billing Basis</label>
+                    <div className="form-select-wrap">
+                      <select className="form-select" value={billingType} onChange={e => setBillingType(e.target.value)}>
+                        <option value="">Select pricing structure</option>
+                        <option value="Per Project / Job">Per Project / Job</option>
+                        <option value="Hourly Rate">Hourly Rate</option>
+                        <option value="Daily Rate">Daily Rate</option>
+                        <option value="Fixed Quote">Fixed Quote</option>
+                      </select>
+                      <ChevronDown size={16} className="select-chevron" />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Years of Experience</label>
+                    <div className="form-select-wrap">
+                      <select className="form-select" value={experienceLevel} onChange={e => setExperienceLevel(e.target.value)}>
+                        <option value="">Select experience</option>
+                        <option value="1-3 Years">1-3 Years</option>
+                        <option value="3-5 Years">3-5 Years</option>
+                        <option value="5-10 Years">5-10 Years</option>
+                        <option value="10+ Years Expert">10+ Years Expert</option>
+                      </select>
+                      <ChevronDown size={16} className="select-chevron" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {category === 'Jobs' && (
+              <div className="spec-fields-box">
+                <h4 className="spec-fields-title">💼 Job Role Specifications</h4>
+                <div className="spec-fields-grid">
+                  <div className="form-group">
+                    <label className="form-label">Employment Type</label>
+                    <div className="form-select-wrap">
+                      <select className="form-select" value={jobType} onChange={e => setJobType(e.target.value)}>
+                        <option value="">Select job type</option>
+                        <option value="Full-Time">Full-Time</option>
+                        <option value="Part-Time">Part-Time</option>
+                        <option value="Contract / Freelance">Contract / Freelance</option>
+                        <option value="Remote Work">Remote Work</option>
+                        <option value="Internship">Internship</option>
+                      </select>
+                      <ChevronDown size={16} className="select-chevron" />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Required Experience</label>
+                    <div className="form-select-wrap">
+                      <select className="form-select" value={experienceRequired} onChange={e => setExperienceRequired(e.target.value)}>
+                        <option value="">Select required experience</option>
+                        <option value="Entry Level (0-1 yrs)">Entry Level (0-1 yrs)</option>
+                        <option value="Mid Level (2-4 yrs)">Mid Level (2-4 yrs)</option>
+                        <option value="Senior Level (5+ yrs)">Senior Level (5+ yrs)</option>
+                      </select>
+                      <ChevronDown size={16} className="select-chevron" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {category === 'Agriculture' && (
+              <div className="spec-fields-box">
+                <h4 className="spec-fields-title">🌾 Agriculture Specifications</h4>
+                <div className="spec-fields-grid">
+                  <div className="form-group">
+                    <label className="form-label">Quantity / Unit Type</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      placeholder="e.g. Per 50kg Bag, Per Tonne, Per Crate, Per Head"
+                      value={unitQuantity}
+                      onChange={e => setUnitQuantity(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(category === 'Electronics' || category === 'Home & Appliances') && (
+              <div className="spec-fields-box">
+                <h4 className="spec-fields-title">⚡ Power & Utility Specifications</h4>
+                <div className="spec-fields-grid">
+                  <div className="form-group">
+                    <label className="form-label">Power Source / Compatibility</label>
+                    <div className="form-select-wrap">
+                      <select className="form-select" value={powerSource} onChange={e => setPowerSource(e.target.value)}>
+                        <option value="">Select power source</option>
+                        <option value="AC Electric">AC Electric</option>
+                        <option value="Solar / Inverter Friendly">Solar / Inverter Friendly</option>
+                        <option value="Gas Powered">Gas Powered</option>
+                        <option value="Rechargeable / Dual Power">Rechargeable / Dual Power</option>
+                      </select>
+                      <ChevronDown size={16} className="select-chevron" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="form-nav-buttons">
               <div />
               <button className="btn-next" onClick={nextStep}>
@@ -931,7 +1075,13 @@ export default function SellItem() {
               <label className="form-label"><FileText size={14} /> Description <span className="required">*</span></label>
               <textarea 
                 className={`form-textarea ${errors.description ? 'input-error' : ''}`}
-                placeholder="Describe your item in detail — include condition, features, reason for selling, and what's included in the package..."
+                placeholder={
+                  category === 'Services' ? "Describe your service offerings in detail — scope of work, turnaround time, coverage areas, pricing structure, and portfolio..." :
+                  category === 'Jobs' ? "Describe the job role — key responsibilities, required qualifications/skills, work hours, location, and compensation benefits..." :
+                  category === 'Property' ? "Describe the property — location landmarks, security, water/electricity status, lease terms, and facility highlights..." :
+                  category === 'Vehicles' ? "Describe the vehicle — engine health, customs clearance status, accident history, interior/exterior condition, and registration..." :
+                  "Describe your item in detail — include condition, features, reason for selling, and what's included in the package..."
+                }
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 maxLength={2000}
@@ -1035,9 +1185,11 @@ export default function SellItem() {
                     <span><MapPin size={12} /> {location || 'Location'}</span>
                     <span><Layers size={12} /> {category || 'Category'} {subcategory ? `› ${subcategory}` : ''}</span>
                   </div>
-                  <span className={`preview-condition ${condition === 'Brand New' ? 'cond-new' : 'cond-used'}`}>
-                    {condition || 'Condition'}
-                  </span>
+                  {category !== 'Services' && category !== 'Jobs' && condition && (
+                    <span className={`preview-condition ${condition === 'Brand New' ? 'cond-new' : 'cond-used'}`}>
+                      {condition}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -1082,10 +1234,12 @@ export default function SellItem() {
                 <span>Price</span>
                 <strong>₦ {formatPrice(price)} {negotiable ? '(Negotiable)' : ''}</strong>
               </div>
-              <div className="summary-row">
-                <span>Condition</span>
-                <strong>{condition}</strong>
-              </div>
+              {category !== 'Services' && category !== 'Jobs' && condition && (
+                <div className="summary-row">
+                  <span>Condition</span>
+                  <strong>{condition}</strong>
+                </div>
+              )}
               <div className="summary-row">
                 <span>Photos</span>
                 <strong>{images.length} uploaded</strong>

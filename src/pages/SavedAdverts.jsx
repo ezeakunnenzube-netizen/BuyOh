@@ -277,9 +277,11 @@ export default function SavedAdverts() {
                         e.target.src = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
                       }}
                     />
-                    <span className={`saved-condition-badge ${item.condition === 'Brand New' ? 'badge-new' : 'badge-used'}`}>
-                      {item.condition}
-                    </span>
+                    {item.category !== 'Services' && item.category !== 'Jobs' && item.condition && item.condition !== 'Service' && item.condition !== 'N/A' && (
+                      <span className={`saved-condition-badge ${item.condition === 'Brand New' ? 'badge-new' : 'badge-used'}`}>
+                        {item.condition}
+                      </span>
+                    )}
                   </div>
                 </NavLink>
 
