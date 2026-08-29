@@ -262,35 +262,50 @@ export default function Home(){
     };
   }, [user]);
 
-  const toggleSaveProduct = async (product, e) => {
+  const toggleSaveProduct = (product, e) => {
     if (e) {
-      e.preventDefault();
-      e.stopPropagation();
+      if (e.preventDefault) e.preventDefault();
+      if (e.stopPropagation) e.stopPropagation();
     }
-    if (!user) {
-      setIsAuthOpen(true);
-      return;
-    }
+    
     try {
-      const existing = getSavedItemsForUser(user);
-      const isSaved = existing.some(item => {
-        const itemId = typeof item === 'object' ? item.id : item;
-        return String(itemId) === String(product.id);
-      });
+      const likesKey = `buyoh_likes_count_${product.id}`;
+      const baseLikes = product.likes !== undefined ? Number(product.likes) : 5;
+      const storedLikes = localStorage.getItem(likesKey);
+      let currentCount = storedLikes !== null ? parseInt(storedLikes, 10) : baseLikes;
+      if (isNaN(currentCount)) currentCount = baseLikes;
 
-      let updated;
-      if (isSaved) {
-        updated = existing.filter(item => {
+      setSavedItems(prevSaved => {
+        const isSaved = prevSaved.some(item => {
           const itemId = typeof item === 'object' ? item.id : item;
-          return String(itemId) !== String(product.id);
+          return String(itemId) === String(product.id);
         });
-      } else {
-        updated = [product, ...existing.filter(item => typeof item === 'object')];
-      }
-      setSavedItems(updated);
-      await saveItemsForUser(user, updated);
+
+        let updated;
+        let newCount;
+        if (isSaved) {
+          updated = prevSaved.filter(item => {
+            const itemId = typeof item === 'object' ? item.id : item;
+            return String(itemId) !== String(product.id);
+          });
+          newCount = Math.max(0, currentCount - 1);
+        } else {
+          updated = [product, ...prevSaved.filter(item => typeof item === 'object')];
+          newCount = currentCount + 1;
+        }
+
+        try {
+          localStorage.setItem(likesKey, newCount.toString());
+          saveItemsForUser(user, updated);
+        } catch (err) {}
+
+        window.dispatchEvent(new CustomEvent('buyoh_saved_updated'));
+        window.dispatchEvent(new CustomEvent('buyoh_likes_updated', { detail: { productId: product.id } }));
+
+        return updated;
+      });
     } catch (err) {
-      console.error(err);
+      console.error("Error toggling saved product:", err);
     }
   };
 
@@ -1200,8 +1215,8 @@ export default function Home(){
         <div className="products-grid">
           {filteredProducts.map(product=>(
             <div className="product-card" key={product.id}>
-              <NavLink to={`/product/${product.id}`} className="product-card-media-link">
-                <div className="product-image-wrap">
+              <div className="product-image-wrap">
+                <NavLink to={`/product/${product.id}`} className="product-card-media-link">
                   <img 
                     src={product.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80"} 
                     alt={product.name} 
@@ -1212,28 +1227,35 @@ export default function Home(){
                       e.target.src = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
                     }}
                   />
-                  <span className={`product-condition-badge ${product.condition === 'Brand New' ? 'badge-new' : 'badge-used'}`}>
-                    {product.condition}
-                  </span>
+                  {product.condition && product.category !== 'Services' && product.category !== 'Jobs' && (
+                    <span className={`product-condition-badge ${product.condition === 'Brand New' ? 'badge-new' : 'badge-used'}`}>
+                      {product.condition}
+                    </span>
+                  )}
                   <span className="product-category-tag">{product.subcategory || product.category}</span>
-                  {(() => {
-                    const isProductSaved = savedItems.some(item => {
-                      const itemId = typeof item === 'object' ? item.id : item;
-                      return String(itemId) === String(product.id);
-                    });
+                </NavLink>
+
+                {(() => {
+                  const isProductSaved = savedItems.some(item => {
+                    const itemId = typeof item === 'object' ? item.id : item;
+                    return String(itemId) === String(product.id);
+                  });
                     return (
                       <button
                         type="button"
                         className={`card-save-btn ${isProductSaved ? 'card-save-active' : ''}`}
-                        onClick={(e) => toggleSaveProduct(product, e)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleSaveProduct(product, e);
+                        }}
                         title={isProductSaved ? "Remove from Saved" : "Save Advert"}
                       >
-                        <Bookmark size={15} fill={isProductSaved ? "#ffa705" : "none"} color={isProductSaved ? "#ffa705" : "#64748b"} />
+                        <Bookmark size={16} fill={isProductSaved ? "#ffa705" : "none"} color={isProductSaved ? "#ffa705" : "#64748b"} style={{ pointerEvents: 'none' }} />
                       </button>
                     );
-                  })()}
-                </div>
-              </NavLink>
+                })()}
+              </div>
               <div className="product-info">
                 <NavLink to={`/product/${product.id}`} className="product-card-info-link">
                   <p className="product-name">{product.name}</p>

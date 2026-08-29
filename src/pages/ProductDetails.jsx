@@ -129,18 +129,19 @@ export default function ProductDetails() {
       localStorage.setItem(viewsKey, currentViews.toString());
       setViewsCount(currentViews);
 
-      // Track real likes
-      const likesKey = `buyoh_likes_prod_${found.id}`;
-      let currentLikes = 0;
+      // Track real likes/saves
+      const likesKey = `buyoh_likes_count_${found.id}`;
+      const baseLikes = found.likes !== undefined ? Number(found.likes) : 5;
+      let currentLikes = baseLikes;
       try {
         const savedLikes = localStorage.getItem(likesKey);
-        if (savedLikes) {
+        if (savedLikes !== null) {
           currentLikes = parseInt(savedLikes, 10);
         }
       } catch (e) {
-        currentLikes = 0;
+        currentLikes = baseLikes;
       }
-      setLikesCount(currentLikes);
+      setLikesCount(isNaN(currentLikes) ? baseLikes : currentLikes);
 
       // Real time elapsed
       if (found.createdAt) {
@@ -159,15 +160,31 @@ export default function ProductDetails() {
     }
   }, [productId]);
 
-  // Load saved item status
+  // Load saved item status and sync likes count listener
   useEffect(() => {
     if (product) {
-      const saved = getSavedItemsForUser(user);
-      const isItemSaved = saved.some(item => {
-        const itemId = typeof item === 'object' ? item.id : item;
-        return String(itemId) === String(product.id);
-      });
-      setIsSaved(isItemSaved);
+      const loadStatus = () => {
+        const saved = getSavedItemsForUser(user);
+        const isItemSaved = saved.some(item => {
+          const itemId = typeof item === 'object' ? item.id : item;
+          return String(itemId) === String(product.id);
+        });
+        setIsSaved(isItemSaved);
+
+        const likesKey = `buyoh_likes_count_${product.id}`;
+        const baseLikes = product.likes !== undefined ? Number(product.likes) : 5;
+        const storedLikes = localStorage.getItem(likesKey);
+        let count = storedLikes !== null ? parseInt(storedLikes, 10) : (isItemSaved ? baseLikes + 1 : baseLikes);
+        setLikesCount(isNaN(count) ? baseLikes : count);
+      };
+
+      loadStatus();
+      window.addEventListener('buyoh_saved_updated', loadStatus);
+      window.addEventListener('buyoh_likes_updated', loadStatus);
+      return () => {
+        window.removeEventListener('buyoh_saved_updated', loadStatus);
+        window.removeEventListener('buyoh_likes_updated', loadStatus);
+      };
     }
   }, [product, user]);
 
@@ -183,23 +200,33 @@ export default function ProductDetails() {
         return String(itemId) === String(product.id);
       });
 
+      const likesKey = `buyoh_likes_count_${product.id}`;
+      const baseLikes = product.likes !== undefined ? Number(product.likes) : 5;
+      let currentCount = likesCount;
+
       let updated;
+      let newCount;
       if (isCurrentlySaved) {
         updated = existing.filter(item => {
           const itemId = typeof item === 'object' ? item.id : item;
           return String(itemId) !== String(product.id);
         });
         setIsSaved(false);
-        setLikesCount(prev => Math.max(0, prev - 1));
+        newCount = Math.max(0, currentCount - 1);
+        setLikesCount(newCount);
+        localStorage.setItem(likesKey, newCount.toString());
         showToast('Removed from Saved Collection');
       } else {
         updated = [product, ...existing.filter(item => typeof item === 'object')];
         setIsSaved(true);
-        setLikesCount(prev => prev + 1);
+        newCount = currentCount + 1;
+        setLikesCount(newCount);
+        localStorage.setItem(likesKey, newCount.toString());
         showToast('Saved to your collection!');
       }
 
       await saveItemsForUser(user, updated);
+      window.dispatchEvent(new CustomEvent('buyoh_likes_updated', { detail: { productId: product.id } }));
     } catch (err) {
       console.error("Error toggling saved item:", err);
     }
@@ -749,14 +776,6 @@ export default function ProductDetails() {
             <div className="detail-title-card">
               <div className="title-row-top">
                 <h1 className="detail-product-name">{product.name}</h1>
-                <button 
-                  className={`detail-bookmark-btn ${isSaved ? 'bookmarked' : ''}`}
-                  onClick={handleSaveToggle}
-                  title={isSaved ? "Remove from saved" : "Save item"}
-                >
-                  <Heart size={20} fill={isSaved ? "#ef4444" : "none"} color={isSaved ? "#ef4444" : "#64748b"} />
-                  <span>{likesCount}</span>
-                </button>
               </div>
 
               <div className="title-meta-row">

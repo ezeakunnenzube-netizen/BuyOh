@@ -16,7 +16,20 @@ export const getSavedItemsForUser = (user) => {
     }
   }
 
-  // 1. Check Supabase cloud user_metadata first (for cross-device sync)
+  // 1. Check local user-scoped storage key first (reflects user's immediate additions & removals)
+  try {
+    const local = localStorage.getItem(`buyoh_saved_items_${user.id}`);
+    if (local !== null) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.error("Error loading user saved items:", e);
+  }
+
+  // 2. Fallback to Supabase cloud user_metadata on initial load/new device
   const cloudSaved = user.user_metadata?.saved_items;
   if (Array.isArray(cloudSaved) && cloudSaved.length > 0) {
     try {
@@ -26,30 +39,18 @@ export const getSavedItemsForUser = (user) => {
     return cloudSaved;
   }
 
-  // 2. Fallback to local user-scoped storage key
+  // 3. Fallback to legacy un-scoped local storage key if migrating
   try {
-    const local = localStorage.getItem(`buyoh_saved_items_${user.id}`);
-    if (local) {
-      const parsed = JSON.parse(local);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        syncSavedItemsToCloud(user, parsed);
-        return parsed;
-      }
-    }
-
-    // 3. Fallback to legacy un-scoped local storage key if migrating
     const legacy = localStorage.getItem('buyoh_saved_items_v1');
-    if (legacy) {
+    if (legacy !== null) {
       const parsedLegacy = JSON.parse(legacy);
-      if (Array.isArray(parsedLegacy) && parsedLegacy.length > 0) {
+      if (Array.isArray(parsedLegacy)) {
         localStorage.setItem(`buyoh_saved_items_${user.id}`, JSON.stringify(parsedLegacy));
         syncSavedItemsToCloud(user, parsedLegacy);
         return parsedLegacy;
       }
     }
-  } catch (e) {
-    console.error("Error loading user saved items:", e);
-  }
+  } catch (e) {}
 
   return [];
 };
@@ -62,6 +63,10 @@ export const saveItemsForUser = async (user, items) => {
     try {
       localStorage.setItem(userKey, JSON.stringify(sanitizedItems));
       localStorage.setItem('buyoh_saved_items_v1', JSON.stringify(sanitizedItems));
+      // Update in-memory user_metadata so any references to user.user_metadata are also updated
+      if (user.user_metadata) {
+        user.user_metadata.saved_items = sanitizedItems;
+      }
       window.dispatchEvent(new CustomEvent('buyoh_saved_updated'));
       await syncSavedItemsToCloud(user, sanitizedItems);
     } catch (e) {
@@ -101,24 +106,30 @@ export const getMyListingsForUser = (user) => {
     }
   }
 
+  // 1. Check local user-scoped storage key first
+  try {
+    const local = localStorage.getItem(`buyoh_my_listings_${user.id}`);
+    if (local !== null) {
+      const parsed = JSON.parse(local) || [];
+      parsed.forEach(item => registerPublicListing(item));
+      return parsed;
+    }
+  } catch (e) {
+    console.error("Error loading user listings:", e);
+  }
+
+  // 2. Fallback to cloud user_metadata on first login/device
   const cloudListings = user.user_metadata?.my_listings;
   if (Array.isArray(cloudListings) && cloudListings.length > 0) {
     try {
       localStorage.setItem(`buyoh_my_listings_${user.id}`, JSON.stringify(cloudListings));
       localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(cloudListings));
-      // Auto-register all cloud listings into local public pool so Home page catalog sees them
       cloudListings.forEach(item => registerPublicListing(item));
     } catch (e) {}
     return cloudListings;
   }
 
   try {
-    const local = localStorage.getItem(`buyoh_my_listings_${user.id}`);
-    if (local) {
-      const parsed = JSON.parse(local) || [];
-      parsed.forEach(item => registerPublicListing(item));
-      return parsed;
-    }
     const legacy = localStorage.getItem('buyoh_my_listings_v1');
     if (legacy) {
       const parsed = JSON.parse(legacy) || [];
@@ -142,8 +153,9 @@ export const saveMyListingsForUser = async (user, listings) => {
     try {
       localStorage.setItem(userKey, JSON.stringify(sanitizedListings));
       localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(sanitizedListings));
-      
-      // Auto-register every item in global public pool
+      if (user.user_metadata) {
+        user.user_metadata.my_listings = sanitizedListings;
+      }
       sanitizedListings.forEach(item => registerPublicListing(item));
 
       window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
