@@ -42,25 +42,28 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let isMounted = true;
 
-    // 1. Get initial session
+    // 1. Subscribe to active auth state changes first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (isMounted) {
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
+    });
+
+    // 2. Fetch initial session from Supabase
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (isMounted) {
         if (session?.user) {
           setUser(session.user);
-        } else if (!getCachedUser()) {
+        } else {
           setUser(null);
         }
         setLoading(false);
       }
     }).catch(err => {
       console.error("Error getting session:", err);
-      if (isMounted) setLoading(false);
-    });
-
-    // 2. Listen to active auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (isMounted) {
-        setUser(session?.user ?? null);
+        setUser(null);
         setLoading(false);
       }
     });
@@ -96,4 +99,3 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
-

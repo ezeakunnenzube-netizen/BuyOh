@@ -78,16 +78,20 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
     setErrorMessage('');
     setSuccessMessage('');
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const redirectUrl = window.location.origin;
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin
+          redirectTo: redirectUrl
         }
       });
       if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      }
     } catch (err) {
-      setErrorMessage(err.message || 'Google Sign-In failed');
-    } finally {
+      console.error("Google Sign-In Error:", err);
+      setErrorMessage(err.message || 'Google Sign-In failed. Please try again.');
       setLoading(false);
     }
   };
