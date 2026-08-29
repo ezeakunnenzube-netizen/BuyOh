@@ -13,7 +13,7 @@ export default function MyAdverts() {
   const navigate = useNavigate();
   const { user, loading, setIsAuthOpen } = useAuth();
 
-  const [myAdverts, setMyAdverts] = useState([]);
+  const [myAdverts, setMyAdverts] = useState(() => getMyListingsForUser(user));
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All'); // 'All' | 'Active'
   const [toastMessage, setToastMessage] = useState('');

@@ -15,13 +15,13 @@ import './Profile.css';
 export default function Profile() {
   const navigate = useNavigate();
 
+  const { user, loading, logout } = useAuth();
+  
   // Load followed sellers count & unread notifications count from localStorage!
   const [followingCount, setFollowingCount] = useState(0);
   const [unreadNotifCount, setUnreadNotifCount] = useState(2);
-  const [myListingsCount, setMyListingsCount] = useState(0);
-  const [savedCount, setSavedCount] = useState(0);
-
-  const { user, loading, logout } = useAuth();
+  const [myListingsCount, setMyListingsCount] = useState(() => getMyListingsForUser(user).length);
+  const [savedCount, setSavedCount] = useState(() => getSavedItemsForUser(user).length);
 
   useEffect(() => {
     const loadCounts = () => {
@@ -56,9 +56,10 @@ export default function Profile() {
     window.addEventListener('storage', loadCounts);
     return () => {
       window.removeEventListener('buyoh_listings_updated', loadCounts);
+      window.removeEventListener('buyoh_saved_updated', loadCounts);
       window.removeEventListener('storage', loadCounts);
     };
-  }, []);
+  }, [user]);
 
   // User Profile Data State
   const [userData, setUserData] = useState(() => ({

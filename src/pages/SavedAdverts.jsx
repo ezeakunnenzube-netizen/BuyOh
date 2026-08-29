@@ -13,7 +13,7 @@ export default function SavedAdverts() {
   const navigate = useNavigate();
   const { user, loading, setIsAuthOpen } = useAuth();
 
-  const [savedItems, setSavedItems] = useState([]);
+  const [savedItems, setSavedItems] = useState(() => getSavedItemsForUser(user));
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState('');
   const [removeId, setRemoveId] = useState(null);
