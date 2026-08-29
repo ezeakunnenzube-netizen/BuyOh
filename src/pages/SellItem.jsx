@@ -6,7 +6,7 @@ import {
   BellRing, Bookmark, PanelTop, UserRound, ArrowLeft, Info
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getMyListingsForUser, saveMyListingsForUser } from '../utils/userSync';
+import { getMyListingsForUser, saveMyListingsForUser, registerPublicListing } from '../utils/userSync';
 import './SellItem.css';
 
 const CATEGORIES = [
@@ -361,6 +361,7 @@ export default function SellItem() {
       const existing = getMyListingsForUser(user);
       existing.unshift(listing);
       await saveMyListingsForUser(user, existing);
+      registerPublicListing(listing);
 
       // Also add to in-app notification list
       const notifications = JSON.parse(localStorage.getItem('buyoh_notifications_v1')) || [];

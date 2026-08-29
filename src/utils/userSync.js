@@ -105,6 +105,9 @@ export const getMyListingsForUser = (user) => {
   if (Array.isArray(cloudListings) && cloudListings.length > 0) {
     try {
       localStorage.setItem(`buyoh_my_listings_${user.id}`, JSON.stringify(cloudListings));
+      localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(cloudListings));
+      // Auto-register all cloud listings into local public pool so Home page catalog sees them
+      cloudListings.forEach(item => registerPublicListing(item));
     } catch (e) {}
     return cloudListings;
   }
@@ -112,7 +115,9 @@ export const getMyListingsForUser = (user) => {
   try {
     const local = localStorage.getItem(`buyoh_my_listings_${user.id}`);
     if (local) {
-      return JSON.parse(local) || [];
+      const parsed = JSON.parse(local) || [];
+      parsed.forEach(item => registerPublicListing(item));
+      return parsed;
     }
     const legacy = localStorage.getItem('buyoh_my_listings_v1');
     if (legacy) {
@@ -137,6 +142,10 @@ export const saveMyListingsForUser = async (user, listings) => {
     try {
       localStorage.setItem(userKey, JSON.stringify(sanitizedListings));
       localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(sanitizedListings));
+      
+      // Auto-register every item in global public pool
+      sanitizedListings.forEach(item => registerPublicListing(item));
+
       window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
       await supabase.auth.updateUser({
         data: {
@@ -149,9 +158,69 @@ export const saveMyListingsForUser = async (user, listings) => {
   } else {
     try {
       localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(sanitizedListings));
+      sanitizedListings.forEach(item => registerPublicListing(item));
       window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
     } catch (e) {
       console.error("Error saving guest listings:", e);
     }
   }
+};
+
+// --- GLOBAL PUBLIC MARKETPLACE LISTINGS SYNC ---
+
+export const registerPublicListing = (newListing) => {
+  if (!newListing || !newListing.id) return;
+  try {
+    const raw = localStorage.getItem('buyoh_public_listings_v1');
+    let publicListings = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(publicListings)) publicListings = [];
+    
+    // Deduplicate by ID
+    const existsIndex = publicListings.findIndex(p => p.id === newListing.id);
+    if (existsIndex >= 0) {
+      publicListings[existsIndex] = newListing;
+    } else {
+      publicListings = [newListing, ...publicListings];
+    }
+    
+    localStorage.setItem('buyoh_public_listings_v1', JSON.stringify(publicListings));
+    window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
+  } catch (e) {
+    console.error("Error registering public listing:", e);
+  }
+};
+
+export const getAllPublicListings = (user) => {
+  let publicPool = [];
+  
+  try {
+    const raw = localStorage.getItem('buyoh_public_listings_v1');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) publicPool = parsed;
+    }
+  } catch (e) {
+    console.error("Error reading public listings pool:", e);
+  }
+
+  // If user is logged in, sync user's cloud listings into public pool
+  if (user) {
+    const userListings = getMyListingsForUser(user);
+    if (Array.isArray(userListings) && userListings.length > 0) {
+      let updated = false;
+      userListings.forEach(item => {
+        if (!publicPool.some(p => p.id === item.id)) {
+          publicPool.unshift(item);
+          updated = true;
+        }
+      });
+      if (updated) {
+        try {
+          localStorage.setItem('buyoh_public_listings_v1', JSON.stringify(publicPool));
+        } catch (e) {}
+      }
+    }
+  }
+
+  return publicPool;
 };
