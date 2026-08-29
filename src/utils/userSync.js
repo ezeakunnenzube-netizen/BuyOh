@@ -157,7 +157,22 @@ export const saveMyListingsForUser = async (user, listings) => {
       if (user.user_metadata) {
         user.user_metadata.my_listings = sanitizedListings;
       }
-      sanitizedListings.forEach(item => registerPublicListing(item));
+      
+      // Update public pool: Remove user's listings and add updated ones
+      try {
+        const rawPublic = localStorage.getItem('buyoh_public_listings_v1');
+        let publicPool = rawPublic ? JSON.parse(rawPublic) : [];
+        if (!Array.isArray(publicPool)) publicPool = [];
+        
+        // Remove any old listings by this user
+        publicPool = publicPool.filter(p => p.sellerId !== user.id);
+        // Add updated ones
+        publicPool = [...sanitizedListings, ...publicPool];
+        
+        localStorage.setItem('buyoh_public_listings_v1', JSON.stringify(publicPool));
+      } catch (e) {
+        console.error("Error updating public pool during saveMyListingsForUser:", e);
+      }
 
       window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
       await supabase.auth.updateUser({
@@ -171,7 +186,22 @@ export const saveMyListingsForUser = async (user, listings) => {
   } else {
     try {
       localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(sanitizedListings));
-      sanitizedListings.forEach(item => registerPublicListing(item));
+      
+      // Update public pool for guest deletion
+      const rawPublic = localStorage.getItem('buyoh_public_listings_v1');
+      let publicPool = rawPublic ? JSON.parse(rawPublic) : [];
+      if (Array.isArray(publicPool)) {
+        const guestIds = new Set(sanitizedListings.map(item => String(item.id)));
+        publicPool = publicPool.filter(p => {
+          const isGuestListing = !p.sellerId;
+          if (isGuestListing) {
+            return guestIds.has(String(p.id));
+          }
+          return true;
+        });
+        localStorage.setItem('buyoh_public_listings_v1', JSON.stringify(publicPool));
+      }
+
       window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
     } catch (e) {
       console.error("Error saving guest listings:", e);
@@ -216,23 +246,31 @@ export const getAllPublicListings = (user) => {
     console.error("Error reading public listings pool:", e);
   }
 
-  // If user is logged in, sync user's cloud listings into public pool
+  // If user is logged in, sync user's cloud listings into public pool and prune deleted ones
   if (user) {
     const userListings = getMyListingsForUser(user);
-    if (Array.isArray(userListings) && userListings.length > 0) {
-      let updated = false;
-      userListings.forEach(item => {
-        if (!publicPool.some(p => String(p.id) === String(item.id))) {
-          publicPool.unshift(item);
-          updated = true;
-        }
-      });
-      if (updated) {
-        try {
-          localStorage.setItem('buyoh_public_listings_v1', JSON.stringify(publicPool));
-        } catch (e) {}
+    const userListingIds = new Set(userListings.map(item => String(item.id)));
+
+    // 1. Filter out any listing belonging to the user that is no longer in their active listings
+    publicPool = publicPool.filter(p => {
+      const isUserListing = (p.sellerId && String(p.sellerId) === String(user.id)) || 
+                            (p.sellerEmail && String(p.sellerEmail) === String(user.email));
+      if (isUserListing) {
+        return userListingIds.has(String(p.id));
       }
-    }
+      return true;
+    });
+
+    // 2. Ensure all active user listings are present in the public pool
+    userListings.forEach(item => {
+      if (!publicPool.some(p => String(p.id) === String(item.id))) {
+        publicPool.unshift(item);
+      }
+    });
+
+    try {
+      localStorage.setItem('buyoh_public_listings_v1', JSON.stringify(publicPool));
+    } catch (e) {}
   }
 
   return publicPool;
