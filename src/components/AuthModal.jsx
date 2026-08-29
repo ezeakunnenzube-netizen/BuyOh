@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Mail, Lock, User, Eye, EyeOff, X, ShieldAlert, Sparkles, Check } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, X, ShieldAlert, Sparkles, Check, Phone } from 'lucide-react';
 import './AuthModal.css';
 
 export default function AuthModal({ isOpen, onClose, onSuccess }) {
@@ -10,6 +10,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   
   const [loading, setLoading] = useState(false);
@@ -25,15 +26,21 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
     try {
       if (isSignUp) {
         // Sign Up Flow
+        if (!whatsapp.trim()) {
+          throw new Error('WhatsApp Number is mandatory for registration');
+        }
         if (password.length < 6) {
           throw new Error('Password must be at least 6 characters long');
         }
+        localStorage.setItem('buyoh_user_whatsapp_v1', whatsapp.trim());
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
-              name: fullName || 'New Marketplace User'
+              name: fullName || 'New Marketplace User',
+              full_name: fullName || 'New Marketplace User',
+              whatsapp: whatsapp.trim()
             }
           }
         });
@@ -172,21 +179,36 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
             <span className="separator-text">or continue with email</span>
             <span className="separator-line" />
           </div>
-          {/* Full Name Input (Sign Up Only) */}
+          {/* Full Name & WhatsApp Input (Sign Up Only) */}
           {isSignUp && (
-            <div className="auth-input-group">
-              <label>Full Name</label>
-              <div className="auth-input-wrapper">
-                <User size={18} className="auth-field-icon" />
-                <input 
-                  type="text" 
-                  placeholder="e.g. Adebayo Johnson" 
-                  value={fullName}
-                  onChange={e => setFullName(e.target.value)}
-                  required
-                />
+            <>
+              <div className="auth-input-group">
+                <label>Full Name</label>
+                <div className="auth-input-wrapper">
+                  <User size={18} className="auth-field-icon" />
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Adebayo Johnson" 
+                    value={fullName}
+                    onChange={e => setFullName(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
-            </div>
+              <div className="auth-input-group">
+                <label>WhatsApp Number <span style={{color: '#ef4444'}}>*</span></label>
+                <div className="auth-input-wrapper">
+                  <Phone size={18} className="auth-field-icon" />
+                  <input 
+                    type="tel" 
+                    placeholder="+234 809 123 4567" 
+                    value={whatsapp}
+                    onChange={e => setWhatsapp(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+            </>
           )}
 
           {/* Email Input */}

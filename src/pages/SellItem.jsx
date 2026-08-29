@@ -52,8 +52,8 @@ export default function SellItem() {
   const [location, setLocation] = useState('');
   const [negotiable, setNegotiable] = useState(true);
   const [images, setImages] = useState([]);
-  const [contactPhone, setContactPhone] = useState('');
-  const [contactWhatsApp, setContactWhatsApp] = useState('');
+  const [contactPhone, setContactPhone] = useState(() => user?.user_metadata?.phone || '');
+  const [contactWhatsApp, setContactWhatsApp] = useState(() => user?.user_metadata?.whatsapp || localStorage.getItem('buyoh_user_whatsapp_v1') || user?.user_metadata?.phone || '');
 
   // Category Specific Specs State (all initialized to empty strings)
   const [brand, setBrand] = useState('');

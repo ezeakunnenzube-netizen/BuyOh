@@ -65,6 +65,7 @@ export default function Profile() {
     name: 'Adebayo Johnson',
     email: 'adebayo.johnson@buyoh.com',
     phone: '+234 812 345 6789',
+    whatsapp: localStorage.getItem('buyoh_user_whatsapp_v1') || '+234 812 345 6789',
     location: 'Lekki, Lagos',
     avatar: localStorage.getItem('buyoh_user_avatar_v1') || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
     banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
@@ -74,6 +75,7 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(userData.name);
   const [editedPhone, setEditedPhone] = useState(userData.phone);
+  const [editedWhatsapp, setEditedWhatsapp] = useState(userData.whatsapp);
   const [editedLocation, setEditedLocation] = useState(userData.location);
 
   const [toastMessage, setToastMessage] = useState('');
@@ -95,10 +97,12 @@ export default function Profile() {
 
   useEffect(() => {
     const savedAvatar = localStorage.getItem('buyoh_user_avatar_v1');
+    const savedWhatsapp = localStorage.getItem('buyoh_user_whatsapp_v1');
     if (user) {
       const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Marketplace User';
       const email = user.email || 'no-email@buyoh.com';
-      const phone = user.user_metadata?.phone || user.phone || 'No phone number';
+      const phone = user.user_metadata?.phone || user.phone || '+234 812 345 6789';
+      const whatsapp = user.user_metadata?.whatsapp || savedWhatsapp || user.user_metadata?.phone || phone;
       const location = user.user_metadata?.location || 'Lagos, Nigeria';
       const avatar = user.user_metadata?.avatar_url || savedAvatar || user.user_metadata?.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
 
@@ -107,14 +111,20 @@ export default function Profile() {
         name,
         email,
         phone,
+        whatsapp,
         location,
         avatar
       }));
       setEditedName(name);
       setEditedPhone(phone);
+      setEditedWhatsapp(whatsapp);
       setEditedLocation(location);
-    } else if (savedAvatar) {
-      setUserData(prev => ({ ...prev, avatar: savedAvatar }));
+    } else if (savedAvatar || savedWhatsapp) {
+      setUserData(prev => ({ 
+        ...prev, 
+        avatar: savedAvatar || prev.avatar,
+        whatsapp: savedWhatsapp || prev.whatsapp 
+      }));
     }
   }, [user]);
 
@@ -131,11 +141,19 @@ export default function Profile() {
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
+    if (!editedWhatsapp.trim()) {
+      showToast("WhatsApp Number is mandatory!");
+      return;
+    }
+
     try {
+      localStorage.setItem('buyoh_user_whatsapp_v1', editedWhatsapp.trim());
+
       const { data, error } = await supabase.auth.updateUser({
         data: {
           full_name: editedName,
           phone: editedPhone,
+          whatsapp: editedWhatsapp.trim(),
           location: editedLocation
         }
       });
@@ -145,6 +163,7 @@ export default function Profile() {
         ...prev,
         name: editedName,
         phone: editedPhone,
+        whatsapp: editedWhatsapp.trim(),
         location: editedLocation
       }));
       setIsEditing(false);
@@ -385,6 +404,10 @@ export default function Profile() {
                       <span className="info-val">{userData.phone}</span>
                     </div>
                     <div className="info-row">
+                      <span className="info-label">WhatsApp Number <span style={{color: '#ef4444', fontWeight: 800}}>*</span></span>
+                      <span className="info-val">{userData.whatsapp}</span>
+                    </div>
+                    <div className="info-row">
                       <span className="info-label">Location</span>
                       <span className="info-val">{userData.location}</span>
                     </div>
@@ -409,6 +432,16 @@ export default function Profile() {
                         type="text" 
                         value={editedPhone} 
                         onChange={e => setEditedPhone(e.target.value)} 
+                        required 
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label>WhatsApp Number <span style={{color: '#ef4444', fontWeight: 800}}>* (Mandatory)</span></label>
+                      <input 
+                        type="tel" 
+                        value={editedWhatsapp} 
+                        onChange={e => setEditedWhatsapp(e.target.value)} 
+                        placeholder="+234 809 123 4567"
                         required 
                       />
                     </div>
