@@ -112,46 +112,42 @@ export default function SellItem() {
   // Clean up any old spurious listing specs from localStorage on mount
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('buyoh_my_listings_v1');
-      if (saved) {
-        let listings = JSON.parse(saved);
-        if (Array.isArray(listings)) {
-          let modified = false;
-          listings = listings.map(item => {
-            if (item.specs) {
-              const cleanedSpecs = { ...item.specs };
-              if (item.category !== 'Vehicles') {
-                delete cleanedSpecs.transmission;
-                delete cleanedSpecs.mileage;
-                delete cleanedSpecs.year;
-                delete cleanedSpecs.fuelType;
-              }
-              if (item.category !== 'Property') {
-                delete cleanedSpecs.bedrooms;
-                delete cleanedSpecs.bathrooms;
-                delete cleanedSpecs.propertyType;
-                delete cleanedSpecs.furnishing;
-              }
-              if (item.category !== 'Fashion') {
-                delete cleanedSpecs.gender;
-                delete cleanedSpecs.size;
-                delete cleanedSpecs.material;
-              }
-              if (JSON.stringify(cleanedSpecs) !== JSON.stringify(item.specs)) {
-                modified = true;
-                return { ...item, specs: cleanedSpecs };
-              }
+      const saved = getMyListingsForUser(user);
+      if (saved && Array.isArray(saved)) {
+        let modified = false;
+        const cleaned = saved.map(item => {
+          if (item.specs) {
+            const cleanedSpecs = { ...item.specs };
+            if (item.category !== 'Vehicles') {
+              delete cleanedSpecs.transmission;
+              delete cleanedSpecs.mileage;
+              delete cleanedSpecs.year;
+              delete cleanedSpecs.fuelType;
             }
-            return item;
-          });
-          if (modified) {
-            localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(listings));
-            window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
+            if (item.category !== 'Property') {
+              delete cleanedSpecs.bedrooms;
+              delete cleanedSpecs.bathrooms;
+              delete cleanedSpecs.propertyType;
+              delete cleanedSpecs.furnishing;
+            }
+            if (item.category !== 'Fashion') {
+              delete cleanedSpecs.gender;
+              delete cleanedSpecs.size;
+              delete cleanedSpecs.material;
+            }
+            if (JSON.stringify(cleanedSpecs) !== JSON.stringify(item.specs)) {
+              modified = true;
+              return { ...item, specs: cleanedSpecs };
+            }
           }
+          return item;
+        });
+        if (modified) {
+          saveMyListingsForUser(user, cleaned);
         }
       }
     } catch (e) { console.error(e); }
-  }, []);
+  }, [user]);
   // Helper to compress uploaded image files into persistent base64 data URLs
   const compressImageFile = (file) => {
     return new Promise((resolve) => {

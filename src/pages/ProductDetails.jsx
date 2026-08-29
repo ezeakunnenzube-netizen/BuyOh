@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { products } from '../data/productData';
 import { useAuth } from '../context/AuthContext';
-import { getSavedItemsForUser, saveItemsForUser, getAllPublicListings, getGeneralProductPool } from '../utils/userSync';
+import { getSavedItemsForUser, saveItemsForUser, getAllPublicListings, getGeneralProductPool, getMyListingsForUser, saveMyListingsForUser } from '../utils/userSync';
 import './ProductDetails.css';
 
 export default function ProductDetails() {
@@ -52,11 +52,11 @@ export default function ProductDetails() {
 
   const isUserSeller = useMemo(() => {
     if (!user || !product) return false;
-    if (product.sellerId && product.sellerId === user.id) return true;
+    if (product.sellerId && String(product.sellerId) === String(user.id)) return true;
     if (product.sellerEmail && product.sellerEmail === user.email) return true;
     try {
-      const myListings = JSON.parse(localStorage.getItem('buyoh_my_listings_v1')) || [];
-      return myListings.some(item => item.id === product.id);
+      const myListings = getMyListingsForUser(user);
+      return myListings.some(item => String(item.id) === String(product.id));
     } catch (e) {
       return false;
     }
@@ -364,21 +364,21 @@ export default function ProductDetails() {
     showToast('Callback request sent! Seller has been notified.');
   };
 
-  const handleMarkUnavailable = () => {
+  const handleMarkUnavailable = async () => {
     try {
-      const userListings = JSON.parse(localStorage.getItem('buyoh_my_listings_v1')) || [];
+      const userListings = getMyListingsForUser(user);
       const updated = userListings.map(ad => {
-        if (ad.id === product.id) {
+        if (String(ad.id) === String(product.id)) {
           return { ...ad, status: 'unavailable' };
         }
         return ad;
       });
-      localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(updated));
-      window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
+      await saveMyListingsForUser(user, updated);
       setProduct(prev => ({ ...prev, status: 'unavailable' }));
       showToast('Ad marked as unavailable');
     } catch (e) {
-      showToast('Ad marked as unavailable');
+      console.error(e);
+      showToast('Error marking ad as unavailable');
     }
   };
 
