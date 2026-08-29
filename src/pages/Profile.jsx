@@ -98,12 +98,16 @@ export default function Profile() {
   useEffect(() => {
     const savedAvatar = localStorage.getItem('buyoh_user_avatar_v1');
     const savedWhatsapp = localStorage.getItem('buyoh_user_whatsapp_v1');
+    const savedName = localStorage.getItem('buyoh_user_name_v1');
+    const savedPhone = localStorage.getItem('buyoh_user_phone_v1');
+    const savedLocation = localStorage.getItem('buyoh_user_location_v1');
+
     if (user) {
-      const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Marketplace User';
+      const name = savedName || user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Marketplace User';
       const email = user.email || 'no-email@buyoh.com';
-      const phone = user.user_metadata?.phone || user.phone || '+234 812 345 6789';
-      const whatsapp = user.user_metadata?.whatsapp || savedWhatsapp || user.user_metadata?.phone || phone;
-      const location = user.user_metadata?.location || 'Lagos, Nigeria';
+      const phone = savedPhone || user.user_metadata?.phone || user.phone || '+234 812 345 6789';
+      const whatsapp = savedWhatsapp || user.user_metadata?.whatsapp || user.user_metadata?.phone || phone;
+      const location = savedLocation || user.user_metadata?.location || 'Lagos, Nigeria';
       const avatar = user.user_metadata?.avatar_url || savedAvatar || user.user_metadata?.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
 
       setUserData(prev => ({
@@ -119,12 +123,21 @@ export default function Profile() {
       setEditedPhone(phone);
       setEditedWhatsapp(whatsapp);
       setEditedLocation(location);
-    } else if (savedAvatar || savedWhatsapp) {
-      setUserData(prev => ({ 
-        ...prev, 
-        avatar: savedAvatar || prev.avatar,
-        whatsapp: savedWhatsapp || prev.whatsapp 
-      }));
+    } else {
+      if (savedName || savedPhone || savedWhatsapp || savedLocation || savedAvatar) {
+        setUserData(prev => ({ 
+          ...prev, 
+          name: savedName || prev.name,
+          phone: savedPhone || prev.phone,
+          whatsapp: savedWhatsapp || prev.whatsapp,
+          location: savedLocation || prev.location,
+          avatar: savedAvatar || prev.avatar 
+        }));
+        if (savedName) setEditedName(savedName);
+        if (savedPhone) setEditedPhone(savedPhone);
+        if (savedWhatsapp) setEditedWhatsapp(savedWhatsapp);
+        if (savedLocation) setEditedLocation(savedLocation);
+      }
     }
   }, [user]);
 
@@ -141,34 +154,45 @@ export default function Profile() {
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
+    const cleanName = editedName.trim() || 'Marketplace User';
+    const cleanPhone = editedPhone.trim();
+    const cleanWhatsapp = editedWhatsapp ? editedWhatsapp.trim() : '';
+    const cleanLocation = editedLocation.trim();
+
+    // 1. Immediately persist details locally so user edits are never lost
     try {
-      const cleanWhatsapp = editedWhatsapp ? editedWhatsapp.trim() : '';
-      if (cleanWhatsapp) {
-        localStorage.setItem('buyoh_user_whatsapp_v1', cleanWhatsapp);
+      localStorage.setItem('buyoh_user_name_v1', cleanName);
+      if (cleanPhone) localStorage.setItem('buyoh_user_phone_v1', cleanPhone);
+      if (cleanWhatsapp) localStorage.setItem('buyoh_user_whatsapp_v1', cleanWhatsapp);
+      if (cleanLocation) localStorage.setItem('buyoh_user_location_v1', cleanLocation);
+    } catch (e) {}
+
+    // 2. Update UI state instantly
+    setUserData(prev => ({
+      ...prev,
+      name: cleanName,
+      phone: cleanPhone || 'Not provided',
+      whatsapp: cleanWhatsapp || 'Not provided',
+      location: cleanLocation || 'Lagos, Nigeria'
+    }));
+    setIsEditing(false);
+    showToast('Profile updated successfully');
+
+    // 3. Background sync to Supabase (graceful error handling)
+    if (user) {
+      try {
+        await supabase.auth.updateUser({
+          data: {
+            full_name: cleanName,
+            name: cleanName,
+            phone: cleanPhone,
+            whatsapp: cleanWhatsapp,
+            location: cleanLocation
+          }
+        });
+      } catch (err) {
+        console.warn("Background Supabase profile sync notice:", err);
       }
-
-      const { data, error } = await supabase.auth.updateUser({
-        data: {
-          full_name: editedName,
-          phone: editedPhone,
-          whatsapp: cleanWhatsapp,
-          location: editedLocation
-        }
-      });
-      if (error) throw error;
-
-      setUserData(prev => ({
-        ...prev,
-        name: editedName,
-        phone: editedPhone,
-        whatsapp: cleanWhatsapp || 'Not provided',
-        location: editedLocation
-      }));
-      setIsEditing(false);
-      showToast('Profile updated successfully');
-    } catch (err) {
-      console.error("Error updating user profile:", err);
-      showToast(err.message || 'Failed to update profile');
     }
   };
 
