@@ -214,7 +214,7 @@ export default function Home(){
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
 
-  const [savedItems, setSavedItems] = useState([]);
+  const [savedItems, setSavedItems] = useState(() => getSavedItemsForUser(user));
 
   useEffect(() => {
     const reloadListings = () => {
