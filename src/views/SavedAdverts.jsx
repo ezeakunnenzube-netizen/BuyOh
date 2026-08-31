@@ -168,9 +168,7 @@ export default function SavedAdverts() {
       <div className="saved-container">
         {/* Mobile Navigation Bar */}
         <div className="saved-mobile-header">
-          <button onClick={handleBack} className="saved-back-btn">
-            <ArrowLeft size={18} /> Back
-          </button>
+          
           <h2 className="saved-mobile-title">Saved Items</h2>
         </div>
 
