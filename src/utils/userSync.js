@@ -126,10 +126,33 @@ export const uploadAvatarImage = async (user, fileOrDataUrl) => {
   return dataToSave;
 };
 
+export const getCachedUserSync = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth-token'))) {
+        const item = localStorage.getItem(key);
+        if (item) {
+          try {
+            const parsed = JSON.parse(item);
+            if (parsed?.user) return parsed.user;
+            if (parsed?.currentSession?.user) return parsed.currentSession.user;
+            if (parsed?.session?.user) return parsed.session.user;
+          } catch (e) {}
+        }
+      }
+    }
+  } catch (e) {}
+  return null;
+};
+
 // --- USER PROFILE & AVATAR SYNC (DATABASE + STORAGE + METADATA) ---
 
 export const getUserProfileData = (user) => {
-  if (!user) {
+  const activeUser = user || (typeof window !== 'undefined' ? getCachedUserSync() : null);
+
+  if (!activeUser) {
     if (typeof window === 'undefined') {
       return {
         name: 'Marketplace User',
@@ -158,46 +181,68 @@ export const getUserProfileData = (user) => {
     };
   }
 
-  // When user is logged in, CLOUD DATA is the primary authoritative source!
-  const meta = user.user_metadata || {};
+  // When activeUser is logged in (or cached in local session):
+  const meta = activeUser.user_metadata || {};
   let localProfile = null;
+  let cachedUserAvatar = null;
+  let cachedUserName = null;
+
   if (typeof window !== 'undefined') {
-    localProfile = safeJsonParse(localStorage.getItem(`buyoh_user_profile_${user.id}`), null);
+    localProfile = safeJsonParse(localStorage.getItem(`buyoh_user_profile_${activeUser.id}`), null);
+    cachedUserAvatar = localStorage.getItem(`buyoh_user_avatar_${activeUser.id}`) || localStorage.getItem('buyoh_user_avatar_v1');
+    cachedUserName = localStorage.getItem(`buyoh_user_name_${activeUser.id}`) || localStorage.getItem('buyoh_user_name_v1');
   }
 
-  const name = meta.full_name || meta.name || localProfile?.name || user.email?.split('@')[0] || 'Marketplace User';
-  const email = user.email || 'no-email@buyoh.com';
-  const phone = meta.phone || localProfile?.phone || user.phone || '+234 812 345 6789';
-  const whatsapp = meta.whatsapp || meta.phone || localProfile?.whatsapp || phone;
-  const location = meta.location || localProfile?.location || 'Lagos, Nigeria';
-  const avatar = meta.avatar_url || meta.picture || localProfile?.avatar || DEFAULT_AVATAR;
+  // Choose the best avatar synchronously without falling back to DEFAULT_AVATAR if custom avatar is cached
+  let chosenAvatar = DEFAULT_AVATAR;
+  if (localProfile?.avatar && localProfile.avatar !== DEFAULT_AVATAR) {
+    chosenAvatar = localProfile.avatar;
+  } else if (cachedUserAvatar && cachedUserAvatar !== DEFAULT_AVATAR) {
+    chosenAvatar = cachedUserAvatar;
+  } else if (meta.avatar_url && meta.avatar_url !== DEFAULT_AVATAR) {
+    chosenAvatar = meta.avatar_url;
+  } else if (meta.picture && meta.picture !== DEFAULT_AVATAR) {
+    chosenAvatar = meta.picture;
+  } else if (localProfile?.avatar) {
+    chosenAvatar = localProfile.avatar;
+  }
+
+  const name = localProfile?.name || cachedUserName || meta.full_name || meta.name || activeUser.email?.split('@')[0] || 'Marketplace User';
+  const email = activeUser.email || 'no-email@buyoh.com';
+  const phone = localProfile?.phone || meta.phone || activeUser.phone || '+234 812 345 6789';
+  const whatsapp = localProfile?.whatsapp || meta.whatsapp || meta.phone || phone;
+  const location = localProfile?.location || meta.location || 'Lagos, Nigeria';
 
   // Background fetch from Supabase database table `public.profiles`
-  if (typeof window !== 'undefined' && user.id) {
+  if (typeof window !== 'undefined' && activeUser.id) {
     (async () => {
       try {
         const { data: dbProfile, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', user.id)
+          .eq('id', activeUser.id)
           .maybeSingle();
 
         if (dbProfile && !error) {
           const freshData = {
-            name: dbProfile.full_name || name,
+            name: dbProfile.full_name || dbProfile.name || name,
             email: dbProfile.email || email,
             phone: dbProfile.phone || phone,
             whatsapp: dbProfile.whatsapp || whatsapp,
             location: dbProfile.location || location,
-            avatar: dbProfile.avatar_url || avatar,
+            avatar: dbProfile.avatar_url || chosenAvatar,
             banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
           };
-          localStorage.setItem(`buyoh_user_profile_${user.id}`, JSON.stringify(freshData));
-          localStorage.setItem(`buyoh_user_avatar_${user.id}`, freshData.avatar);
+          localStorage.setItem(`buyoh_user_profile_${activeUser.id}`, JSON.stringify(freshData));
+          localStorage.setItem(`buyoh_user_avatar_${activeUser.id}`, freshData.avatar);
           localStorage.setItem('buyoh_user_avatar_v1', freshData.avatar);
-          localStorage.setItem(`buyoh_user_name_${user.id}`, freshData.name);
+          localStorage.setItem(`buyoh_user_name_${activeUser.id}`, freshData.name);
           localStorage.setItem('buyoh_user_name_v1', freshData.name);
-          window.dispatchEvent(new CustomEvent('buyoh_profile_updated', { detail: freshData }));
+
+          // Only fire update event if values actually changed to avoid unnecessary re-renders/flashes
+          if (freshData.avatar !== chosenAvatar || freshData.name !== name || freshData.phone !== phone) {
+            window.dispatchEvent(new CustomEvent('buyoh_profile_updated', { detail: freshData }));
+          }
         }
       } catch (err) {}
     })();
@@ -206,9 +251,9 @@ export const getUserProfileData = (user) => {
   // Cache back to local storage
   if (typeof window !== 'undefined') {
     try {
-      localStorage.setItem(`buyoh_user_avatar_${user.id}`, avatar);
-      localStorage.setItem('buyoh_user_avatar_v1', avatar);
-      localStorage.setItem(`buyoh_user_name_${user.id}`, name);
+      localStorage.setItem(`buyoh_user_avatar_${activeUser.id}`, chosenAvatar);
+      localStorage.setItem('buyoh_user_avatar_v1', chosenAvatar);
+      localStorage.setItem(`buyoh_user_name_${activeUser.id}`, name);
       localStorage.setItem('buyoh_user_name_v1', name);
     } catch (e) {}
   }
@@ -219,7 +264,7 @@ export const getUserProfileData = (user) => {
     phone,
     whatsapp,
     location,
-    avatar,
+    avatar: chosenAvatar,
     banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
   };
 };

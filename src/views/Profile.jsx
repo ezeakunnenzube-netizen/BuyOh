@@ -78,12 +78,21 @@ export default function Profile() {
 
   // Sync profile data when user changes or loads from cloud
   useEffect(() => {
-    const current = getUserProfileData(user);
-    setUserData(current);
-    setEditedName(current.name);
-    setEditedPhone(current.phone);
-    setEditedWhatsapp(current.whatsapp);
-    setEditedLocation(current.location);
+    if (user) {
+      const current = getUserProfileData(user);
+      setUserData(prev => {
+        if (prev.avatar === current.avatar && prev.name === current.name && prev.phone === current.phone && prev.location === current.location && prev.whatsapp === current.whatsapp) {
+          return prev;
+        }
+        return current;
+      });
+      if (!isEditing) {
+        setEditedName(current.name);
+        setEditedPhone(current.phone);
+        setEditedWhatsapp(current.whatsapp);
+        setEditedLocation(current.location);
+      }
+    }
 
     if (user?.id) {
       // Direct realtime subscription to Supabase `public.profiles`
