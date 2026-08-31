@@ -102,6 +102,18 @@
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.profile-avatar-skeleton {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 50%, #e2e8f0 100%);
+  background-size: 200% 200%;
+  animation: avatarShimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes avatarShimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 .profile-avatar-large:hover {
   transform: scale(1.06);
   box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);

@@ -61,6 +61,12 @@ export default function Profile() {
     };
   }, [user]);
 
+  // Mounted state to eliminate Next.js SSR hydration flash
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // User Profile Data State (Authoritative Cloud Source of Truth)
   const [userData, setUserData] = useState(() => getUserProfileData(user));
 
@@ -310,13 +316,17 @@ export default function Profile() {
           {/* User Profile Card Summary */}
           <div className="profile-summary-section">
             <div className="avatar-holder">
-              <img 
-                src={userData.avatar} 
-                alt="User Avatar" 
-                className="profile-avatar-large clickable-avatar" 
-                onClick={() => setIsAvatarModalOpen(true)}
-                title="Click to change avatar"
-              />
+              {!mounted ? (
+                <div className="profile-avatar-large profile-avatar-skeleton" />
+              ) : (
+                <img 
+                  src={userData.avatar} 
+                  alt="User Avatar" 
+                  className="profile-avatar-large clickable-avatar" 
+                  onClick={() => setIsAvatarModalOpen(true)}
+                  title="Click to change avatar"
+                />
+              )}
               <button 
                 className="avatar-change-badge" 
                 title="Change Avatar" 

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { products } from '../data/productData';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabaseClient';
 import { getSavedItemsForUser, saveItemsForUser, getAllPublicListings, getGeneralProductPool, getMyListingsForUser, saveMyListingsForUser } from '../utils/userSync';
 import './ProductDetails.css';
 
@@ -117,6 +118,32 @@ export default function ProductDetails({ params: serverParams }) {
       }
 
       setProduct(found);
+
+      // If product has a sellerId, fetch their latest WhatsApp number and profile from Supabase
+      if (found.sellerId) {
+        (async () => {
+          try {
+            const { data: sProfile, error } = await supabase
+              .from('profiles')
+              .select('full_name, name, phone, whatsapp, avatar_url')
+              .eq('id', found.sellerId)
+              .maybeSingle();
+
+            if (sProfile && !error) {
+              setProduct(prev => {
+                if (!prev || String(prev.id) !== String(found.id)) return prev;
+                return {
+                  ...prev,
+                  sellerName: sProfile.full_name || sProfile.name || prev.sellerName,
+                  sellerWhatsApp: sProfile.whatsapp || sProfile.phone || prev.sellerWhatsApp,
+                  sellerPhone: sProfile.phone || sProfile.whatsapp || prev.sellerPhone,
+                  sellerAvatar: sProfile.avatar_url || prev.sellerAvatar
+                };
+              });
+            }
+          } catch (e) {}
+        })();
+      }
 
       // Track real page views
       const viewsKey = `buyoh_views_prod_${found.id}`;
@@ -306,13 +333,37 @@ export default function ProductDetails({ params: serverParams }) {
   };
 
   const handleWhatsAppChat = () => {
+    if (!product) return;
     showToast('Redirecting to WhatsApp...');
-    const phoneNumber = "2348091234567"; // Mock seller WhatsApp number
-    const text = encodeURIComponent(`Hello PHONEMART, I am interested in your item: "${product.name}" listed on BuyOh! for ${formatPrice(product.price)}. Is it still available?`);
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${text}`;
+
+    // Extract seller's actual WhatsApp or phone number
+    const rawNumber = product.sellerWhatsApp || 
+                      product.contactWhatsApp || 
+                      product.sellerPhone || 
+                      product.contactPhone || 
+                      product.phone || 
+                      '';
+
+    // Clean and format phone number for WhatsApp wa.me API
+    let cleanNumber = String(rawNumber).trim().replace(/[^\d+]/g, '');
+    if (cleanNumber.startsWith('+')) {
+      cleanNumber = cleanNumber.substring(1);
+    } else if (cleanNumber.startsWith('0')) {
+      cleanNumber = '234' + cleanNumber.substring(1);
+    }
+
+    // Fallback if seller number is missing
+    if (!cleanNumber || cleanNumber.length < 5) {
+      cleanNumber = '2348091234567';
+    }
+
+    const sellerName = product.sellerName || 'Seller';
+    const text = encodeURIComponent(`Hello ${sellerName}, I am interested in your item: "${product.name}" listed on BuyOh! for ${formatPrice(product.price)}. Is it still available?`);
+    const whatsappUrl = `https://wa.me/${cleanNumber}?text=${text}`;
+
     setTimeout(() => {
       window.open(whatsappUrl, '_blank');
-    }, 600);
+    }, 400);
   };
 
   const handleFacebookShare = () => {
