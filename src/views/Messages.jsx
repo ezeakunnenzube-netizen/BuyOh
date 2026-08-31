@@ -15,7 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { getFollowedSellersForUser, saveFollowedSellersForUser } from '../utils/userSync';
 import './Messages.css';
 
-const NOW_TS = Date.now();
+const BASE_MOCK_TS = 1756660000000;
 const ONE_HOUR = 3600000;
 const ONE_DAY = 86400000;
 
@@ -215,7 +215,7 @@ const INITIAL_CONVERSATIONS = [
         sender: 'them',
         text: 'Hello! Thanks for showing interest in my iPhone 13 Pro. Check the original photos below! 📱',
         image: 'https://images.unsplash.com/photo-1632661674596-df8be070a5c5?auto=format&fit=crop&w=600&q=80',
-        timestamp: NOW_TS - ONE_HOUR * 2,
+        timestamp: BASE_MOCK_TS - ONE_HOUR * 2,
         time: '10:15 AM',
         status: 'read'
       },
@@ -223,7 +223,7 @@ const INITIAL_CONVERSATIONS = [
         id: 'm2',
         sender: 'me',
         text: 'Hi Babatunde, is the battery health still at 88% as stated?',
-        timestamp: NOW_TS - ONE_HOUR * 1.5,
+        timestamp: BASE_MOCK_TS - ONE_HOUR * 1.5,
         time: '10:18 AM',
         status: 'read'
       },
@@ -233,7 +233,7 @@ const INITIAL_CONVERSATIONS = [
         text: 'Listen to my short voice note about the inspection details below 👇',
         isVoiceNote: true,
         duration: 8,
-        timestamp: NOW_TS - ONE_HOUR * 1,
+        timestamp: BASE_MOCK_TS - ONE_HOUR * 1,
         time: '10:20 AM',
         status: 'unread'
       }
@@ -263,7 +263,7 @@ const INITIAL_CONVERSATIONS = [
         id: 'm1',
         sender: 'me',
         text: 'Good afternoon, is this MacBook Pro still available?',
-        timestamp: NOW_TS - ONE_DAY * 1 - ONE_HOUR * 4,
+        timestamp: BASE_MOCK_TS - ONE_DAY * 1 - ONE_HOUR * 4,
         time: '2:15 PM',
         status: 'read'
       },
@@ -271,7 +271,7 @@ const INITIAL_CONVERSATIONS = [
         id: 'm2',
         sender: 'them',
         text: 'Yes it is available! Original charger and box included.',
-        timestamp: NOW_TS - ONE_DAY * 1 - ONE_HOUR * 3.5,
+        timestamp: BASE_MOCK_TS - ONE_DAY * 1 - ONE_HOUR * 3.5,
         time: '2:30 PM',
         status: 'read'
       },
@@ -279,7 +279,7 @@ const INITIAL_CONVERSATIONS = [
         id: 'm3',
         sender: 'me',
         text: 'Can I come inspect it tomorrow around 2pm?',
-        timestamp: NOW_TS - ONE_DAY * 1 - ONE_HOUR * 3,
+        timestamp: BASE_MOCK_TS - ONE_DAY * 1 - ONE_HOUR * 3,
         time: '2:40 PM',
         status: 'read'
       },
@@ -287,7 +287,7 @@ const INITIAL_CONVERSATIONS = [
         id: 'm4',
         sender: 'them',
         text: 'That works perfectly! My shop is at Lekki Phase 1.',
-        timestamp: NOW_TS - ONE_DAY * 1 - ONE_HOUR * 2,
+        timestamp: BASE_MOCK_TS - ONE_DAY * 1 - ONE_HOUR * 2,
         time: '2:45 PM',
         status: 'read'
       }
@@ -317,7 +317,7 @@ const INITIAL_CONVERSATIONS = [
         id: 'm1',
         sender: 'them',
         text: 'Welcome to Emeka Autos! Clean custom duty documents intact.',
-        timestamp: NOW_TS - ONE_DAY * 2 - ONE_HOUR * 5,
+        timestamp: BASE_MOCK_TS - ONE_DAY * 2 - ONE_HOUR * 5,
         time: '11:00 AM',
         status: 'read'
       },
@@ -325,7 +325,7 @@ const INITIAL_CONVERSATIONS = [
         id: 'm2',
         sender: 'me',
         text: 'What is your last price for cash payment?',
-        timestamp: NOW_TS - ONE_DAY * 2 - ONE_HOUR * 4.5,
+        timestamp: BASE_MOCK_TS - ONE_DAY * 2 - ONE_HOUR * 4.5,
         time: '11:05 AM',
         status: 'read'
       },
@@ -333,7 +333,7 @@ const INITIAL_CONVERSATIONS = [
         id: 'm3',
         sender: 'them',
         text: 'Final price is ₦14,000,000. Feel free to bring your mechanic for full scan inspection.',
-        timestamp: NOW_TS - ONE_DAY * 2 - ONE_HOUR * 4,
+        timestamp: BASE_MOCK_TS - ONE_DAY * 2 - ONE_HOUR * 4,
         time: '11:20 AM',
         status: 'read'
       }
@@ -363,7 +363,7 @@ const INITIAL_CONVERSATIONS = [
         id: 'm1',
         sender: 'them',
         text: 'Hello, I saw your PS5 listing. Would you accept ₦540,000?',
-        timestamp: NOW_TS - ONE_DAY * 3 - ONE_HOUR * 3,
+        timestamp: BASE_MOCK_TS - ONE_DAY * 3 - ONE_HOUR * 3,
         time: '4:10 PM',
         status: 'read'
       },
@@ -371,7 +371,7 @@ const INITIAL_CONVERSATIONS = [
         id: 'm2',
         sender: 'me',
         text: 'Hi Blessing, last price is ₦560,000. It comes with 2 dualsense pads.',
-        timestamp: NOW_TS - ONE_DAY * 3 - ONE_HOUR * 2.5,
+        timestamp: BASE_MOCK_TS - ONE_DAY * 3 - ONE_HOUR * 2.5,
         time: '4:25 PM',
         status: 'read'
       }

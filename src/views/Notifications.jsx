@@ -65,7 +65,7 @@ export default function Notifications() {
   const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
   const { user } = useAuth();
 
-  const [notifications, setNotifications] = useState(() => getNotificationsForUser(user, INITIAL_NOTIFICATIONS));
+  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const [activeTab, setActiveTab] = useState('all'); // all, unread, offers, alerts
   const [toastMessage, setToastMessage] = useState('');
 

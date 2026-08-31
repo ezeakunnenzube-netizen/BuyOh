@@ -212,11 +212,11 @@ export default function Home(){
   const [agricMenuOpen,     setAgricMenuOpen]     = useState(false)
   const [animalsMenuOpen,   setAnimalsMenuOpen]   = useState(false)
   const [jobsMenuOpen,      setJobsMenuOpen]      = useState(false)
-  const [allProducts, setAllProducts] = useState(() => getGeneralProductPool(null));
+  const [allProducts, setAllProducts] = useState(products);
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
 
-  const [savedItems, setSavedItems] = useState(() => getSavedItemsForUser(user));
+  const [savedItems, setSavedItems] = useState([]);
 
   useEffect(() => {
     const reloadListings = () => {

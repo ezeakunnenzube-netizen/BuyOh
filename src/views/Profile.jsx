@@ -68,7 +68,7 @@ export default function Profile() {
   }, []);
 
   // User Profile Data State (Authoritative Cloud Source of Truth)
-  const [userData, setUserData] = useState(() => getUserProfileData(user));
+  const [userData, setUserData] = useState(() => getUserProfileData(null));
 
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);

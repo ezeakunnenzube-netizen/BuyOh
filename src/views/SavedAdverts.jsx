@@ -17,7 +17,7 @@ export default function SavedAdverts() {
   const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
   const { user, loading, setIsAuthOpen } = useAuth();
 
-  const [savedItems, setSavedItems] = useState(() => getSavedItemsForUser(user));
+  const [savedItems, setSavedItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState('');
   const [removeId, setRemoveId] = useState(null);

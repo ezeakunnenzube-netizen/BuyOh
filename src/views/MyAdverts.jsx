@@ -17,7 +17,7 @@ export default function MyAdverts() {
   const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
   const { user, loading, setIsAuthOpen } = useAuth();
 
-  const [myAdverts, setMyAdverts] = useState(() => getMyListingsForUser(user));
+  const [myAdverts, setMyAdverts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All'); // 'All' | 'Active'
   const [toastMessage, setToastMessage] = useState('');
