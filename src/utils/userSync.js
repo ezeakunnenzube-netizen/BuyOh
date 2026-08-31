@@ -6,13 +6,23 @@ import { products } from '../data/productData';
  * and synchronize data seamlessly with Supabase user_metadata across devices.
  */
 
+export const safeJsonParse = (val, fallback = []) => {
+  if (!val || typeof val !== 'string') return fallback;
+  try {
+    const res = JSON.parse(val);
+    return res !== null && res !== undefined ? res : fallback;
+  } catch (e) {
+    return fallback;
+  }
+};
+
 // --- SAVED ADVERTS SYNC ---
 
 export const getSavedItemsForUser = (user) => {
   if (typeof window === 'undefined') return [];
   if (!user) {
     try {
-      return JSON.parse(localStorage.getItem('buyoh_saved_items_v1')) || [];
+      return safeJsonParse(localStorage.getItem('buyoh_saved_items_v1'), []);
     } catch (e) {
       return [];
     }
@@ -21,8 +31,8 @@ export const getSavedItemsForUser = (user) => {
   // 1. Check local user-scoped storage key first (reflects user's immediate additions & removals)
   try {
     const local = localStorage.getItem(`buyoh_saved_items_${user.id}`);
-    if (local !== null) {
-      const parsed = JSON.parse(local);
+    if (local !== null && local !== undefined) {
+      const parsed = safeJsonParse(local, null);
       if (Array.isArray(parsed)) {
         return parsed;
       }
@@ -44,8 +54,8 @@ export const getSavedItemsForUser = (user) => {
   // 3. Fallback to legacy un-scoped local storage key if migrating
   try {
     const legacy = localStorage.getItem('buyoh_saved_items_v1');
-    if (legacy !== null) {
-      const parsedLegacy = JSON.parse(legacy);
+    if (legacy !== null && legacy !== undefined) {
+      const parsedLegacy = safeJsonParse(legacy, null);
       if (Array.isArray(parsedLegacy)) {
         localStorage.setItem(`buyoh_saved_items_${user.id}`, JSON.stringify(parsedLegacy));
         syncSavedItemsToCloud(user, parsedLegacy);
@@ -104,7 +114,7 @@ export const getMyListingsForUser = (user) => {
   if (typeof window === 'undefined') return [];
   if (!user) {
     try {
-      return JSON.parse(localStorage.getItem('buyoh_my_listings_v1')) || [];
+      return safeJsonParse(localStorage.getItem('buyoh_my_listings_v1'), []);
     } catch (e) {
       return [];
     }
@@ -113,8 +123,8 @@ export const getMyListingsForUser = (user) => {
   // 1. Check local user-scoped storage key first
   try {
     const local = localStorage.getItem(`buyoh_my_listings_${user.id}`);
-    if (local !== null) {
-      const parsed = JSON.parse(local) || [];
+    if (local !== null && local !== undefined) {
+      const parsed = safeJsonParse(local, []);
       parsed.forEach(item => registerPublicListing(item));
       return parsed;
     }
@@ -136,7 +146,7 @@ export const getMyListingsForUser = (user) => {
   try {
     const legacy = localStorage.getItem('buyoh_my_listings_v1');
     if (legacy) {
-      const parsed = JSON.parse(legacy) || [];
+      const parsed = safeJsonParse(legacy, []);
       const userListings = parsed.filter(ad => !ad.sellerId || ad.sellerId === user.id);
       if (userListings.length > 0) {
         localStorage.setItem(`buyoh_my_listings_${user.id}`, JSON.stringify(userListings));
@@ -165,7 +175,7 @@ export const saveMyListingsForUser = async (user, listings) => {
       // Update public pool: Remove user's listings and add updated ones
       try {
         const rawPublic = localStorage.getItem('buyoh_public_listings_v1');
-        let publicPool = rawPublic ? JSON.parse(rawPublic) : [];
+        let publicPool = safeJsonParse(rawPublic, []);
         if (!Array.isArray(publicPool)) publicPool = [];
         
         // Remove any old listings by this user
@@ -193,7 +203,7 @@ export const saveMyListingsForUser = async (user, listings) => {
       
       // Update public pool for guest deletion
       const rawPublic = localStorage.getItem('buyoh_public_listings_v1');
-      let publicPool = rawPublic ? JSON.parse(rawPublic) : [];
+      let publicPool = safeJsonParse(rawPublic, []);
       if (Array.isArray(publicPool)) {
         const guestIds = new Set(sanitizedListings.map(item => String(item.id)));
         publicPool = publicPool.filter(p => {
@@ -220,7 +230,7 @@ export const registerPublicListing = (newListing) => {
   if (!newListing || !newListing.id) return;
   try {
     const raw = localStorage.getItem('buyoh_public_listings_v1');
-    let publicListings = raw ? JSON.parse(raw) : [];
+    let publicListings = safeJsonParse(raw, []);
     if (!Array.isArray(publicListings)) publicListings = [];
     
     // Deduplicate by ID
@@ -244,10 +254,7 @@ export const getAllPublicListings = (user) => {
   
   try {
     const raw = localStorage.getItem('buyoh_public_listings_v1');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) publicPool = parsed;
-    }
+    publicPool = safeJsonParse(raw, []);
   } catch (e) {
     console.error("Error reading public listings pool:", e);
   }

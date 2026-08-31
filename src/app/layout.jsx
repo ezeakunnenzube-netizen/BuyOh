@@ -3,6 +3,14 @@ import './globals.css';
 import '../components/AuthModal.css';
 import '../components/AvatarModal.css';
 import '../components/Footer.css';
+import '../views/Home.css';
+import '../views/Messages.css';
+import '../views/Notifications.css';
+import '../views/Profile.css';
+import '../views/ProductDetails.css';
+import '../views/SellItem.css';
+import '../views/MyAdverts.css';
+import '../views/SavedAdverts.css';
 import { AuthProvider } from '../context/AuthContext';
 import Footer from '../components/Footer';
 

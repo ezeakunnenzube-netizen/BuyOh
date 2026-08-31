@@ -665,39 +665,39 @@ export default function ProductDetails({ params: serverParams }) {
           {user ? (
             <>
               <NavLink to="/messages" replace className={({isActive})=>isActive?"home-nav-item home-nav-item-active":"home-nav-item"}>
-                {({isActive})=>(<button className="home-nav-icon-btn">
+                {({isActive})=>(<span className="home-nav-icon-btn">
                   <MessageSquareMore className="home-nav-icon" color={isActive?"#1d4ed8":"white"}/>
                   <div className="home-header-tooltip">My Messages</div>
-                </button>)}
+                </span>)}
               </NavLink>
               <NavLink to="/notifications" replace className={({isActive})=>isActive?"home-nav-item home-nav-item-active":"home-nav-item"}>
-                {({isActive})=>(<button className="home-nav-icon-btn">
+                {({isActive})=>(<span className="home-nav-icon-btn">
                   <BellRing className="home-nav-icon" color={isActive?"#1d4ed8":"white"}/>
                   <div className="home-header-tooltip">Notifications</div>
-                </button>)}
+                </span>)}
               </NavLink>
               <NavLink to="/saved" replace className={({isActive})=>isActive?"home-nav-item home-nav-item-active":"home-nav-item"}>
-                {({isActive})=>(<button className="home-nav-icon-btn">
+                {({isActive})=>(<span className="home-nav-icon-btn">
                   <Bookmark className="home-nav-icon" color={isActive?"#1d4ed8":"white"}/>
                   <div className="home-header-tooltip">Saved</div>
-                </button>)}
+                </span>)}
               </NavLink>
               <NavLink to="/adverts" replace className={({isActive})=>isActive?"home-nav-item home-nav-item-active":"home-nav-item"}>
-                {({isActive})=>(<button className="home-nav-icon-btn">
+                {({isActive})=>(<span className="home-nav-icon-btn">
                   <PanelTop className="home-nav-icon" color={isActive?"#1d4ed8":"white"}/>
                   <div className="home-header-tooltip">My Adverts</div>
-                </button>)}
+                </span>)}
               </NavLink>
               <NavLink to="/profile" replace className={({isActive})=>isActive?"home-nav-item home-nav-item-active":"home-nav-item"}>
-                {({isActive})=>(<button className="home-nav-icon-btn">
+                {({isActive})=>(<span className="home-nav-icon-btn">
                   <UserRound className="home-nav-icon" color={isActive?"#1d4ed8":"white"}/>
                   <div className="home-header-tooltip">My Profile</div>
-                </button>)}
+                </span>)}
               </NavLink>
               <NavLink to="/sell" replace className="home-nav-item">
-                <button className="home-sell-btn">
-                  <p className="home-sell-btn-text" style={{color: '#e67600'}}>+ Sell</p>
-                </button>
+                <span className="home-sell-btn">
+                  <span className="home-sell-btn-text" style={{color: '#e67600'}}>+ Sell</span>
+                </span>
               </NavLink>
             </>
           ) : loading ? null : (

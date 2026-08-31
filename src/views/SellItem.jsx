@@ -442,29 +442,29 @@ export default function SellItem() {
         </NavLink>
         <div className="home-nav-links">
           <NavLink to="/messages" replace className="home-nav-item">
-            <button className="home-nav-icon-btn">
+            <span className="home-nav-icon-btn">
               <MessageSquareMore className="home-nav-icon" color="white" />
-            </button>
+            </span>
           </NavLink>
           <NavLink to="/notifications" replace className="home-nav-item">
-            <button className="home-nav-icon-btn">
+            <span className="home-nav-icon-btn">
               <BellRing className="home-nav-icon" color="white" />
-            </button>
+            </span>
           </NavLink>
           <NavLink to="/saved" replace className="home-nav-item">
-            <button className="home-nav-icon-btn">
+            <span className="home-nav-icon-btn">
               <Bookmark className="home-nav-icon" color="white" />
-            </button>
+            </span>
           </NavLink>
           <NavLink to="/adverts" replace className="home-nav-item">
-            <button className="home-nav-icon-btn">
+            <span className="home-nav-icon-btn">
               <PanelTop className="home-nav-icon" color="white" />
-            </button>
+            </span>
           </NavLink>
           <NavLink to="/profile" replace className="home-nav-item">
-            <button className="home-nav-icon-btn">
+            <span className="home-nav-icon-btn">
               <UserRound className="home-nav-icon" color="white" />
-            </button>
+            </span>
           </NavLink>
         </div>
       </header>

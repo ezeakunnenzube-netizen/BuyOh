@@ -273,39 +273,39 @@ export default function Profile() {
         </NavLink>
         <div className="home-nav-links">
           <NavLink to="/messages" replace className="home-nav-item">
-            <button className="home-nav-icon-btn">
+            <span className="home-nav-icon-btn">
               <MessageSquareMore className="home-nav-icon" color="white" />
               <div className="home-header-tooltip">My Messages</div>
-            </button>
+            </span>
           </NavLink>
           <NavLink to="/notifications" replace className="home-nav-item">
-            <button className="home-nav-icon-btn">
+            <span className="home-nav-icon-btn">
               <BellRing className="home-nav-icon" color="white" />
               <div className="home-header-tooltip">Notifications</div>
-            </button>
+            </span>
           </NavLink>
           <NavLink to="/saved" replace className="home-nav-item">
-            <button className="home-nav-icon-btn">
+            <span className="home-nav-icon-btn">
               <Bookmark className="home-nav-icon" color="white" />
               <div className="home-header-tooltip">Saved</div>
-            </button>
+            </span>
           </NavLink>
           <NavLink to="/adverts" replace className="home-nav-item">
-            <button className="home-nav-icon-btn">
+            <span className="home-nav-icon-btn">
               <PanelTop className="home-nav-icon" color="white" />
               <div className="home-header-tooltip">My Adverts</div>
-            </button>
+            </span>
           </NavLink>
           <NavLink to="/profile" replace className="home-nav-item home-nav-item-active">
-            <button className="home-nav-icon-btn">
+            <span className="home-nav-icon-btn">
               <UserRound className="home-nav-icon" color="#1d4ed8" />
               <div className="home-header-tooltip">My Profile</div>
-            </button>
+            </span>
           </NavLink>
           <NavLink to="/sell" replace className="home-nav-item">
-            <button className="home-sell-btn">
-              <p className="home-sell-btn-text">+ Sell</p>
-            </button>
+            <span className="home-sell-btn">
+              <span className="home-sell-btn-text">+ Sell</span>
+            </span>
           </NavLink>
         </div>
       </header>

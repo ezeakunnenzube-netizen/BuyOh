@@ -428,8 +428,14 @@ export default function Messages() {
   // Followed sellers state
   const [followedSellers, setFollowedSellers] = useState(() => {
     if (typeof window === 'undefined') return [];
-    const saved = localStorage.getItem('buyoh_followed_sellers_v1');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('buyoh_followed_sellers_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return [];
   });
 
   useEffect(() => {
@@ -1053,49 +1059,49 @@ export default function Messages() {
         <div className="home-nav-links">
           <NavLink to="/messages" replace className={({ isActive }) => isActive ? "home-nav-item home-nav-item-active" : "home-nav-item"}>
             {({ isActive }) => (
-              <button className="home-nav-icon-btn">
+              <span className="home-nav-icon-btn">
                 <MessageSquareMore className="home-nav-icon" color={isActive ? "#1d4ed8" : "white"} />
                 <div className="home-header-tooltip">My Messages</div>
-              </button>
+              </span>
             )}
           </NavLink>
           <NavLink to="/notifications" replace className={({ isActive }) => isActive ? "home-nav-item home-nav-item-active" : "home-nav-item"}>
             {({ isActive }) => (
-              <button className="home-nav-icon-btn">
+              <span className="home-nav-icon-btn">
                 <BellRing className="home-nav-icon" color={isActive ? "#1d4ed8" : "white"} />
                 <div className="home-header-tooltip">Notifications</div>
-              </button>
+              </span>
             )}
           </NavLink>
           <NavLink to="/saved" replace className={({ isActive }) => isActive ? "home-nav-item home-nav-item-active" : "home-nav-item"}>
             {({ isActive }) => (
-              <button className="home-nav-icon-btn">
+              <span className="home-nav-icon-btn">
                 <Bookmark className="home-nav-icon" color={isActive ? "#1d4ed8" : "white"} />
                 <div className="home-header-tooltip">Saved</div>
-              </button>
+              </span>
             )}
           </NavLink>
           <NavLink to="/adverts" replace className={({ isActive }) => isActive ? "home-nav-item home-nav-item-active" : "home-nav-item"}>
             {({ isActive }) => (
-              <button className="home-nav-icon-btn">
+              <span className="home-nav-icon-btn">
                 <PanelTop className="home-nav-icon" color={isActive ? "#1d4ed8" : "white"} />
                 <div className="home-header-tooltip">My Adverts</div>
-              </button>
+              </span>
             )}
           </NavLink>
           <NavLink to="/profile" replace className={({ isActive }) => isActive ? "home-nav-item home-nav-item-active" : "home-nav-item"}>
             {({ isActive }) => (
-              <button className="home-nav-icon-btn">
+              <span className="home-nav-icon-btn">
                 <UserRound className="home-nav-icon" color={isActive ? "#1d4ed8" : "white"} />
                 <div className="home-header-tooltip">My Profile</div>
-              </button>
+              </span>
             )}
           </NavLink>
           <NavLink to="/sell" replace className={({ isActive }) => isActive ? "home-nav-item home-nav-item-active" : "home-nav-item"}>
             {({ isActive }) => (
-              <button className="home-sell-btn">
-                <p style={{ color: isActive ? "#1d4ed8" : "#e67600" }} className="home-sell-btn-text">+ Sell</p>
-              </button>
+              <span className="home-sell-btn">
+                <span style={{ color: isActive ? "#1d4ed8" : "#e67600" }} className="home-sell-btn-text">+ Sell</span>
+              </span>
             )}
           </NavLink>
         </div>
