@@ -39,12 +39,17 @@ function getCachedUser() {
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(getCachedUser);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    const cached = getCachedUser();
+    if (cached) {
+      setUser(cached);
+    }
 
     // 1. Subscribe to active auth state changes continuously
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
