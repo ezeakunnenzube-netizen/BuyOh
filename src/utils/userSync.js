@@ -217,50 +217,13 @@ export const getUserProfileData = (user) => {
   const whatsapp = localProfile?.whatsapp || meta.whatsapp || meta.phone || phone;
   const location = localProfile?.location || meta.location || 'Lagos, Nigeria';
 
-  // Background fetch from Supabase database table `public.profiles`
-  if (typeof window !== 'undefined' && activeUser.id) {
-    (async () => {
-      try {
-        const { data: dbProfile, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', activeUser.id)
-          .maybeSingle();
-
-        if (dbProfile && !error) {
-          const freshData = {
-            name: dbProfile.full_name || dbProfile.name || name,
-            email: dbProfile.email || email,
-            phone: dbProfile.phone || phone,
-            whatsapp: dbProfile.whatsapp || whatsapp,
-            location: dbProfile.location || location,
-            avatar: isValidAvatarUrl(dbProfile.avatar_url) ? dbProfile.avatar_url : chosenAvatar,
-            banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
-          };
-          localStorage.setItem(`buyoh_user_profile_${activeUser.id}`, JSON.stringify(freshData));
-          if (freshData.avatar) {
-            localStorage.setItem(`buyoh_user_avatar_${activeUser.id}`, freshData.avatar);
-            localStorage.setItem('buyoh_user_avatar_v1', freshData.avatar);
-          }
-          localStorage.setItem(`buyoh_user_name_${activeUser.id}`, freshData.name);
-          localStorage.setItem('buyoh_user_name_v1', freshData.name);
-
-          // Only fire update event if values actually changed to avoid unnecessary re-renders/flashes
-          if (freshData.avatar !== chosenAvatar || freshData.name !== name || freshData.phone !== phone) {
-            window.dispatchEvent(new CustomEvent('buyoh_profile_updated', { detail: freshData }));
-          }
-        }
-      } catch (err) {
-        console.error('Supabase profile fetch error:', err);
-      }
-    })();
-  }
-
   // Cache back to local storage
   if (typeof window !== 'undefined') {
     try {
-      localStorage.setItem(`buyoh_user_avatar_${activeUser.id}`, chosenAvatar);
-      localStorage.setItem('buyoh_user_avatar_v1', chosenAvatar);
+      if (chosenAvatar) {
+        localStorage.setItem(`buyoh_user_avatar_${activeUser.id}`, chosenAvatar);
+        localStorage.setItem('buyoh_user_avatar_v1', chosenAvatar);
+      }
       localStorage.setItem(`buyoh_user_name_${activeUser.id}`, name);
       localStorage.setItem('buyoh_user_name_v1', name);
     } catch (e) {}

@@ -47,18 +47,9 @@ export function AuthProvider({ children }) {
     if (typeof window === 'undefined') return;
 
     // 1. Subscribe to active auth state changes continuously
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        // Fetch fresh server user metadata
-        try {
-          const { data: { user: freshUser } } = await supabase.auth.getUser();
-          const activeUser = freshUser || session.user;
-          setUser(activeUser);
-          getUserProfileData(activeUser);
-        } catch (e) {
-          setUser(session.user);
-          getUserProfileData(session.user);
-        }
+        setUser(session.user);
         setIsAuthOpen(false);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
@@ -66,21 +57,14 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
 
-    // 2. Initialize session from Supabase server / local storage
+    // 2. Initialize session from Supabase local session
     const initAuth = async () => {
       try {
-        const { data: { user: serverUser }, error } = await supabase.auth.getUser();
-        if (serverUser && !error) {
-          setUser(serverUser);
-          getUserProfileData(serverUser);
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (session?.user && !error) {
+          setUser(session.user);
         } else {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user) {
-            setUser(session.user);
-            getUserProfileData(session.user);
-          } else {
-            setUser(null);
-          }
+          setUser(null);
         }
       } catch (err) {
         console.error("Auth init error:", err);

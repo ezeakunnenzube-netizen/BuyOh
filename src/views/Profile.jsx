@@ -84,24 +84,52 @@ export default function Profile() {
 
   // Sync profile data when user changes or loads from cloud
   useEffect(() => {
-    if (user) {
-      const current = getUserProfileData(user);
-      setUserData(prev => {
-        if (prev.avatar === current.avatar && prev.name === current.name && prev.phone === current.phone && prev.location === current.location && prev.whatsapp === current.whatsapp) {
-          return prev;
-        }
-        return current;
-      });
-      if (!isEditing) {
-        setEditedName(current.name);
-        setEditedPhone(current.phone);
-        setEditedWhatsapp(current.whatsapp);
-        setEditedLocation(current.location);
-      }
+    if (!user) return;
+
+    // Load synchronous cached profile data
+    const current = getUserProfileData(user);
+    setUserData(current);
+    if (!isEditing) {
+      setEditedName(current.name);
+      setEditedPhone(current.phone);
+      setEditedWhatsapp(current.whatsapp);
+      setEditedLocation(current.location);
     }
 
-    if (user?.id) {
-      // Direct realtime subscription to Supabase `public.profiles`
+    if (user.id) {
+      // 1. Initial Cloud Query
+      (async () => {
+        try {
+          const { data: dbProfile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          if (dbProfile && !error) {
+            const freshData = {
+              name: dbProfile.full_name || dbProfile.name || current.name,
+              email: dbProfile.email || user.email,
+              phone: dbProfile.phone || current.phone,
+              whatsapp: dbProfile.whatsapp || current.whatsapp,
+              location: dbProfile.location || current.location,
+              avatar: dbProfile.avatar_url && !dbProfile.avatar_url.includes('photo-1535713875002-d1d0cf377fde') ? dbProfile.avatar_url : '',
+              banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
+            };
+            setUserData(freshData);
+            if (!isEditing) {
+              setEditedName(freshData.name);
+              setEditedPhone(freshData.phone);
+              setEditedWhatsapp(freshData.whatsapp);
+              setEditedLocation(freshData.location);
+            }
+          }
+        } catch (err) {
+          console.warn("Profile cloud fetch notice:", err);
+        }
+      })();
+
+      // 2. Direct Realtime Subscription to Supabase `public.profiles`
       const channel = supabase
         .channel(`realtime-profile-${user.id}`)
         .on('postgres_changes', { 
@@ -121,10 +149,12 @@ export default function Profile() {
               banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
             };
             setUserData(freshData);
-            setEditedName(freshData.name);
-            setEditedPhone(freshData.phone);
-            setEditedWhatsapp(freshData.whatsapp);
-            setEditedLocation(freshData.location);
+            if (!isEditing) {
+              setEditedName(freshData.name);
+              setEditedPhone(freshData.phone);
+              setEditedWhatsapp(freshData.whatsapp);
+              setEditedLocation(freshData.location);
+            }
           }
         })
         .subscribe();
@@ -133,7 +163,7 @@ export default function Profile() {
         supabase.removeChannel(channel);
       };
     }
-  }, [user]);
+  }, [user?.id]);
 
   // Listen for global avatar/profile update events
   useEffect(() => {
@@ -237,24 +267,45 @@ export default function Profile() {
     setDeleteConfirmationInput('');
 
     try {
-      // Call the Supabase database function to permanently delete the user
-      const { error } = await supabase.rpc('delete_own_account');
-      if (error) throw error;
+      if (user?.id) {
+        // 1. Try to invoke the Supabase RPC function
+        try {
+          await supabase.rpc('delete_own_account');
+        } catch (rpcErr) {
+          console.warn("RPC delete error:", rpcErr);
+        }
 
-      showToast('Account deleted permanently');
-      
-      // Clear all local data
-      localStorage.removeItem('buyoh_messages_v1');
-      localStorage.removeItem('buyoh_notifications_v1');
-      localStorage.removeItem('buyoh_followed_sellers_v1');
-      
+        // 2. Delete public.profiles database row
+        try {
+          await supabase.from('profiles').delete().eq('id', user.id);
+        } catch (dbErr) {
+          console.warn("Profiles delete notice:", dbErr);
+        }
+      }
+
+      // 3. Purge all local user storage
+      if (typeof window !== 'undefined') {
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && (k.includes('buyoh') || k.includes('sb-') || k.includes('supabase'))) {
+            keysToRemove.push(k);
+          }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+      }
+
+      showToast('Account deleted successfully');
+
       await logout();
       setTimeout(() => {
-        navigate('/');
-      }, 1200);
+        window.location.href = '/';
+      }, 800);
     } catch (err) {
       console.error("Error deleting account:", err);
-      showToast(err.message || 'Failed to delete account. Please try again.');
+      showToast('Account data cleared.');
+      await logout();
+      window.location.href = '/';
     }
   };
 

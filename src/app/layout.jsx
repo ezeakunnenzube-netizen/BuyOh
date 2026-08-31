@@ -26,7 +26,11 @@ export const metadata = {
   description: 'Nigeria’s premier online marketplace. Buy, sell, and discover amazing deals on phones, laptops, cars, fashion, property, and everyday goods with verified Nigerian buyers and sellers.',
   keywords: ['marketplace', 'buy in nigeria', 'sell in nigeria', 'lagos classifieds', 'abuja deals', 'buyoh'],
   icons: {
-    icon: '/favicon.svg',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' }
+    ],
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
   },
 };
 

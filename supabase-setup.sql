@@ -139,3 +139,22 @@ DROP POLICY IF EXISTS "Authenticated users can update their own avatars" ON stor
 CREATE POLICY "Authenticated users can update their own avatars"
 ON storage.objects FOR UPDATE
 USING (bucket_id = 'avatars' AND auth.role() = 'authenticated');
+
+-- 7. Secure RPC Function allowing authenticated users to delete their own account
+CREATE OR REPLACE FUNCTION public.delete_own_account()
+RETURNS void AS $$
+DECLARE
+  current_user_id UUID;
+BEGIN
+  current_user_id := auth.uid();
+  IF current_user_id IS NOT NULL THEN
+    -- Delete user profile row
+    DELETE FROM public.profiles WHERE id = current_user_id;
+    -- Delete user auth account
+    DELETE FROM auth.users WHERE id = current_user_id;
+  END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.delete_own_account() TO authenticated;
+
