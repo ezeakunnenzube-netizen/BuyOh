@@ -73,19 +73,12 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialError }) 
 
         if (error) throw error;
 
-        let activeUser = data.user;
-        try {
-          const { data: serverUserData } = await supabase.auth.getUser();
-          if (serverUserData?.user) {
-            activeUser = serverUserData.user;
-          }
-        } catch (e) {}
-
+        const activeUser = data.user;
         setSuccessMessage('Logged in successfully!');
         setTimeout(() => {
           if (onSuccess) onSuccess(activeUser);
           onClose();
-        }, 1200);
+        }, 800);
       }
     } catch (err) {
       setErrorMessage(err.message || 'An error occurred during authentication');

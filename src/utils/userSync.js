@@ -399,7 +399,6 @@ export const getMyListingsForUser = (user) => {
     if (local !== null && local !== undefined) {
       const parsed = safeJsonParse(local, []);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        parsed.forEach(item => registerPublicListing(item));
         return parsed;
       }
     }
@@ -411,7 +410,6 @@ export const getMyListingsForUser = (user) => {
     try {
       localStorage.setItem(`buyoh_my_listings_${user.id}`, JSON.stringify(cloudListings));
       localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(cloudListings));
-      cloudListings.forEach(item => registerPublicListing(item));
     } catch (e) {}
     return cloudListings;
   }
@@ -645,10 +643,6 @@ export const getAllPublicListings = (user) => {
         publicPool.unshift(item);
       }
     });
-
-    try {
-      localStorage.setItem('buyoh_public_listings_v1', JSON.stringify(publicPool));
-    } catch (e) {}
   }
 
   return publicPool;
