@@ -498,9 +498,7 @@ export default function SellItem() {
       <div className="sell-container">
         {/* Mobile Header */}
         <div className="sell-mobile-header">
-          <button onClick={handleBack} className="sell-mobile-back">
-            <ArrowLeft size={20} /> Back
-          </button>
+          
           <h2 className="sell-mobile-title">Post Ad</h2>
         </div>
 
