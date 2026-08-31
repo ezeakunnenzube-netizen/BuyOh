@@ -43,11 +43,17 @@ export const viewport = {
   interactiveWidget: 'resizes-content',
 };
 
+import { Suspense } from 'react';
+import MobileSwipeNavigator from '../components/MobileSwipeNavigator';
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={poppins.variable}>
       <body className={poppins.className}>
         <AuthProvider>
+          <Suspense fallback={null}>
+            <MobileSwipeNavigator />
+          </Suspense>
           <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             <main style={{ flex: '1 0 auto' }}>
               {children}

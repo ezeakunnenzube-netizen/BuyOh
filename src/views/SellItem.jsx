@@ -242,6 +242,38 @@ export default function SellItem() {
     return Object.keys(errs).length === 0;
   };
 
+  const currentStepRef = useRef(currentStep);
+  useEffect(() => {
+    currentStepRef.current = currentStep;
+  }, [currentStep]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      window.history.pushState({ page: 'sell', step: 1 }, '', window.location.href);
+    } catch (e) {}
+
+    const handlePopState = () => {
+      if (currentStepRef.current > 1 && currentStepRef.current < 4) {
+        setCurrentStep(prev => Math.max(prev - 1, 1));
+        window.scrollTo(0, 0);
+        try {
+          window.history.pushState({ page: 'sell', step: currentStepRef.current }, '', window.location.href);
+        } catch (e) {}
+      } else {
+        try {
+          window.history.pushState({ page: 'sell', step: 1 }, '', window.location.href);
+        } catch (e) {}
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
   const nextStep = () => {
     if (validateStep(currentStep)) {
       setCurrentStep(prev => Math.min(prev + 1, 4));

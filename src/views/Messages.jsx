@@ -1039,15 +1039,12 @@ export default function Messages() {
     setIsChatSearchOpen(false);
     setChatSearchQuery('');
     setCurrentMatchIndex(0);
-    setSearchParams({ chatId: id });
+    router.replace(`/messages?chatId=${id}`);
   };
 
   const handleMobileBack = () => {
-    if (searchParams.get('chatId') || searchParams.get('productId')) {
-      setSearchParams({});
-    } else {
-      setIsMobileDetailOpen(false);
-    }
+    setIsMobileDetailOpen(false);
+    router.replace('/messages');
   };
 
   const formatPrice = (price) => '₦' + Number(price).toLocaleString('en-NG');
