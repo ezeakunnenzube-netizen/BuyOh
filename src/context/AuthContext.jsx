@@ -1,3 +1,5 @@
+'use client';
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import AuthModal from '../components/AuthModal';
@@ -11,6 +13,7 @@ const AuthContext = createContext({
 });
 
 function getCachedUser() {
+  if (typeof window === 'undefined') return null;
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -41,6 +44,8 @@ export function AuthProvider({ children }) {
   const [oauthError, setOauthError] = useState('');
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     // 1. Check for OAuth error returned in URL hash or query params
     try {
       const hash = window.location.hash.substring(1);

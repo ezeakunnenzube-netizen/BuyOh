@@ -1,7 +1,9 @@
-import "./Home.css"
-import {useEffect, useLayoutEffect, useRef, useState, useMemo} from "react"
-import {ChevronDown, Search, MapPin, X, MessageSquareMore, BellRing, PanelTop, UserRound, Bookmark} from "lucide-react"
-import {NavLink} from "react-router-dom"
+'use client';
+
+import "./Home.css";
+import {useEffect, useLayoutEffect, useRef, useState, useMemo} from "react";
+import {ChevronDown, Search, MapPin, X, MessageSquareMore, BellRing, PanelTop, UserRound, Bookmark} from "lucide-react";
+import NavLink from "../components/NavLink";
 import {locations} from "../data/statesData.js"
 import {products} from "../data/productData.js"
 import {useAuth} from "../context/AuthContext"

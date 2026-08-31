@@ -1,5 +1,8 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import NavLink from '../components/NavLink';
+import { useRouter } from 'next/navigation';
 import { 
   BellRing, BellOff, MessageSquare, Tag, AlertTriangle, ShieldCheck, 
   Trash2, Check, ArrowLeft, MoreVertical, Search, MessageSquareMore, 
@@ -64,8 +67,10 @@ const INITIAL_NOTIFICATIONS = [
 ];
 
 export default function Notifications() {
-  const navigate = useNavigate();
+  const router = useRouter();
+  const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
   const [notifications, setNotifications] = useState(() => {
+    if (typeof window === 'undefined') return INITIAL_NOTIFICATIONS;
     const saved = localStorage.getItem('buyoh_notifications_v1');
     return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
   });

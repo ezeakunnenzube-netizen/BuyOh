@@ -1,5 +1,8 @@
+'use client';
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import NavLink from '../components/NavLink';
+import { useRouter } from 'next/navigation';
 import {
   Bookmark, MapPin, Tag, ArrowLeft, Eye, Trash2,
   MessageSquareMore, BellRing, PanelTop, UserRound, Heart, Sparkles,
@@ -10,7 +13,8 @@ import { getSavedItemsForUser, saveItemsForUser } from '../utils/userSync';
 import './SavedAdverts.css';
 
 export default function SavedAdverts() {
-  const navigate = useNavigate();
+  const router = useRouter();
+  const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
   const { user, loading, setIsAuthOpen } = useAuth();
 
   const [savedItems, setSavedItems] = useState(() => getSavedItemsForUser(user));

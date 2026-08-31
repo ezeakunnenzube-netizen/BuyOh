@@ -1,5 +1,8 @@
+'use client';
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import NavLink from '../components/NavLink';
+import { useRouter } from 'next/navigation';
 import { 
   PanelTop, Trash2, Eye, MapPin, Tag, Plus, ArrowLeft, 
   MessageSquareMore, BellRing, Bookmark, UserRound, Sparkles, CheckCircle,
@@ -10,7 +13,8 @@ import { getMyListingsForUser, saveMyListingsForUser } from '../utils/userSync';
 import './MyAdverts.css';
 
 export default function MyAdverts() {
-  const navigate = useNavigate();
+  const router = useRouter();
+  const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
   const { user, loading, setIsAuthOpen } = useAuth();
 
   const [myAdverts, setMyAdverts] = useState(() => getMyListingsForUser(user));

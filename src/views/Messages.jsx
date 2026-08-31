@@ -1,5 +1,8 @@
+'use client';
+
 import React, { useState, useEffect, useRef } from 'react';
-import { NavLink, useSearchParams, useNavigate } from 'react-router-dom';
+import NavLink from '../components/NavLink';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   Search, MessageSquareMore, BellRing, PanelTop, UserRound, Bookmark, 
   Send, Phone, ShieldCheck, MoreVertical, ArrowLeft, CheckCheck, 
@@ -374,11 +377,13 @@ const AUTO_REPLIES = [
 ];
 
 export default function Messages() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
 
   // Load state from localStorage or initial seed
   const [conversations, setConversations] = useState(() => {
+    if (typeof window === 'undefined') return INITIAL_CONVERSATIONS;
     const saved = localStorage.getItem('buyoh_messages_v1');
     if (saved) {
       try {
@@ -392,7 +397,7 @@ export default function Messages() {
   });
 
   const [activeChatId, setActiveChatId] = useState(() => {
-    const paramChatId = searchParams.get('chatId');
+    const paramChatId = searchParams?.get('chatId');
     if (paramChatId && conversations.some(c => c.id === paramChatId)) {
       return paramChatId;
     }
@@ -422,6 +427,7 @@ export default function Messages() {
 
   // Followed sellers state
   const [followedSellers, setFollowedSellers] = useState(() => {
+    if (typeof window === 'undefined') return [];
     const saved = localStorage.getItem('buyoh_followed_sellers_v1');
     return saved ? JSON.parse(saved) : [];
   });

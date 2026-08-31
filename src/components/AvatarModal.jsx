@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, Upload, Check, Image as ImageIcon, RefreshCw, 

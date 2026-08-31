@@ -1,5 +1,8 @@
+'use client';
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate, NavLink } from 'react-router-dom';
+import { useParams, useRouter } from 'next/navigation';
+import NavLink from '../components/NavLink';
 import { 
   MapPin, MessageSquareMore, Heart, 
   ArrowLeft, Phone, ShieldAlert, Eye, 
@@ -11,9 +14,11 @@ import { useAuth } from '../context/AuthContext';
 import { getSavedItemsForUser, saveItemsForUser, getAllPublicListings, getGeneralProductPool, getMyListingsForUser, saveMyListingsForUser } from '../utils/userSync';
 import './ProductDetails.css';
 
-export default function ProductDetails() {
-  const { productId } = useParams();
-  const navigate = useNavigate();
+export default function ProductDetails({ params: serverParams }) {
+  const routerParams = useParams();
+  const productId = serverParams?.productId || routerParams?.productId;
+  const router = useRouter();
+  const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
   const { user, loading, setIsAuthOpen } = useAuth();
   
   const [product, setProduct] = useState(null);

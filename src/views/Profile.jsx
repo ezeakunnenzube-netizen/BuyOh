@@ -1,5 +1,8 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import NavLink from '../components/NavLink';
+import { useRouter } from 'next/navigation';
 import { 
   User, ShieldCheck, MapPin, Phone, Mail, Bell, Lock, Eye, LogOut, 
   Trash2, ArrowLeft, Camera, Check, MessageSquareMore, 
@@ -13,7 +16,8 @@ import { getSavedItemsForUser, getMyListingsForUser } from '../utils/userSync';
 import './Profile.css';
 
 export default function Profile() {
-  const navigate = useNavigate();
+  const router = useRouter();
+  const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
 
   const { user, loading, logout } = useAuth();
   
@@ -66,9 +70,9 @@ export default function Profile() {
     name: 'Adebayo Johnson',
     email: 'adebayo.johnson@buyoh.com',
     phone: '+234 812 345 6789',
-    whatsapp: localStorage.getItem('buyoh_user_whatsapp_v1') || '+234 812 345 6789',
+    whatsapp: (typeof window !== 'undefined' ? localStorage.getItem('buyoh_user_whatsapp_v1') : null) || '+234 812 345 6789',
     location: 'Lekki, Lagos',
-    avatar: localStorage.getItem('buyoh_user_avatar_v1') || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+    avatar: (typeof window !== 'undefined' ? localStorage.getItem('buyoh_user_avatar_v1') : null) || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
     banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
   }));
 

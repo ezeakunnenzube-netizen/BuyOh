@@ -9,6 +9,7 @@ import { products } from '../data/productData';
 // --- SAVED ADVERTS SYNC ---
 
 export const getSavedItemsForUser = (user) => {
+  if (typeof window === 'undefined') return [];
   if (!user) {
     try {
       return JSON.parse(localStorage.getItem('buyoh_saved_items_v1')) || [];
@@ -57,6 +58,7 @@ export const getSavedItemsForUser = (user) => {
 };
 
 export const saveItemsForUser = async (user, items) => {
+  if (typeof window === 'undefined') return;
   const sanitizedItems = Array.isArray(items) ? items : [];
   
   if (user && user.id) {
@@ -99,6 +101,7 @@ export const syncSavedItemsToCloud = async (user, items) => {
 // --- MY LISTINGS SYNC ---
 
 export const getMyListingsForUser = (user) => {
+  if (typeof window === 'undefined') return [];
   if (!user) {
     try {
       return JSON.parse(localStorage.getItem('buyoh_my_listings_v1')) || [];
@@ -148,6 +151,7 @@ export const getMyListingsForUser = (user) => {
 };
 
 export const saveMyListingsForUser = async (user, listings) => {
+  if (typeof window === 'undefined') return;
   const sanitizedListings = Array.isArray(listings) ? listings : [];
   if (user && user.id) {
     const userKey = `buyoh_my_listings_${user.id}`;
@@ -212,6 +216,7 @@ export const saveMyListingsForUser = async (user, listings) => {
 // --- GLOBAL PUBLIC MARKETPLACE LISTINGS SYNC ---
 
 export const registerPublicListing = (newListing) => {
+  if (typeof window === 'undefined') return;
   if (!newListing || !newListing.id) return;
   try {
     const raw = localStorage.getItem('buyoh_public_listings_v1');
@@ -235,6 +240,7 @@ export const registerPublicListing = (newListing) => {
 
 export const getAllPublicListings = (user) => {
   let publicPool = [];
+  if (typeof window === 'undefined') return publicPool;
   
   try {
     const raw = localStorage.getItem('buyoh_public_listings_v1');

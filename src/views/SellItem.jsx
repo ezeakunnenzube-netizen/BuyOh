@@ -1,5 +1,8 @@
-import React, { useState, useRef, useEffect} from 'react';
-import { useNavigate, NavLink } from 'react-router-dom';
+'use client';
+
+import React, { useState, useRef, useEffect } from 'react';
+import NavLink from '../components/NavLink';
+import { useRouter } from 'next/navigation';
 import { 
   Camera, X, MapPin, Tag, DollarSign, FileText, Layers, ChevronDown,
   ImagePlus, Sparkles, AlertCircle, CheckCircle, MessageSquareMore,
@@ -38,7 +41,8 @@ const NIGERIAN_STATES = [
 ];
 
 export default function SellItem() {
-  const navigate = useNavigate();
+  const router = useRouter();
+  const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
   const { user, loading, setIsAuthOpen } = useAuth();
   const fileInputRef = useRef(null);
 
@@ -53,7 +57,13 @@ export default function SellItem() {
   const [negotiable, setNegotiable] = useState(true);
   const [images, setImages] = useState([]);
   const [contactPhone, setContactPhone] = useState(() => user?.user_metadata?.phone || '');
-  const [contactWhatsApp, setContactWhatsApp] = useState(() => user?.user_metadata?.whatsapp || localStorage.getItem('buyoh_user_whatsapp_v1') || user?.user_metadata?.phone || '');
+  const [contactWhatsApp, setContactWhatsApp] = useState(() => {
+    if (user?.user_metadata?.whatsapp) return user.user_metadata.whatsapp;
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('buyoh_user_whatsapp_v1') || user?.user_metadata?.phone || '';
+    }
+    return user?.user_metadata?.phone || '';
+  });
 
   // Category Specific Specs State (all initialized to empty strings)
   const [brand, setBrand] = useState('');
