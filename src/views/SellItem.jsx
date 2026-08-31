@@ -497,8 +497,7 @@ export default function SellItem() {
 
       <div className="sell-container">
         {/* Mobile Header */}
-        <div className="sell-mobile-header">
-          
+        <div className="sell-mobile-header">         
           <h2 className="sell-mobile-title">Post Ad</h2>
         </div>
 
