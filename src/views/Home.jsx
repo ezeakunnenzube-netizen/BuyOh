@@ -802,7 +802,7 @@ export default function Home(){
         </div>
       </div>
 
-      {!user && (
+      {!loading && !user && (
         <div className="hero-auth-prompt-bar">
           <span className="prompt-text">Sign in to start negotiations, make offers, and chat with verified sellers!</span>
           <button className="prompt-action-btn" onClick={() => setIsAuthOpen(true)}>
