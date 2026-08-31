@@ -22,7 +22,22 @@ export default function ProductDetails({ params: serverParams }) {
   const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
   const { user, loading, setIsAuthOpen } = useAuth();
   
-  const [product, setProduct] = useState(null);
+  const [product, setProduct] = useState(() => {
+    if (!productId) return null;
+    try {
+      const pool = getGeneralProductPool(null);
+      const found = pool.find(p => String(p.id) === String(productId));
+      if (found) {
+        const defaultPlaceholder = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
+        let img = found.image;
+        if (!img || img.startsWith('blob:')) img = defaultPlaceholder;
+        let imgs = Array.isArray(found.images) ? found.images.map(u => (!u || u.startsWith('blob:')) ? defaultPlaceholder : u) : [img];
+        return { ...found, image: img, images: imgs };
+      }
+    } catch (e) {}
+    return null;
+  });
+  const [isSearching, setIsSearching] = useState(!product);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
   const [showContactNumber, setShowContactNumber] = useState(false);
@@ -118,6 +133,7 @@ export default function ProductDetails({ params: serverParams }) {
       }
 
       setProduct(found);
+      setIsSearching(false);
 
       // If product has a sellerId, fetch their latest WhatsApp number and profile from Supabase
       if (found.sellerId) {
@@ -187,8 +203,10 @@ export default function ProductDetails({ params: serverParams }) {
       } else {
         setPostedAgo('Recently listed');
       }
+    } else {
+      setIsSearching(false);
     }
-  }, [productId]);
+  }, [productId, user]);
 
   // Load saved item status and sync likes count listener
   useEffect(() => {
@@ -313,13 +331,39 @@ export default function ProductDetails({ params: serverParams }) {
     ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
     : '0.0';
 
+  if (!product && isSearching) {
+    return (
+      <div className="detail-page-wrapper">
+        <header className="home-nav-row detail-desktop-nav">
+          <NavLink to="/" replace className="home-nav-brand">
+            <span className="logo-buy">Buy</span><span className="logo-oh">Oh!</span>
+          </NavLink>
+        </header>
+        <div className="detail-page-container" style={{ padding: '3rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <div className="detail-loading-pulse">
+            <div className="detail-skeleton-box detail-skeleton-carousel" />
+            <div className="detail-skeleton-box detail-skeleton-text" style={{ marginTop: '1.25rem', width: '70%' }} />
+            <div className="detail-skeleton-box detail-skeleton-text" style={{ marginTop: '0.75rem', width: '40%' }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!product) {
     return (
-      <div className="product-not-found">
-        <ShieldAlert size={48} color="#ef4444" />
-        <h3>Product Not Found</h3>
-        <p>The product you are looking for does not exist or has been removed.</p>
-        <button onClick={() => navigate('/')} className="back-home-btn">Go to Home</button>
+      <div className="detail-page-wrapper">
+        <header className="home-nav-row detail-desktop-nav">
+          <NavLink to="/" replace className="home-nav-brand">
+            <span className="logo-buy">Buy</span><span className="logo-oh">Oh!</span>
+          </NavLink>
+        </header>
+        <div className="product-not-found" style={{ marginTop: '3rem' }}>
+          <ShieldAlert size={48} color="#ef4444" />
+          <h3>Product Not Found</h3>
+          <p>The product you are looking for does not exist or has been removed.</p>
+          <button onClick={() => navigate('/')} className="back-home-btn">Go to Home</button>
+        </div>
       </div>
     );
   }
@@ -876,19 +920,6 @@ export default function ProductDetails({ params: serverParams }) {
               {/* Bottom Primary Actions */}
               <div className="detail-bottom-actions">
                 <button 
-                  className={`btn-primary-action ${showContactNumber ? 'contact-revealed' : ''}`}
-                  onClick={() => {
-                    setShowContactNumber(prev => !prev);
-                    if (!showContactNumber) {
-                      showToast(`Contact number: ${product.sellerPhone || product.contactPhone || '+234 809 123 4567'}`);
-                    }
-                  }}
-                  title="Click to view seller contact number"
-                >
-                  <Phone size={16} /> 
-                  {showContactNumber ? (product.sellerPhone || product.contactPhone || '+234 809 123 4567') : 'Show contact'}
-                </button>
-                <button 
                   className="btn-outline-action"
                   onClick={() => {
                     if (!user) setIsAuthOpen(true);
@@ -959,13 +990,29 @@ export default function ProductDetails({ params: serverParams }) {
               </div>
 
               <div className="seller-action-buttons">
-                <button 
-                  className="btn-primary-action"
-                  onClick={() => setShowContactNumber(prev => !prev)}
-                >
-                  <Phone size={16} /> 
-                  {showContactNumber ? (product.sellerPhone || product.contactPhone || '+234 809 123 4567') : 'Show contact'}
-                </button>
+                {showContactNumber ? (
+                  <a 
+                    href={`tel:${String(product.sellerPhone || product.contactPhone || product.phone || '+2348091234567').replace(/[^\d+]/g, '')}`}
+                    className="btn-primary-action contact-revealed-btn"
+                    title="Click to call seller directly"
+                    style={{ textDecoration: 'none' }}
+                  >
+                    <Phone size={16} /> 
+                    {product.sellerPhone || product.contactPhone || product.phone || '+234 809 123 4567'}
+                  </a>
+                ) : (
+                  <button 
+                    className="btn-primary-action"
+                    onClick={() => {
+                      setShowContactNumber(true);
+                      showToast(`Contact revealed: ${product.sellerPhone || product.contactPhone || product.phone || '+234 809 123 4567'}. Click to call.`);
+                    }}
+                    title="Click to view seller contact number"
+                  >
+                    <Phone size={16} /> 
+                    Show contact
+                  </button>
+                )}
                 
                 {user ? (
                   <NavLink 
