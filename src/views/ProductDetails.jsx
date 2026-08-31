@@ -368,7 +368,12 @@ export default function ProductDetails({ params: serverParams }) {
     );
   }
 
+  const isGhanaProduct = product?.currency === 'GHS' || product?.country === 'Ghana' || (product?.location && (product?.location.includes('Ghana') || product?.location.includes('Accra') || product?.location.includes('Ashanti') || product?.location.includes('Region')));
+
   const formatPrice = (value) => {
+    if (isGhanaProduct) {
+      return 'GH₵ ' + Number(value || 0).toLocaleString();
+    }
     return new Intl.NumberFormat('en-NG', {
       style: 'currency',
       currency: 'NGN',
@@ -393,12 +398,12 @@ export default function ProductDetails({ params: serverParams }) {
     if (cleanNumber.startsWith('+')) {
       cleanNumber = cleanNumber.substring(1);
     } else if (cleanNumber.startsWith('0')) {
-      cleanNumber = '234' + cleanNumber.substring(1);
+      cleanNumber = (isGhanaProduct ? '233' : '234') + cleanNumber.substring(1);
     }
 
     // Fallback if seller number is missing
     if (!cleanNumber || cleanNumber.length < 5) {
-      cleanNumber = '2348091234567';
+      cleanNumber = isGhanaProduct ? '233240123456' : '2348091234567';
     }
 
     const sellerName = product.sellerName || 'Seller';

@@ -1659,16 +1659,90 @@ export const products = [
     image: "https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?auto=format&fit=crop&w=800&q=80"
   },
 
-  // ── Jobs (remaining subcats) ──
+  // ── Ghana Marketplace Listings ──
   {
-    id: "prod-j03",
-    name: "Experienced Sales Representative - FMCG",
-    price: 200000,
-    location: "Lagos State",
+    id: "prod-gh01",
+    name: "Apple iPhone 14 Pro Max 256GB - Deep Purple (Factory Unlocked)",
+    price: 850000,
+    currency: "GHS",
+    location: "Greater Accra Region",
+    country: "Ghana",
     condition: "Brand New",
-    category: "Jobs",
-    subcategory: "Accounting & Finance",
-    image: "https://images.unsplash.com/photo-1556742044-3c52d6e88c62?auto=format&fit=crop&w=800&q=80"
+    category: "Phones & Tablets",
+    subcategory: "Mobile Phones",
+    image: "https://images.unsplash.com/photo-1663499482523-1c0c1bae4ce1?auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: "prod-gh02",
+    name: "Toyota Corolla 2020 LE (Direct Foreign Used) - Accra Port Cleared",
+    price: 9500000,
+    currency: "GHS",
+    location: "Greater Accra Region",
+    country: "Ghana",
+    condition: "Used",
+    category: "Vehicles",
+    subcategory: "Cars",
+    image: "https://images.unsplash.com/photo-1590362891988-f7761b378b66?auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: "prod-gh03",
+    name: "MacBook Air M2 13-inch (16GB RAM / 256GB SSD) - Midnight Blue",
+    price: 1150000,
+    currency: "GHS",
+    location: "Ashanti Region",
+    country: "Ghana",
+    condition: "Brand New",
+    category: "Electronics",
+    subcategory: "Laptops & Computers",
+    image: "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: "prod-gh04",
+    name: "3 Bedroom Furnished Apartment in East Legon - Accra",
+    price: 18500000,
+    currency: "GHS",
+    location: "Greater Accra Region",
+    country: "Ghana",
+    condition: "Brand New",
+    category: "Property",
+    subcategory: "Houses & Apartments for Rent",
+    image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: "prod-gh05",
+    name: "PlayStation 5 Slim Console with 2 DualSense Wireless Controllers",
+    price: 620000,
+    currency: "GHS",
+    location: "Ashanti Region",
+    country: "Ghana",
+    condition: "Brand New",
+    category: "Gaming",
+    subcategory: "Gaming Consoles",
+    image: "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: "prod-gh06",
+    name: "Authentic Ghanaian Kente Cloth (Handwoven 6 Yards) - Kumasi",
+    price: 85000,
+    currency: "GHS",
+    location: "Central Region",
+    country: "Ghana",
+    condition: "Brand New",
+    category: "Fashion",
+    subcategory: "Traditional Wear",
+    image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: "prod-gh07",
+    name: "Samsung 55\" Crystal UHD 4K Smart TV CU7000",
+    price: 580000,
+    currency: "GHS",
+    location: "Western Region",
+    country: "Ghana",
+    condition: "Brand New",
+    category: "Electronics",
+    subcategory: "TV & Video",
+    image: "https://images.unsplash.com/photo-1593784991095-a205069470b6?auto=format&fit=crop&w=800&q=80"
   }
 ];
 

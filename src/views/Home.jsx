@@ -4,7 +4,7 @@ import "./Home.css";
 import {useEffect, useLayoutEffect, useRef, useState, useMemo} from "react";
 import {ChevronDown, Search, MapPin, X, MessageSquareMore, BellRing, PanelTop, UserRound, Bookmark} from "lucide-react";
 import NavLink from "../components/NavLink";
-import {locations} from "../data/statesData.js"
+import {locations, COUNTRIES, NIGERIA_STATES, GHANA_REGIONS} from "../data/statesData.js"
 import {products} from "../data/productData.js"
 import {useAuth} from "../context/AuthContext"
 import {getSavedItemsForUser, saveItemsForUser, getAllPublicListings, getGeneralProductPool} from "../utils/userSync"
@@ -191,6 +191,8 @@ export default function Home(){
   const { user, loading, setIsAuthOpen } = useAuth();
   const [isOpen, setIsOpen]                     = useState(false)
   const [selectedLocation, setSelectedLocation] = useState(locations[0].name)
+  const [selectedCountryTab, setSelectedCountryTab] = useState('all') // 'all' | 'nigeria' | 'ghana'
+  const [locationSearchText, setLocationSearchText] = useState('')
   const [searchQuery, setSearchQuery]           = useState('')
 
   /* ── single-select category & subcategory ── */
@@ -523,6 +525,23 @@ export default function Home(){
   }
   const selectSub = (cat, sub) => { setActiveSubcategory(p=>p===sub?'':sub); setActiveCategory(cat) }
 
+  /* ── Locations list computation for location modal ── */
+  const displayLocations = useMemo(() => {
+    let pool = locations;
+    if (selectedCountryTab === 'nigeria') {
+      pool = [{ name: 'All Nigeria', country: 'Nigeria', flag: '🇳🇬' }, ...NIGERIA_STATES];
+    } else if (selectedCountryTab === 'ghana') {
+      pool = [{ name: 'All Ghana', country: 'Ghana', flag: '🇬🇭' }, ...GHANA_REGIONS];
+    }
+
+    if (!locationSearchText.trim()) return pool;
+    const query = locationSearchText.toLowerCase().trim();
+    return pool.filter(loc => 
+      loc.name.toLowerCase().includes(query) || 
+      (loc.country && loc.country.toLowerCase().includes(query))
+    );
+  }, [selectedCountryTab, locationSearchText]);
+
   /* ── filter products ── */
   const filteredProducts = useMemo(() => {
     return allProducts.filter(product => {
@@ -532,10 +551,22 @@ export default function Home(){
         product.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (product.subcategory || '').toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesLocation =
-        selectedLocation === locations[0].name ||
-        product.location === selectedLocation ||
-        (product.location && selectedLocation && product.location.toLowerCase().includes(selectedLocation.toLowerCase().replace('state', '').trim()));
+      let matchesLocation = true;
+      if (selectedLocation === 'All Locations') {
+        matchesLocation = true;
+      } else if (selectedLocation === 'All Nigeria') {
+        const pLoc = (product.location || '').toLowerCase();
+        const pCtry = (product.country || '').toLowerCase();
+        matchesLocation = pCtry === 'nigeria' || !pLoc.includes('region') || NIGERIA_STATES.some(s => pLoc.includes(s.name.toLowerCase().replace('state', '').trim()));
+      } else if (selectedLocation === 'All Ghana') {
+        const pLoc = (product.location || '').toLowerCase();
+        const pCtry = (product.country || '').toLowerCase();
+        matchesLocation = pCtry === 'ghana' || pLoc.includes('ghana') || GHANA_REGIONS.some(r => pLoc.includes(r.name.toLowerCase().replace('region', '').trim()));
+      } else {
+        const pLoc = (product.location || '').toLowerCase();
+        const cleanTarget = selectedLocation.toLowerCase().replace(/(state|region)/g, '').trim();
+        matchesLocation = product.location === selectedLocation || pLoc.includes(cleanTarget);
+      }
 
       let matchesCategory;
       if (activeCategory === 'All') {
@@ -554,7 +585,10 @@ export default function Home(){
     });
   }, [allProducts, searchQuery, selectedLocation, activeCategory, activeSubcategory, minPrice, maxPrice]);
 
-  const formatPrice = (price) => '₦' + price.toLocaleString('en-NG')
+  const formatPrice = (price, product) => {
+    const isGhana = product?.currency === 'GHS' || product?.country === 'Ghana' || (product?.location && product?.location.includes('Ghana')) || (product?.location && product?.location.includes('Accra'));
+    return (isGhana ? 'GH₵ ' : '₦ ') + Number(price || 0).toLocaleString();
+  };
 
   const clearAllFilters = () => {
     setSearchQuery('')
@@ -647,24 +681,108 @@ export default function Home(){
 
         {isOpen && (
           <div className="location-header-options">
-            <div className="location-top">
-              <div className="location-top-left">
-                <p className="location-options-header">{selectedLocation}</p>
+            <div className="location-modal-head">
+              <div className="location-modal-title-row">
+                <div className="location-modal-title">
+                  <MapPin size={18} className="location-pin-accent" />
+                  <span>Choose Location / Region</span>
+                </div>
+                <button 
+                  type="button" 
+                  className="location-modal-close-btn"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <X size={18} />
+                </button>
               </div>
-              <div className="location-top-right">
-                <Search className="location-search-icon"/>
-                <input className="location-search-input"/>
+
+              {/* Country Selection Tabs */}
+              <div className="location-country-tabs">
+                <button
+                  type="button"
+                  className={`country-tab-btn ${selectedCountryTab === 'all' ? 'active-country-tab' : ''}`}
+                  onClick={() => setSelectedCountryTab('all')}
+                >
+                  <span className="tab-flag">🌍</span> All Locations
+                </button>
+                <button
+                  type="button"
+                  className={`country-tab-btn ${selectedCountryTab === 'ghana' ? 'active-country-tab' : ''}`}
+                  onClick={() => setSelectedCountryTab('ghana')}
+                >
+                  <span className="tab-flag">🇬🇭</span> Ghana (16 Regions)
+                </button>
+                <button
+                  type="button"
+                  className={`country-tab-btn ${selectedCountryTab === 'nigeria' ? 'active-country-tab' : ''}`}
+                  onClick={() => setSelectedCountryTab('nigeria')}
+                >
+                  <span className="tab-flag">🇳🇬</span> Nigeria (37 States)
+                </button>
+              </div>
+
+              {/* Live Search inside Location Modal */}
+              <div className="location-modal-search-wrap">
+                <Search size={16} className="location-search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search state, region or city (e.g. Accra, Kumasi, Lagos, Abuja)..."
+                  value={locationSearchText}
+                  onChange={(e) => setLocationSearchText(e.target.value)}
+                  className="location-search-input"
+                  autoFocus
+                />
+                {locationSearchText && (
+                  <button 
+                    type="button" 
+                    className="location-search-clear"
+                    onClick={() => setLocationSearchText('')}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
             </div>
-            <div className="location-options">
-              {locations.map(loc=>(
-                <div className="location-option" key={loc.name} onClick={()=>{
-                  setSelectedLocation(loc.name)
-                  setIsOpen(false)
-                }}>
-                  <p className="location-option-text">{loc.name}</p>
+
+            {/* Location Cards Grid */}
+            <div className="location-options-container">
+              {displayLocations.map(loc => {
+                const isSelected = selectedLocation === loc.name;
+                return (
+                  <button
+                    type="button"
+                    className={`location-option-card ${isSelected ? 'location-option-active' : ''}`}
+                    key={loc.name}
+                    onClick={() => {
+                      setSelectedLocation(loc.name);
+                      setIsOpen(false);
+                    }}
+                  >
+                    <span className="location-card-flag">{loc.flag || '📍'}</span>
+                    <span className="location-card-name">{loc.name}</span>
+                    {loc.country && loc.country !== 'All' && (
+                      <span className="location-card-country-badge">{loc.country}</span>
+                    )}
+                    {isSelected && <span className="location-card-check">✓</span>}
+                  </button>
+                );
+              })}
+
+              {displayLocations.length === 0 && (
+                <div className="location-no-results">
+                  <p>No regions or states found matching &quot;{locationSearchText}&quot;</p>
+                  <button 
+                    type="button" 
+                    className="location-reset-btn"
+                    onClick={() => {
+                      setLocationSearchText('');
+                      setSelectedCountryTab('all');
+                    }}
+                  >
+                    Show all regions
+                  </button>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}
@@ -1246,7 +1364,7 @@ export default function Home(){
                 <NavLink to={`/product/${product.id}`} className="product-card-info-link">
                   <p className="product-name">{product.name}</p>
                 </NavLink>
-                <p className="product-price">{formatPrice(product.price)}</p>
+                <p className="product-price">{formatPrice(product.price, product)}</p>
                 <div className="product-meta">
                   <span className="product-location">
                     <MapPin className="meta-icon"/> {product.location}

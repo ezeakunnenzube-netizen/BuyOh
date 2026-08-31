@@ -32,13 +32,7 @@ const CATEGORIES = [
 ];
 
 const CONDITIONS = ['Brand New', 'Used'];
-
-const NIGERIAN_STATES = [
-  'Lagos State', 'Abuja (FCT)', 'Rivers State', 'Oyo State', 'Kano State',
-  'Ogun State', 'Delta State', 'Edo State', 'Enugu State', 'Kaduna State',
-  'Anambra State', 'Imo State', 'Abia State', 'Benue State', 'Kwara State',
-  'Osun State', 'Ondo State', 'Ekiti State', 'Cross River State', 'Akwa Ibom State'
-];
+import { NIGERIA_STATES, GHANA_REGIONS } from '../data/statesData.js';
 
 export default function SellItem() {
   const router = useRouter();
@@ -1060,17 +1054,24 @@ export default function SellItem() {
 
             {/* Location */}
             <div className="form-group">
-              <label className="form-label"><MapPin size={14} /> Location <span className="required">*</span></label>
+              <label className="form-label"><MapPin size={14} /> Location / Region <span className="required">*</span></label>
               <div className={`form-select-wrap ${errors.location ? 'input-error' : ''}`}>
                 <select 
                   className="form-select"
                   value={location}
                   onChange={e => setLocation(e.target.value)}
                 >
-                  <option value="">Select your location</option>
-                  {NIGERIAN_STATES.map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
+                  <option value="">Select your state or region</option>
+                  <optgroup label="🇬🇭 Ghana Regions">
+                    {GHANA_REGIONS.map(r => (
+                      <option key={r.name} value={r.name}>🇬🇭 {r.name}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🇳🇬 Nigeria States">
+                    {NIGERIA_STATES.map(s => (
+                      <option key={s.name} value={s.name}>🇳🇬 {s.name}</option>
+                    ))}
+                  </optgroup>
                 </select>
                 <ChevronDown size={16} className="select-chevron" />
               </div>

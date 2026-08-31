@@ -300,20 +300,268 @@
 }
 .location-header-options{
   position: fixed;
-  z-index: 100;
-  top: 10vw;
-  background-color: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(16px);
-  padding: 3vw;
-  width: 80vw;
+  z-index: 999;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
-  border-radius:2vw;
+  transform: translate(-50%, -50%);
+  background-color: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 1.5rem;
+  width: 90vw;
+  max-width: 680px;
+  max-height: 85vh;
+  border-radius: 1.25rem;
   overflow-y: auto;
-  max-height: 80vh;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-  border: 1px solid rgba(255,255,255,0.5);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  animation: locationModalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+@keyframes locationModalIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.location-modal-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 1rem;
+}
+
+.location-modal-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.location-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.location-pin-accent {
+  color: #ffa705;
+}
+
+.location-modal-close-btn {
+  background: #f1f5f9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.location-modal-close-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Country Selector Tabs */
+.location-country-tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.country-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 99px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.country-tab-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.country-tab-btn.active-country-tab {
+  background: #ffa705;
+  border-color: #ffa705;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(255, 167, 5, 0.3);
+}
+
+.tab-flag {
+  font-size: 1rem;
+}
+
+/* Live Search inside Location Modal */
+.location-modal-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.location-modal-search-wrap .location-search-icon {
+  position: absolute;
+  left: 0.85rem;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.location-modal-search-wrap .location-search-input {
+  width: 100%;
+  height: 42px;
+  padding: 0 2.2rem 0 2.4rem;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 0.6rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.location-modal-search-wrap .location-search-input:focus {
+  border-color: #ffa705;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(255, 167, 5, 0.15);
+}
+
+.location-search-clear {
+  position: absolute;
+  right: 0.75rem;
+  background: #e2e8f0;
+  border: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+}
+
+/* Location Options Container Grid */
+.location-options-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.5rem;
+  max-height: 48vh;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.location-option-card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.6rem;
+  border: 1px solid #f1f5f9;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.location-option-card:hover {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #ea580c;
+  transform: translateY(-1px);
+}
+
+.location-option-card.location-option-active {
+  background: #ffa705;
+  border-color: #ffa705;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(255, 167, 5, 0.25);
+}
+
+.location-card-flag {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.location-card-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.location-card-country-badge {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, 0.06);
+  color: inherit;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.location-option-active .location-card-country-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.location-card-check {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.location-no-results {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #64748b;
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.location-reset-btn {
+  background: #ffa705;
+  color: #fff;
+  border: none;
+  padding: 0.4rem 1rem;
+  border-radius: 99px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
 .search-right{
   display:flex;
   align-items:stretch;
@@ -358,49 +606,6 @@
   color:#fff;
   width:1.8vw;
   height:1.8vw;
-}
-.location-search-input{
-  height:3.3vw;
-  background-color:#d7d7d7;
-  border:none;
-  outline:none;
-  border-radius:0 5px 5px 0;
-}
-.location-search-icon{
-  height:3.45vw;
-  width:2.5vw;
-  background-color:#d7d7d7;
-  border-radius:5px 0 0 5px;
-}
-.location-options{
-  display:inline-flex;
-  flex-direction:column;
-  justify-content:center;
-  width:100%;
-  border-radius:1.5vw;
-  margin-top:1vw;
-  gap:0.4vw;
-}
-.location-option{
-  display:flex;
-  cursor:pointer;
-  background-color:rgba(241,240,240,0.7);
-  color:#333;
-  font-family:'Poppins', sans-serif;
-  font-size:1.5vw;
-  height:3.5vw;
-  justify-content:center;
-  align-items:center;
-  border-radius:0.8vw;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-.location-option:hover{
-  background-color:#ffa705;
-  color:#fff;
-}
-.location-option-text{
-  font-size:1.8vw;
-  font-family:'Poppins', sans-serif;
 }
 
 /* ── Products Section ── */
