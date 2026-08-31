@@ -117,7 +117,7 @@ export default function Profile() {
               phone: payload.new.phone || '+234 812 345 6789',
               whatsapp: payload.new.whatsapp || payload.new.phone || '+234 812 345 6789',
               location: payload.new.location || 'Lagos, Nigeria',
-              avatar: payload.new.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+              avatar: payload.new.avatar_url && !payload.new.avatar_url.includes('photo-1535713875002-d1d0cf377fde') ? payload.new.avatar_url : '',
               banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
             };
             setUserData(freshData);
@@ -318,7 +318,7 @@ export default function Profile() {
             <div className="avatar-holder">
               {!mounted ? (
                 <div className="profile-avatar-large profile-avatar-skeleton" />
-              ) : (
+              ) : userData.avatar && !userData.avatar.includes('photo-1535713875002-d1d0cf377fde') ? (
                 <img 
                   src={userData.avatar} 
                   alt="User Avatar" 
@@ -326,6 +326,14 @@ export default function Profile() {
                   onClick={() => setIsAvatarModalOpen(true)}
                   title="Click to change avatar"
                 />
+              ) : (
+                <div 
+                  className="profile-avatar-large profile-avatar-initials clickable-avatar"
+                  onClick={() => setIsAvatarModalOpen(true)}
+                  title="Click to upload profile photo"
+                >
+                  {(userData.name || 'U').trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase()}
+                </div>
               )}
               <button 
                 className="avatar-change-badge" 

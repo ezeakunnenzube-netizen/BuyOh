@@ -16,7 +16,7 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS whatsapp TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS location TEXT DEFAULT 'Lagos, Nigeria';
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT '';
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS saved_items JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS my_listings JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS notifications JSONB DEFAULT '[]'::jsonb;
@@ -64,18 +64,21 @@ RETURNS TRIGGER AS $$
 DECLARE
   display_name TEXT;
   user_avatar TEXT;
+  user_phone TEXT;
   user_whatsapp TEXT;
 BEGIN
   display_name := COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1));
-  user_avatar := COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80');
-  user_whatsapp := COALESCE(NEW.raw_user_meta_data->>'whatsapp', '');
+  user_avatar := COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture', '');
+  user_phone := COALESCE(NEW.raw_user_meta_data->>'phone', '');
+  user_whatsapp := COALESCE(NEW.raw_user_meta_data->>'whatsapp', user_phone, '');
 
-  INSERT INTO public.profiles (id, email, name, full_name, whatsapp, avatar_url)
+  INSERT INTO public.profiles (id, email, name, full_name, phone, whatsapp, avatar_url)
   VALUES (
     NEW.id,
     NEW.email,
     display_name,
     display_name,
+    user_phone,
     user_whatsapp,
     user_avatar
   )
@@ -84,7 +87,9 @@ BEGIN
     email = EXCLUDED.email,
     name = COALESCE(EXCLUDED.name, public.profiles.name),
     full_name = COALESCE(EXCLUDED.full_name, public.profiles.full_name),
-    avatar_url = COALESCE(EXCLUDED.avatar_url, public.profiles.avatar_url),
+    phone = COALESCE(NULLIF(EXCLUDED.phone, ''), public.profiles.phone),
+    whatsapp = COALESCE(NULLIF(EXCLUDED.whatsapp, ''), public.profiles.whatsapp),
+    avatar_url = COALESCE(NULLIF(EXCLUDED.avatar_url, ''), public.profiles.avatar_url),
     updated_at = now();
   RETURN NEW;
 END;
@@ -96,21 +101,23 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- 5. Backfill profiles for existing users
-INSERT INTO public.profiles (id, email, name, full_name, whatsapp, avatar_url)
+INSERT INTO public.profiles (id, email, name, full_name, phone, whatsapp, avatar_url)
 SELECT 
   id,
   email,
   COALESCE(raw_user_meta_data->>'full_name', raw_user_meta_data->>'name', split_part(email, '@', 1)),
   COALESCE(raw_user_meta_data->>'full_name', raw_user_meta_data->>'name', split_part(email, '@', 1)),
-  COALESCE(raw_user_meta_data->>'whatsapp', ''),
-  COALESCE(raw_user_meta_data->>'avatar_url', raw_user_meta_data->>'picture', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80')
+  COALESCE(raw_user_meta_data->>'phone', ''),
+  COALESCE(raw_user_meta_data->>'whatsapp', raw_user_meta_data->>'phone', ''),
+  COALESCE(raw_user_meta_data->>'avatar_url', raw_user_meta_data->>'picture', '')
 FROM auth.users
 ON CONFLICT (id) DO UPDATE
 SET 
   email = EXCLUDED.email,
+  phone = COALESCE(NULLIF(EXCLUDED.phone, ''), public.profiles.phone),
+  whatsapp = COALESCE(NULLIF(EXCLUDED.whatsapp, ''), public.profiles.whatsapp),
   name = COALESCE(EXCLUDED.name, public.profiles.name),
-  full_name = COALESCE(EXCLUDED.full_name, public.profiles.full_name),
-  avatar_url = COALESCE(EXCLUDED.avatar_url, public.profiles.avatar_url);
+  full_name = COALESCE(EXCLUDED.full_name, public.profiles.full_name);
 
 -- 6. Setup the Public Storage Bucket for avatars
 INSERT INTO storage.buckets (id, name, public)

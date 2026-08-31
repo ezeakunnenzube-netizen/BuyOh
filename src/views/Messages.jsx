@@ -48,6 +48,15 @@ const formatSidebarDate = (msg) => {
   return msg.time || '';
 };
 
+// Helper to render contact avatar with initials fallback
+const renderContactAvatar = (avatarUrl, name, className = 'chat-avatar') => {
+  if (avatarUrl && typeof avatarUrl === 'string' && !avatarUrl.includes('photo-1535713875002-d1d0cf377fde')) {
+    return <img src={avatarUrl} alt={name || 'Avatar'} className={className} />;
+  }
+  const initials = (name || 'U').trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase();
+  return <div className={`${className} initials-avatar-badge`}>{initials}</div>;
+};
+
 // Helper to format date divider headers inside message thread
 const formatDateDivider = (msg) => {
   if (!msg) return 'Today';
@@ -796,7 +805,7 @@ export default function Messages() {
           type: 'buying',
           contact: {
             name: sellerName,
-            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+            avatar: '',
             isOnline: true,
             verified: true,
             phone: '+234 800 000 0000',
@@ -1174,7 +1183,7 @@ export default function Messages() {
                     onClick={() => handleSelectChat(chat.id)}
                   >
                     <div className="chat-avatar-wrap">
-                      <img src={chat.contact.avatar} alt={chat.contact.name} className="chat-avatar" />
+                      {renderContactAvatar(chat.contact.avatar, chat.contact.name, "chat-avatar")}
                       {chat.contact.isOnline && <span className="online-indicator" title="Online" />}
                     </div>
 
@@ -1231,7 +1240,7 @@ export default function Messages() {
                     title="View profile"
                   >
                     <div className="contact-avatar-wrap">
-                      <img src={activeChat.contact.avatar} alt={activeChat.contact.name} className="contact-avatar" />
+                      {renderContactAvatar(activeChat.contact.avatar, activeChat.contact.name, "contact-avatar")}
                       {activeChat.contact.isOnline && <span className="online-indicator" />}
                     </div>
                   </button>
@@ -1517,9 +1526,7 @@ export default function Messages() {
                         id={`msg-bubble-${msg.id}`}
                         className={`message-bubble-row ${isMe ? 'row-me' : 'row-them'}`}
                       >
-                        {!isMe && (
-                          <img src={activeChat.contact.avatar} alt="avatar" className="msg-avatar-mini" />
-                        )}
+                        {!isMe && renderContactAvatar(activeChat.contact.avatar, activeChat.contact.name, "msg-avatar-mini")}
                         <div className="msg-bubble-wrapper">
                           <div className={`message-bubble ${isMe ? 'bubble-me' : 'bubble-them'} ${msg.isOffer ? 'bubble-offer' : ''} ${isMatch ? 'bubble-search-active' : ''}`}>
                             {msg.isVoiceNote ? (
@@ -1819,7 +1826,7 @@ export default function Messages() {
             </div>
             <div className="modal-body profile-modal-body">
               <div className="profile-modal-avatar-container">
-                <img src={activeChat.contact.avatar} alt="avatar" className="profile-large-avatar" />
+                {renderContactAvatar(activeChat.contact.avatar, activeChat.contact.name, "profile-large-avatar")}
                 {activeChat.contact.isOnline && <span className="profile-online-badge" />}
               </div>
               <h3 className="profile-modal-name">{activeChat.contact.name}</h3>

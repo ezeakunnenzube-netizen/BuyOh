@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Mail, Lock, User, Eye, EyeOff, X, ShieldAlert, Sparkles, Check, Phone } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, X, ShieldAlert, Sparkles, Check, Phone, MessageSquareMore } from 'lucide-react';
 import './AuthModal.css';
 
 export default function AuthModal({ isOpen, onClose, onSuccess, initialError }) {
@@ -12,6 +12,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialError }) 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   
@@ -37,6 +38,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialError }) 
         if (password.length < 6) {
           throw new Error('Password must be at least 6 characters long');
         }
+        if (phone.trim()) {
+          localStorage.setItem('buyoh_user_phone_v1', phone.trim());
+        }
         if (whatsapp.trim()) {
           localStorage.setItem('buyoh_user_whatsapp_v1', whatsapp.trim());
         }
@@ -47,7 +51,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialError }) 
             data: {
               name: fullName || 'New Marketplace User',
               full_name: fullName || 'New Marketplace User',
-              whatsapp: whatsapp.trim()
+              phone: phone.trim(),
+              whatsapp: whatsapp.trim() || phone.trim()
             }
           }
         });
@@ -152,7 +157,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialError }) 
               <span>{successMessage}</span>
             </div>
           )}
-          {/* Full Name & WhatsApp Input (Sign Up Only) */}
+          {/* Full Name, Phone & WhatsApp Input (Sign Up Only) */}
           {isSignUp && (
             <>
               <div className="auth-input-group">
@@ -170,9 +175,23 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialError }) 
                 </div>
               </div>
               <div className="auth-input-group">
-                <label>WhatsApp Number (Optional)</label>
+                <label>Contact Phone Number</label>
                 <div className="auth-input-wrapper">
                   <Phone size={18} className="auth-field-icon" />
+                  <input 
+                    type="tel" 
+                    placeholder="e.g. +234 809 123 4567" 
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    autoComplete="tel"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="auth-input-group">
+                <label>WhatsApp Number (Optional)</label>
+                <div className="auth-input-wrapper">
+                  <MessageSquareMore size={18} className="auth-field-icon" />
                   <input 
                     type="tel" 
                     placeholder="e.g. +234 809 123 4567" 

@@ -205,6 +205,17 @@ body {
   transition: transform 0.25s ease;
 }
 
+.initials-avatar-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  user-select: none;
+}
+
 .chat-item-card:hover .chat-avatar {
   transform: scale(1.04);
 }

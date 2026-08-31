@@ -20,9 +20,11 @@ export default function AvatarModal({ isOpen, onClose, currentAvatar, onAvatarCh
 
   const fileInputRef = useRef(null);
 
+  const isValidPhoto = (url) => url && typeof url === 'string' && !url.includes('photo-1535713875002-d1d0cf377fde');
+
   useEffect(() => {
     if (isOpen) {
-      const initial = currentAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80';
+      const initial = isValidPhoto(currentAvatar) ? currentAvatar : '';
       setSelectedImage(initial);
       setFileDetails(null);
       setErrorMsg('');
@@ -84,7 +86,7 @@ export default function AvatarModal({ isOpen, onClose, currentAvatar, onAvatarCh
   };
 
   const handleResetImage = () => {
-    setSelectedImage(currentAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80');
+    setSelectedImage(isValidPhoto(currentAvatar) ? currentAvatar : '');
     setFileDetails(null);
     setErrorMsg('');
   };
@@ -155,11 +157,17 @@ export default function AvatarModal({ isOpen, onClose, currentAvatar, onAvatarCh
         <div className="avatar-upload-showcase">
           <div className="showcase-avatar-wrapper">
             <div className="showcase-avatar-ring">
-              <img 
-                src={selectedImage} 
-                alt="Uploaded Avatar Preview" 
-                className="showcase-avatar-img" 
-              />
+              {selectedImage ? (
+                <img 
+                  src={selectedImage} 
+                  alt="Uploaded Avatar Preview" 
+                  className="showcase-avatar-img" 
+                />
+              ) : (
+                <div className="showcase-avatar-initials-placeholder">
+                  <Camera size={28} color="#ffffff" />
+                </div>
+              )}
             </div>
             <span className="showcase-live-dot" title="Photo Ready" />
           </div>

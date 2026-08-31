@@ -6,7 +6,7 @@ import { products } from '../data/productData';
  * and Client Local Storage across all user accounts and multiple devices.
  */
 
-export const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
+export const DEFAULT_AVATAR = '';
 
 export const safeJsonParse = (val, fallback = []) => {
   if (!val || typeof val !== 'string') return fallback;
@@ -89,7 +89,7 @@ export const uploadAvatarImage = async (user, fileOrDataUrl) => {
 
   // 2. Generate a compressed version
   const compressed = await compressImage(fileOrDataUrl, 160, 160, 0.8);
-  const dataToSave = compressed || (typeof fileOrDataUrl === 'string' ? fileOrDataUrl : DEFAULT_AVATAR);
+  const dataToSave = compressed || (typeof fileOrDataUrl === 'string' ? fileOrDataUrl : '');
 
   // 3. Upload to Supabase Storage bucket 'avatars'
   if (user && user.id && typeof window !== 'undefined' && dataToSave && dataToSave.startsWith('data:')) {
@@ -149,6 +149,12 @@ export const getCachedUserSync = () => {
 
 // --- USER PROFILE & AVATAR SYNC (DATABASE + STORAGE + METADATA) ---
 
+const isValidAvatarUrl = (url) => {
+  if (!url || typeof url !== 'string') return false;
+  if (url.includes('photo-1535713875002-d1d0cf377fde')) return false;
+  return url.trim().length > 0;
+};
+
 export const getUserProfileData = (user) => {
   const activeUser = user || (typeof window !== 'undefined' ? getCachedUserSync() : null);
 
@@ -160,7 +166,7 @@ export const getUserProfileData = (user) => {
         phone: '+234 812 345 6789',
         whatsapp: '+234 812 345 6789',
         location: 'Lekki, Lagos',
-        avatar: DEFAULT_AVATAR,
+        avatar: '',
         banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
       };
     }
@@ -171,12 +177,12 @@ export const getUserProfileData = (user) => {
     const savedAvatar = localStorage.getItem('buyoh_user_avatar_v1');
 
     return {
-      name: savedName || 'Adebayo Johnson',
-      email: 'adebayo.johnson@buyoh.com',
+      name: savedName || 'Marketplace User',
+      email: '',
       phone: savedPhone || '+234 812 345 6789',
       whatsapp: savedWhatsapp || '+234 812 345 6789',
-      location: savedLocation || 'Lekki, Lagos',
-      avatar: savedAvatar || DEFAULT_AVATAR,
+      location: savedLocation || 'Lagos, Nigeria',
+      avatar: isValidAvatarUrl(savedAvatar) ? savedAvatar : '',
       banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
     };
   }
@@ -193,18 +199,16 @@ export const getUserProfileData = (user) => {
     cachedUserName = localStorage.getItem(`buyoh_user_name_${activeUser.id}`) || localStorage.getItem('buyoh_user_name_v1');
   }
 
-  // Choose the best avatar synchronously without falling back to DEFAULT_AVATAR if custom avatar is cached
-  let chosenAvatar = DEFAULT_AVATAR;
-  if (localProfile?.avatar && localProfile.avatar !== DEFAULT_AVATAR) {
+  // Choose the best avatar synchronously
+  let chosenAvatar = '';
+  if (isValidAvatarUrl(localProfile?.avatar)) {
     chosenAvatar = localProfile.avatar;
-  } else if (cachedUserAvatar && cachedUserAvatar !== DEFAULT_AVATAR) {
+  } else if (isValidAvatarUrl(cachedUserAvatar)) {
     chosenAvatar = cachedUserAvatar;
-  } else if (meta.avatar_url && meta.avatar_url !== DEFAULT_AVATAR) {
+  } else if (isValidAvatarUrl(meta.avatar_url)) {
     chosenAvatar = meta.avatar_url;
-  } else if (meta.picture && meta.picture !== DEFAULT_AVATAR) {
+  } else if (isValidAvatarUrl(meta.picture)) {
     chosenAvatar = meta.picture;
-  } else if (localProfile?.avatar) {
-    chosenAvatar = localProfile.avatar;
   }
 
   const name = localProfile?.name || cachedUserName || meta.full_name || meta.name || activeUser.email?.split('@')[0] || 'Marketplace User';
@@ -230,12 +234,14 @@ export const getUserProfileData = (user) => {
             phone: dbProfile.phone || phone,
             whatsapp: dbProfile.whatsapp || whatsapp,
             location: dbProfile.location || location,
-            avatar: dbProfile.avatar_url || chosenAvatar,
+            avatar: isValidAvatarUrl(dbProfile.avatar_url) ? dbProfile.avatar_url : chosenAvatar,
             banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
           };
           localStorage.setItem(`buyoh_user_profile_${activeUser.id}`, JSON.stringify(freshData));
-          localStorage.setItem(`buyoh_user_avatar_${activeUser.id}`, freshData.avatar);
-          localStorage.setItem('buyoh_user_avatar_v1', freshData.avatar);
+          if (freshData.avatar) {
+            localStorage.setItem(`buyoh_user_avatar_${activeUser.id}`, freshData.avatar);
+            localStorage.setItem('buyoh_user_avatar_v1', freshData.avatar);
+          }
           localStorage.setItem(`buyoh_user_name_${activeUser.id}`, freshData.name);
           localStorage.setItem('buyoh_user_name_v1', freshData.name);
 
@@ -244,7 +250,9 @@ export const getUserProfileData = (user) => {
             window.dispatchEvent(new CustomEvent('buyoh_profile_updated', { detail: freshData }));
           }
         }
-      } catch (err) {}
+      } catch (err) {
+        console.error('Supabase profile fetch error:', err);
+      }
     })();
   }
 

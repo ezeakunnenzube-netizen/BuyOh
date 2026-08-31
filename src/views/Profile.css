@@ -108,6 +108,18 @@
   animation: avatarShimmer 1.5s ease-in-out infinite;
 }
 
+.profile-avatar-initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #ffa705 0%, #e67600 100%);
+  color: #ffffff;
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  user-select: none;
+}
+
 @keyframes avatarShimmer {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
