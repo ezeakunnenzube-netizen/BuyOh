@@ -9,7 +9,7 @@ import {
   BellRing, Bookmark, PanelTop, UserRound, ArrowLeft, Info
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getMyListingsForUser, saveMyListingsForUser, registerPublicListing } from '../utils/userSync';
+import { getMyListingsForUser, saveMyListingsForUser, registerPublicListing, getUserProfileData, getNotificationsForUser, saveNotificationsForUser } from '../utils/userSync';
 import './SellItem.css';
 
 const CATEGORIES = [
@@ -268,7 +268,7 @@ export default function SellItem() {
     }
 
     setIsSubmitting(true);
-
+    const userProfile = getUserProfileData(user);
     const defaultPlaceholder = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
     
     // Ensure all image URLs are persistent data URLs or valid HTTP URLs, not temporary blob: URLs
@@ -352,12 +352,12 @@ export default function SellItem() {
       images: imageUrls.length > 0 ? imageUrls : [defaultPlaceholder],
       createdAt: new Date().toISOString(),
       sellerId: user.id,
-      sellerName: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Marketplace Seller',
+      sellerName: userProfile.name,
       sellerEmail: user.email,
-      sellerPhone: contactPhone || user.user_metadata?.phone || '+234 809 123 4567',
-      sellerWhatsApp: contactWhatsApp || contactPhone || '2348091234567',
-      sellerLocation: location,
-      sellerAvatar: user.user_metadata?.avatar_url || localStorage.getItem('buyoh_user_avatar_v1') || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+      sellerPhone: contactPhone || userProfile.phone || '+234 809 123 4567',
+      sellerWhatsApp: contactWhatsApp || userProfile.whatsapp || '2348091234567',
+      sellerLocation: location || userProfile.location || 'Lagos, Nigeria',
+      sellerAvatar: userProfile.avatar,
       sellerJoined: 'Joined August 2026',
       status: 'active'
     };
@@ -370,17 +370,17 @@ export default function SellItem() {
       registerPublicListing(listing);
 
       // Also add to in-app notification list
-      const notifications = JSON.parse(localStorage.getItem('buyoh_notifications_v1')) || [];
+      const notifications = getNotificationsForUser(user);
       notifications.unshift({
         id: `notif-${Date.now()}`,
-        type: 'listing',
+        type: 'system',
         title: 'Ad Published Successfully!',
-        body: `Your listing "${title}" is now live and visible to buyers.`,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        date: 'Just now',
-        read: false
+        message: `Your listing "${title}" is now live and visible to buyers on BuyOh.`,
+        time: 'Just now',
+        unread: true,
+        actionLink: '/adverts'
       });
-      localStorage.setItem('buyoh_notifications_v1', JSON.stringify(notifications));
+      await saveNotificationsForUser(user, notifications);
     } catch (e) {
       console.error(e);
     }

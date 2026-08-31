@@ -12,7 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import AvatarModal from '../components/AvatarModal';
-import { getSavedItemsForUser, getMyListingsForUser } from '../utils/userSync';
+import { getSavedItemsForUser, getMyListingsForUser, getUserProfileData, saveUserProfileData, getFollowedSellersForUser, getNotificationsForUser } from '../utils/userSync';
 import './Profile.css';
 
 export default function Profile() {
@@ -21,28 +21,22 @@ export default function Profile() {
 
   const { user, loading, logout } = useAuth();
   
-  // Load followed sellers count & unread notifications count from localStorage!
+  // Load followed sellers count & unread notifications count
   const [followingCount, setFollowingCount] = useState(0);
-  const [unreadNotifCount, setUnreadNotifCount] = useState(2);
-  const [myListingsCount, setMyListingsCount] = useState(() => getMyListingsForUser(user).length);
-  const [savedCount, setSavedCount] = useState(() => getSavedItemsForUser(user).length);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [myListingsCount, setMyListingsCount] = useState(0);
+  const [savedCount, setSavedCount] = useState(0);
 
   useEffect(() => {
     const loadCounts = () => {
       try {
-        const saved = localStorage.getItem('buyoh_followed_sellers_v1');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) setFollowingCount(parsed.length);
-        }
-        const savedNotifs = localStorage.getItem('buyoh_notifications_v1');
-        if (savedNotifs) {
-          const parsedNotifs = JSON.parse(savedNotifs);
-          if (Array.isArray(parsedNotifs)) {
-            const unread = parsedNotifs.filter(n => n.unread || n.read === false);
-            setUnreadNotifCount(unread.length);
-          }
-        }
+        const followed = getFollowedSellersForUser(user);
+        setFollowingCount(followed.length);
+
+        const notifs = getNotificationsForUser(user);
+        const unread = notifs.filter(n => n.unread || n.read === false);
+        setUnreadNotifCount(unread.length);
+
         const userListings = getMyListingsForUser(user);
         setMyListingsCount(userListings.length);
 
@@ -57,24 +51,18 @@ export default function Profile() {
 
     window.addEventListener('buyoh_listings_updated', loadCounts);
     window.addEventListener('buyoh_saved_updated', loadCounts);
+    window.addEventListener('buyoh_profile_updated', loadCounts);
     window.addEventListener('storage', loadCounts);
     return () => {
       window.removeEventListener('buyoh_listings_updated', loadCounts);
       window.removeEventListener('buyoh_saved_updated', loadCounts);
+      window.removeEventListener('buyoh_profile_updated', loadCounts);
       window.removeEventListener('storage', loadCounts);
     };
   }, [user]);
 
-  // User Profile Data State
-  const [userData, setUserData] = useState(() => ({
-    name: 'Adebayo Johnson',
-    email: 'adebayo.johnson@buyoh.com',
-    phone: '+234 812 345 6789',
-    whatsapp: (typeof window !== 'undefined' ? localStorage.getItem('buyoh_user_whatsapp_v1') : null) || '+234 812 345 6789',
-    location: 'Lekki, Lagos',
-    avatar: (typeof window !== 'undefined' ? localStorage.getItem('buyoh_user_avatar_v1') : null) || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-    banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
-  }));
+  // User Profile Data State (Authoritative Cloud Source of Truth)
+  const [userData, setUserData] = useState(() => getUserProfileData(user));
 
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -88,63 +76,76 @@ export default function Profile() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
 
-  // Listen for global avatar update events
+  // Sync profile data when user changes or loads from cloud
+  useEffect(() => {
+    const current = getUserProfileData(user);
+    setUserData(current);
+    setEditedName(current.name);
+    setEditedPhone(current.phone);
+    setEditedWhatsapp(current.whatsapp);
+    setEditedLocation(current.location);
+
+    if (user?.id) {
+      // Direct realtime subscription to Supabase `public.profiles`
+      const channel = supabase
+        .channel(`realtime-profile-${user.id}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'profiles', 
+          filter: `id=eq.${user.id}` 
+        }, (payload) => {
+          if (payload.new) {
+            const freshData = {
+              name: payload.new.full_name || payload.new.name || 'Marketplace User',
+              email: payload.new.email || user.email,
+              phone: payload.new.phone || '+234 812 345 6789',
+              whatsapp: payload.new.whatsapp || payload.new.phone || '+234 812 345 6789',
+              location: payload.new.location || 'Lagos, Nigeria',
+              avatar: payload.new.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+              banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
+            };
+            setUserData(freshData);
+            setEditedName(freshData.name);
+            setEditedPhone(freshData.phone);
+            setEditedWhatsapp(freshData.whatsapp);
+            setEditedLocation(freshData.location);
+          }
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user]);
+
+  // Listen for global avatar/profile update events
   useEffect(() => {
     const handleAvatarUpdated = (e) => {
-      const newAvatar = e.detail || localStorage.getItem('buyoh_user_avatar_v1');
+      const newAvatar = e.detail;
       if (newAvatar) {
         setUserData(prev => ({ ...prev, avatar: newAvatar }));
       }
     };
-    window.addEventListener('buyoh_avatar_updated', handleAvatarUpdated);
-    return () => window.removeEventListener('buyoh_avatar_updated', handleAvatarUpdated);
-  }, []);
-
-  useEffect(() => {
-    const savedAvatar = localStorage.getItem('buyoh_user_avatar_v1');
-    const savedWhatsapp = localStorage.getItem('buyoh_user_whatsapp_v1');
-    const savedName = localStorage.getItem('buyoh_user_name_v1');
-    const savedPhone = localStorage.getItem('buyoh_user_phone_v1');
-    const savedLocation = localStorage.getItem('buyoh_user_location_v1');
-
-    if (user) {
-      const name = savedName || user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Marketplace User';
-      const email = user.email || 'no-email@buyoh.com';
-      const phone = savedPhone || user.user_metadata?.phone || user.phone || '+234 812 345 6789';
-      const whatsapp = savedWhatsapp || user.user_metadata?.whatsapp || user.user_metadata?.phone || phone;
-      const location = savedLocation || user.user_metadata?.location || 'Lagos, Nigeria';
-      const avatar = user.user_metadata?.avatar_url || savedAvatar || user.user_metadata?.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
-
-      setUserData(prev => ({
-        ...prev,
-        name,
-        email,
-        phone,
-        whatsapp,
-        location,
-        avatar
-      }));
-      setEditedName(name);
-      setEditedPhone(phone);
-      setEditedWhatsapp(whatsapp);
-      setEditedLocation(location);
-    } else {
-      if (savedName || savedPhone || savedWhatsapp || savedLocation || savedAvatar) {
-        setUserData(prev => ({ 
-          ...prev, 
-          name: savedName || prev.name,
-          phone: savedPhone || prev.phone,
-          whatsapp: savedWhatsapp || prev.whatsapp,
-          location: savedLocation || prev.location,
-          avatar: savedAvatar || prev.avatar 
-        }));
-        if (savedName) setEditedName(savedName);
-        if (savedPhone) setEditedPhone(savedPhone);
-        if (savedWhatsapp) setEditedWhatsapp(savedWhatsapp);
-        if (savedLocation) setEditedLocation(savedLocation);
+    const handleProfileUpdated = (e) => {
+      if (e.detail) {
+        setUserData(prev => ({ ...prev, ...e.detail }));
+        if (!isEditing) {
+          if (e.detail.name) setEditedName(e.detail.name);
+          if (e.detail.phone) setEditedPhone(e.detail.phone);
+          if (e.detail.whatsapp) setEditedWhatsapp(e.detail.whatsapp);
+          if (e.detail.location) setEditedLocation(e.detail.location);
+        }
       }
-    }
-  }, [user]);
+    };
+    window.addEventListener('buyoh_avatar_updated', handleAvatarUpdated);
+    window.addEventListener('buyoh_profile_updated', handleProfileUpdated);
+    return () => {
+      window.removeEventListener('buyoh_avatar_updated', handleAvatarUpdated);
+      window.removeEventListener('buyoh_profile_updated', handleProfileUpdated);
+    };
+  }, [isEditing]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -164,41 +165,19 @@ export default function Profile() {
     const cleanWhatsapp = editedWhatsapp ? editedWhatsapp.trim() : '';
     const cleanLocation = editedLocation.trim();
 
-    // 1. Immediately persist details locally so user edits are never lost
-    try {
-      localStorage.setItem('buyoh_user_name_v1', cleanName);
-      if (cleanPhone) localStorage.setItem('buyoh_user_phone_v1', cleanPhone);
-      if (cleanWhatsapp) localStorage.setItem('buyoh_user_whatsapp_v1', cleanWhatsapp);
-      if (cleanLocation) localStorage.setItem('buyoh_user_location_v1', cleanLocation);
-    } catch (e) {}
-
-    // 2. Update UI state instantly
-    setUserData(prev => ({
-      ...prev,
+    const updated = {
+      ...userData,
       name: cleanName,
       phone: cleanPhone || 'Not provided',
       whatsapp: cleanWhatsapp || 'Not provided',
       location: cleanLocation || 'Lagos, Nigeria'
-    }));
+    };
+
+    setUserData(updated);
     setIsEditing(false);
     showToast('Profile updated successfully');
 
-    // 3. Background sync to Supabase (graceful error handling)
-    if (user) {
-      try {
-        await supabase.auth.updateUser({
-          data: {
-            full_name: cleanName,
-            name: cleanName,
-            phone: cleanPhone,
-            whatsapp: cleanWhatsapp,
-            location: cleanLocation
-          }
-        });
-      } catch (err) {
-        console.warn("Background Supabase profile sync notice:", err);
-      }
-    }
+    await saveUserProfileData(user, updated);
   };
 
   const handleUpdatePassword = async (e) => {

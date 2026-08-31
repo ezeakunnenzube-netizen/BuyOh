@@ -6,9 +6,12 @@ import {
   RotateCcw, ShieldCheck, CheckCircle2, AlertCircle, Camera
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
+import { useAuth } from '../context/AuthContext';
+import { uploadAvatarImage } from '../utils/userSync';
 import './AvatarModal.css';
 
 export default function AvatarModal({ isOpen, onClose, currentAvatar, onAvatarChanged }) {
+  const { user } = useAuth();
   const [selectedImage, setSelectedImage] = useState(currentAvatar);
   const [fileDetails, setFileDetails] = useState(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -91,26 +94,38 @@ export default function AvatarModal({ isOpen, onClose, currentAvatar, onAvatarCh
 
     setIsSaving(true);
     try {
-      // 1. Save locally
-      localStorage.setItem('buyoh_user_avatar_v1', selectedImage);
+      // 1. Process / upload image to Supabase Storage or lightweight compressed URL
+      const finalAvatarUrl = await uploadAvatarImage(user, selectedImage);
 
-      // 2. Sync Supabase metadata
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          await supabase.auth.updateUser({
-            data: { avatar_url: selectedImage }
-          });
-        }
-      } catch (err) {
-        console.warn('Supabase avatar update warning:', err);
+      // 2. Save locally (general & user-scoped)
+      localStorage.setItem('buyoh_user_avatar_v1', finalAvatarUrl);
+      if (user?.id) {
+        localStorage.setItem(`buyoh_user_avatar_${user.id}`, finalAvatarUrl);
       }
 
-      // 3. Dispatch global broadcast event
-      window.dispatchEvent(new CustomEvent('buyoh_avatar_updated', { detail: selectedImage }));
+      // 3. Sync Supabase user_metadata
+      if (user && user.id) {
+        try {
+          if (user.user_metadata) {
+            user.user_metadata.avatar_url = finalAvatarUrl;
+            user.user_metadata.picture = finalAvatarUrl;
+          }
+          await supabase.auth.updateUser({
+            data: { 
+              avatar_url: finalAvatarUrl,
+              picture: finalAvatarUrl 
+            }
+          });
+        } catch (err) {
+          console.warn('Supabase avatar update warning:', err);
+        }
+      }
+
+      // 4. Dispatch global broadcast event
+      window.dispatchEvent(new CustomEvent('buyoh_avatar_updated', { detail: finalAvatarUrl }));
 
       if (onAvatarChanged) {
-        onAvatarChanged(selectedImage);
+        onAvatarChanged(finalAvatarUrl);
       }
 
       onClose();

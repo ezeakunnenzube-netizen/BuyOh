@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import AuthModal from '../components/AuthModal';
+import { getUserProfileData } from '../utils/userSync';
 
 const AuthContext = createContext({
   user: null,
@@ -46,9 +47,18 @@ export function AuthProvider({ children }) {
     if (typeof window === 'undefined') return;
 
     // 1. Subscribe to active auth state changes continuously
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        setUser(session.user);
+        // Fetch fresh server user metadata
+        try {
+          const { data: { user: freshUser } } = await supabase.auth.getUser();
+          const activeUser = freshUser || session.user;
+          setUser(activeUser);
+          getUserProfileData(activeUser);
+        } catch (e) {
+          setUser(session.user);
+          getUserProfileData(session.user);
+        }
         setIsAuthOpen(false);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
@@ -56,15 +66,19 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
 
-    // 2. Initialize session from Supabase client / local storage
+    // 2. Initialize session from Supabase server / local storage
     const initAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          setUser(session.user);
+        const { data: { user: serverUser }, error } = await supabase.auth.getUser();
+        if (serverUser && !error) {
+          setUser(serverUser);
+          getUserProfileData(serverUser);
         } else {
-          const cached = getCachedUser();
-          if (!cached) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            setUser(session.user);
+            getUserProfileData(session.user);
+          } else {
             setUser(null);
           }
         }

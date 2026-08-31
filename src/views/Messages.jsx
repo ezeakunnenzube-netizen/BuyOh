@@ -11,6 +11,8 @@ import {
   Smile, Paperclip, Mic, Square, Play, Pause, Volume2, FileText,
   BellOff, Bell, Video, UserPlus, UserMinus
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { getFollowedSellersForUser, saveFollowedSellersForUser } from '../utils/userSync';
 import './Messages.css';
 
 const NOW_TS = Date.now();
@@ -380,6 +382,7 @@ export default function Messages() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
+  const { user } = useAuth();
 
   // Load state from localStorage or initial seed
   const [conversations, setConversations] = useState(() => {
@@ -425,22 +428,12 @@ export default function Messages() {
   const [toastMessage, setToastMessage] = useState('');
   const menuRef = useRef(null);
 
-  // Followed sellers state
-  const [followedSellers, setFollowedSellers] = useState(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const saved = localStorage.getItem('buyoh_followed_sellers_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch (e) {}
-    return [];
-  });
+  // Followed sellers state (Authoritative Cloud Source of Truth)
+  const [followedSellers, setFollowedSellers] = useState(() => getFollowedSellersForUser(user));
 
   useEffect(() => {
-    localStorage.setItem('buyoh_followed_sellers_v1', JSON.stringify(followedSellers));
-  }, [followedSellers]);
+    setFollowedSellers(getFollowedSellersForUser(user));
+  }, [user]);
 
   const isFollowingSeller = (name) => followedSellers.includes(name);
 
@@ -454,6 +447,7 @@ export default function Messages() {
       setToastMessage(`Following ${name}`);
     }
     setFollowedSellers(next);
+    saveFollowedSellersForUser(user, next);
     setTimeout(() => setToastMessage(''), 2500);
   };
 

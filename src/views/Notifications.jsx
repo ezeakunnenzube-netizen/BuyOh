@@ -8,6 +8,8 @@ import {
   Trash2, Check, ArrowLeft, MoreVertical, Search, MessageSquareMore, 
   PanelTop, UserRound, Bookmark, Sparkles, ShoppingBag, Eye
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { getNotificationsForUser, saveNotificationsForUser } from '../utils/userSync';
 import './Notifications.css';
 
 const INITIAL_NOTIFICATIONS = [
@@ -18,50 +20,42 @@ const INITIAL_NOTIFICATIONS = [
     message: 'Blessing Adebayo offered ₦550,000 for your Sony PlayStation 5 Disc Edition.',
     time: '2 mins ago',
     unread: true,
-    actionLabel: 'View Offer',
-    actionLink: '/messages?chatId=chat-004',
-    itemImg: 'https://images.unsplash.com/photo-1606813907291-d86efa9b94db?auto=format&fit=crop&w=120&q=80'
+    actionLink: '/messages'
   },
   {
     id: 'notif-002',
     type: 'alert',
-    title: 'Price Drop on Saved Item',
-    message: 'Apple iPhone 13 Pro (128GB) has dropped to ₦510,000 (was ₦540,000).',
+    title: 'Price Drop Alert',
+    message: 'Toyota Corolla 2018 is now ₦7,500,000 (12% off original price).',
     time: '1 hour ago',
     unread: true,
-    actionLabel: 'View Listing',
-    actionLink: '/messages?chatId=chat-001',
-    itemImg: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=120&q=80'
-  },
-  {
-    id: 'notif-003',
-    type: 'system',
-    title: 'Account Verified',
-    message: 'Congratulations! Your seller verification profile is complete. You now have a verified shield badge.',
-    time: '5 hours ago',
-    unread: false,
-    actionLabel: 'View Profile',
     actionLink: '#'
   },
   {
-    id: 'notif-004',
+    id: 'notif-003',
     type: 'message',
-    title: 'Unread Messages',
-    message: 'You have unread messages from Babatunde Ogunlesi about the Toyota Camry.',
+    title: 'New Message from Chinedu',
+    message: 'Is the MacBook Pro 16" still available for inspection?',
+    time: '3 hours ago',
+    unread: false,
+    actionLink: '/messages'
+  },
+  {
+    id: 'notif-004',
+    type: 'system',
+    title: 'Listing Approved',
+    message: 'Your advert "Apple iPhone 15 Pro Max 256GB" is now live on BuyOh marketplace.',
     time: 'Yesterday',
     unread: false,
-    actionLabel: 'Reply Now',
-    actionLink: '/messages?chatId=chat-001',
-    itemImg: 'https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=120&q=80'
+    actionLink: '/adverts'
   },
   {
     id: 'notif-005',
-    type: 'system',
-    title: 'Security Alert',
-    message: 'A new login was detected on your account from Chrome on Android (Lagos, Nigeria).',
+    type: 'alert',
+    title: 'Security Tip',
+    message: 'Never make payments before inspecting items in person. Stay safe with verified sellers.',
     time: '2 days ago',
     unread: false,
-    actionLabel: 'Review Security',
     actionLink: '#'
   }
 ];
@@ -69,45 +63,43 @@ const INITIAL_NOTIFICATIONS = [
 export default function Notifications() {
   const router = useRouter();
   const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
-  const [notifications, setNotifications] = useState(() => {
-    if (typeof window === 'undefined') return INITIAL_NOTIFICATIONS;
-    try {
-      const saved = localStorage.getItem('buyoh_notifications_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch (e) {}
-    return INITIAL_NOTIFICATIONS;
-  });
+  const { user } = useAuth();
 
+  const [notifications, setNotifications] = useState(() => getNotificationsForUser(user, INITIAL_NOTIFICATIONS));
   const [activeTab, setActiveTab] = useState('all'); // all, unread, offers, alerts
   const [toastMessage, setToastMessage] = useState('');
 
+  // Sync notifications when user changes or logs in on a new device
   useEffect(() => {
-    localStorage.setItem('buyoh_notifications_v1', JSON.stringify(notifications));
-  }, [notifications]);
+    setNotifications(getNotificationsForUser(user, INITIAL_NOTIFICATIONS));
+  }, [user]);
+
+  const updateAndSyncNotifications = (newNotifs) => {
+    setNotifications(newNotifs);
+    saveNotificationsForUser(user, newNotifs);
+  };
 
   const handleMarkAsRead = (id) => {
-    setNotifications(prev =>
-      prev.map(n => n.id === id ? { ...n, unread: false } : n)
-    );
+    const next = notifications.map(n => n.id === id ? { ...n, unread: false } : n);
+    updateAndSyncNotifications(next);
     showToast('Notification marked as read');
   };
 
   const handleMarkAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+    const next = notifications.map(n => ({ ...n, unread: false }));
+    updateAndSyncNotifications(next);
     showToast('All notifications marked as read');
   };
 
   const handleDelete = (id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    const next = notifications.filter(n => n.id !== id);
+    updateAndSyncNotifications(next);
     showToast('Notification deleted');
   };
 
   const handleClearAll = () => {
     if (window.confirm('Are you sure you want to delete all notifications?')) {
-      setNotifications([]);
+      updateAndSyncNotifications([]);
       showToast('All notifications cleared');
     }
   };
