@@ -105,25 +105,7 @@ export default function AvatarModal({ isOpen, onClose, currentAvatar, onAvatarCh
         localStorage.setItem(`buyoh_user_avatar_${user.id}`, finalAvatarUrl);
       }
 
-      // 3. Sync Supabase user_metadata
-      if (user && user.id) {
-        try {
-          if (user.user_metadata) {
-            user.user_metadata.avatar_url = finalAvatarUrl;
-            user.user_metadata.picture = finalAvatarUrl;
-          }
-          await supabase.auth.updateUser({
-            data: { 
-              avatar_url: finalAvatarUrl,
-              picture: finalAvatarUrl 
-            }
-          });
-        } catch (err) {
-          console.warn('Supabase avatar update warning:', err);
-        }
-      }
-
-      // 4. Dispatch global broadcast event
+      // 3. Dispatch global broadcast event
       window.dispatchEvent(new CustomEvent('buyoh_avatar_updated', { detail: finalAvatarUrl }));
 
       if (onAvatarChanged) {

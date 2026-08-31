@@ -268,7 +268,7 @@ export const saveUserProfileData = async (user, profileData) => {
     }
 
     if (user && user.id) {
-      // 1. Sync to Supabase `public.profiles` database table
+      // Sync to Supabase `public.profiles` database table
       try {
         await supabase
           .from('profiles')
@@ -284,35 +284,6 @@ export const saveUserProfileData = async (user, profileData) => {
           });
       } catch (dbErr) {
         console.warn("Supabase profiles table upsert notice:", dbErr);
-      }
-
-      // 2. Sync to Supabase `auth.users` user_metadata
-      if (user.user_metadata) {
-        Object.assign(user.user_metadata, {
-          full_name: profileData.name,
-          name: profileData.name,
-          phone: profileData.phone,
-          whatsapp: profileData.whatsapp,
-          location: profileData.location,
-          avatar_url: profileData.avatar,
-          picture: profileData.avatar
-        });
-      }
-
-      try {
-        await supabase.auth.updateUser({
-          data: {
-            full_name: profileData.name,
-            name: profileData.name,
-            phone: profileData.phone,
-            whatsapp: profileData.whatsapp,
-            location: profileData.location,
-            avatar_url: profileData.avatar,
-            picture: profileData.avatar
-          }
-        });
-      } catch (authErr) {
-        console.warn("Supabase auth updateUser notice:", authErr);
       }
     }
 
@@ -365,7 +336,6 @@ export const getSavedItemsForUser = (user) => {
       const parsedLegacy = safeJsonParse(legacy, null);
       if (Array.isArray(parsedLegacy)) {
         localStorage.setItem(`buyoh_saved_items_${user.id}`, JSON.stringify(parsedLegacy));
-        syncSavedItemsToCloud(user, parsedLegacy);
         return parsedLegacy;
       }
     }
@@ -409,12 +379,6 @@ export const syncSavedItemsToCloud = async (user, items) => {
       .update({ saved_items: items, updated_at: new Date().toISOString() })
       .eq('id', user.id);
   } catch (e) {}
-
-  try {
-    await supabase.auth.updateUser({
-      data: { saved_items: items }
-    });
-  } catch (err) {}
 };
 
 // --- MY LISTINGS SYNC ---
@@ -459,7 +423,6 @@ export const getMyListingsForUser = (user) => {
       const userListings = parsed.filter(ad => !ad.sellerId || ad.sellerId === user.id);
       if (userListings.length > 0) {
         localStorage.setItem(`buyoh_my_listings_${user.id}`, JSON.stringify(userListings));
-        saveMyListingsForUser(user, userListings);
         return userListings;
       }
     }
@@ -499,10 +462,6 @@ export const saveMyListingsForUser = async (user, listings) => {
           .update({ my_listings: sanitizedListings, updated_at: new Date().toISOString() })
           .eq('id', user.id);
       } catch (e) {}
-
-      await supabase.auth.updateUser({
-        data: { my_listings: sanitizedListings }
-      });
     } catch (e) {
       console.error("Error saving user listings:", e);
     }
@@ -576,10 +535,6 @@ export const saveNotificationsForUser = async (user, notifications) => {
           .update({ notifications: sanitized, updated_at: new Date().toISOString() })
           .eq('id', user.id);
       } catch (e) {}
-
-      await supabase.auth.updateUser({
-        data: { notifications: sanitized }
-      });
     }
   } catch (e) {
     console.error("Error saving notifications:", e);
@@ -631,10 +586,6 @@ export const saveFollowedSellersForUser = async (user, followedSellers) => {
           .update({ followed_sellers: sanitized, updated_at: new Date().toISOString() })
           .eq('id', user.id);
       } catch (e) {}
-
-      await supabase.auth.updateUser({
-        data: { followed_sellers: sanitized }
-      });
     }
   } catch (e) {
     console.error("Error saving followed sellers:", e);
