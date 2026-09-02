@@ -39,7 +39,7 @@ function getCachedUser() {
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => getCachedUser());
   const [loading, setLoading] = useState(true);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   // Track the cleanup function returned by initUserRealtimeSync
@@ -85,8 +85,14 @@ export function AuthProvider({ children }) {
       setUser(cached);
     }
 
+    // Safety timeout: ensure blank screen resolves within 600ms even if network lags
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 600);
+
     // 1. Subscribe to active auth state changes continuously
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      clearTimeout(safetyTimer);
       if (session?.user) {
         setUser(session.user);
         setIsAuthOpen(false);
@@ -106,12 +112,13 @@ export function AuthProvider({ children }) {
         if (session?.user && !error) {
           setUser(session.user);
           activateSync(session.user);
-        } else {
+        } else if (!cached) {
           setUser(null);
         }
       } catch (err) {
         console.error("Auth init error:", err);
       } finally {
+        clearTimeout(safetyTimer);
         setLoading(false);
       }
     };
@@ -119,6 +126,7 @@ export function AuthProvider({ children }) {
     initAuth();
 
     return () => {
+      clearTimeout(safetyTimer);
       if (subscription) subscription.unsubscribe();
       // Clean up realtime on unmount
       if (realtimeCleanupRef.current) {
@@ -143,6 +151,23 @@ export function AuthProvider({ children }) {
       setUser(null);
     }
   };
+
+  // On page reload, show a completely blank screen while resolving user session
+  // to avoid flashing default/placeholder pre-page states
+  if (loading) {
+    return (
+      <AuthContext.Provider value={{ user, loading, isAuthOpen, setIsAuthOpen, logout }}>
+        <div 
+          id="app-blank-screen" 
+          style={{ 
+            minHeight: '100vh', 
+            width: '100%', 
+            backgroundColor: '#f8fafc' 
+          }} 
+        />
+      </AuthContext.Provider>
+    );
+  }
 
   return (
     <AuthContext.Provider value={{ user, loading, isAuthOpen, setIsAuthOpen, logout }}>

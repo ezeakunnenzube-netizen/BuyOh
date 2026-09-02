@@ -134,13 +134,7 @@ export default function MyAdverts() {
   }, [myAdverts, searchQuery]);
 
   if (loading) {
-    return (
-      <div className="adverts-page-wrapper">
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
-          <div style={{ width: '36px', height: '36px', border: '3px solid #e2e8f0', borderTopColor: '#1d4ed8', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-        </div>
-      </div>
-    );
+    return <div style={{ minHeight: '100vh', width: '100%', backgroundColor: '#f8fafc' }} />;
   }
 
   if (!user) {

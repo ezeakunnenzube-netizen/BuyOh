@@ -70,14 +70,14 @@ export default function Profile() {
   }, []);
 
   // User Profile Data State (Authoritative Cloud Source of Truth)
-  const [userData, setUserData] = useState(() => getUserProfileData(null));
+  const [userData, setUserData] = useState(() => getUserProfileData(user));
 
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedName, setEditedName] = useState(userData.name);
-  const [editedPhone, setEditedPhone] = useState(userData.phone);
-  const [editedWhatsapp, setEditedWhatsapp] = useState(userData.whatsapp);
-  const [editedLocation, setEditedLocation] = useState(userData.location);
+  const [editedName, setEditedName] = useState(() => getUserProfileData(user).name || '');
+  const [editedPhone, setEditedPhone] = useState(() => getUserProfileData(user).phone || '');
+  const [editedWhatsapp, setEditedWhatsapp] = useState(() => getUserProfileData(user).whatsapp || '');
+  const [editedLocation, setEditedLocation] = useState(() => getUserProfileData(user).location || '');
 
   const [toastMessage, setToastMessage] = useState('');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -313,6 +313,11 @@ export default function Profile() {
       window.location.href = '/';
     }
   };
+
+  // Render a completely blank screen while mounting or loading auth session
+  if (loading || !mounted) {
+    return <div style={{ minHeight: '100vh', width: '100%', backgroundColor: '#f8fafc' }} />;
+  }
 
   return (
     <div className="profile-page-wrapper">

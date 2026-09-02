@@ -165,11 +165,11 @@ export const getUserProfileData = (user) => {
   if (!activeUser) {
     if (typeof window === 'undefined') {
       return {
-        name: 'Marketplace User',
+        name: '',
         email: '',
-        phone: '+234 812 345 6789',
-        whatsapp: '+234 812 345 6789',
-        location: 'Lekki, Lagos',
+        phone: '',
+        whatsapp: '',
+        location: '',
         avatar: '',
         banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
       };
@@ -181,11 +181,11 @@ export const getUserProfileData = (user) => {
     const savedAvatar = localStorage.getItem('buyoh_user_avatar_v1');
 
     return {
-      name: savedName || 'Marketplace User',
+      name: savedName || '',
       email: '',
-      phone: savedPhone || '+234 812 345 6789',
-      whatsapp: savedWhatsapp || '+234 812 345 6789',
-      location: savedLocation || 'Lagos, Nigeria',
+      phone: savedPhone || '',
+      whatsapp: savedWhatsapp || '',
+      location: savedLocation || '',
       avatar: isValidAvatarUrl(savedAvatar) ? savedAvatar : '',
       banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
     };
@@ -215,7 +215,7 @@ export const getUserProfileData = (user) => {
     chosenAvatar = meta.picture;
   }
 
-  const name = localProfile?.name || cachedUserName || meta.full_name || meta.name || activeUser.email?.split('@')[0] || 'Marketplace User';
+  const name = localProfile?.name || cachedUserName || meta.full_name || meta.name || activeUser.email?.split('@')[0] || '';
   const email = activeUser.email || 'no-email@buyoh.com';
   const phone = localProfile?.phone || meta.phone || activeUser.phone || '+234 812 345 6789';
   const whatsapp = localProfile?.whatsapp || meta.whatsapp || meta.phone || phone;
@@ -471,13 +471,17 @@ export const saveMyListingsForUser = async (user, listings) => {
         if (session?.access_token) {
           const { error, data: updatedRows } = await supabase
             .from('profiles')
-            .update({ my_listings: sanitizedListings, updated_at: new Date().toISOString() })
-            .eq('id', user.id)
+            .upsert({
+              id: user.id,
+              email: user.email,
+              my_listings: sanitizedListings,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'id' })
             .select('id, updated_at');
           if (error) {
             console.warn('Cloud listings save warning:', error.message);
           } else if (!updatedRows || updatedRows.length === 0) {
-            console.warn('Cloud listings: update matched 0 rows — RLS may be blocking write');
+            console.warn('Cloud listings: upsert matched 0 rows — check RLS in Supabase');
           } else {
             console.log(`[BuyOh] Listings synced to cloud (${sanitizedListings.length} items)`);
           }
@@ -740,8 +744,36 @@ export const syncUserDataFromCloud = async (user) => {
       .eq('id', user.id)
       .maybeSingle();
 
-    if (error || !dbProfile) {
-      console.warn('syncUserDataFromCloud: could not fetch profile', error?.message);
+    if (error) {
+      console.warn('syncUserDataFromCloud: error fetching profile', error?.message);
+      return;
+    }
+
+    // If profile row doesn't exist yet in public.profiles, create it with local data!
+    if (!dbProfile) {
+      const localProfile = getUserProfileData(user);
+      const localListings = getMyListingsForUser(user);
+      const localSaved = getSavedItemsForUser(user);
+      const localNotifs = getNotificationsForUser(user);
+
+      await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          email: user.email,
+          name: localProfile.name || '',
+          full_name: localProfile.name || '',
+          phone: localProfile.phone || '',
+          whatsapp: localProfile.whatsapp || '',
+          location: localProfile.location || 'Lagos, Nigeria',
+          avatar_url: localProfile.avatar || '',
+          my_listings: localListings,
+          saved_items: localSaved,
+          notifications: localNotifs,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
+
+      console.log('[BuyOh] Created missing profile row in Supabase for user', user.id);
       return;
     }
 
@@ -819,10 +851,14 @@ export const syncUserDataFromCloud = async (user) => {
     window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
 
     if (listingsNeedCloudPush && session?.access_token) {
-      // Push merged listings back to cloud
+      // Push merged listings back to cloud with upsert
       supabase.from('profiles')
-        .update({ my_listings: mergedListings, updated_at: new Date().toISOString() })
-        .eq('id', user.id)
+        .upsert({
+          id: user.id,
+          email: user.email,
+          my_listings: mergedListings,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' })
         .then(({ error: e }) => {
           if (e) console.warn('syncUserDataFromCloud: listings push error', e.message);
         });
