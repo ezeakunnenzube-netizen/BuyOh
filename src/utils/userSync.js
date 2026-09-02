@@ -357,9 +357,6 @@ export const saveItemsForUser = async (user, items) => {
     try {
       localStorage.setItem(userKey, JSON.stringify(sanitizedItems));
       localStorage.setItem('buyoh_saved_items_v1', JSON.stringify(sanitizedItems));
-      if (user.user_metadata) {
-        user.user_metadata.saved_items = sanitizedItems;
-      }
       window.dispatchEvent(new CustomEvent('buyoh_saved_updated'));
       await syncSavedItemsToCloud(user, sanitizedItems);
     } catch (e) {
@@ -440,9 +437,6 @@ export const saveMyListingsForUser = async (user, listings) => {
     try {
       localStorage.setItem(userKey, JSON.stringify(sanitizedListings));
       localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(sanitizedListings));
-      if (user.user_metadata) {
-        user.user_metadata.my_listings = sanitizedListings;
-      }
       
       // Update public pool
       try {
