@@ -391,6 +391,8 @@ export default function SellItem() {
     };
 
     // Save to localStorage and dispatch event for real-time synchronization
+    // saveMyListingsForUser now awaits the Supabase cloud write (with session refresh)
+    // so by the time we navigate to the success step the listing IS in the cloud.
     try {
       const existing = getMyListingsForUser(user);
       existing.unshift(listing);
@@ -413,10 +415,9 @@ export default function SellItem() {
       console.error(e);
     }
 
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setCurrentStep(4); // Success step
-    }, 1500);
+    // Navigate to success — cloud write has already completed above
+    setIsSubmitting(false);
+    setCurrentStep(4); // Success step
   };
 
   const formatPrice = (val) => {

@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import AuthModal from '../components/AuthModal';
-import { getUserProfileData, syncUserDataFromCloud, initUserRealtimeSync, cleanupUserRealtimeSync } from '../utils/userSync';
+import { getUserProfileData, syncUserDataFromCloud, initUserRealtimeSync, cleanupUserRealtimeSync, initWindowFocusSync } from '../utils/userSync';
 
 const AuthContext = createContext({
   user: null,
@@ -44,6 +44,8 @@ export function AuthProvider({ children }) {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   // Track the cleanup function returned by initUserRealtimeSync
   const realtimeCleanupRef = useRef(null);
+  // Track the cleanup function returned by initWindowFocusSync
+  const focusCleanupRef = useRef(null);
 
   // Activate cloud sync + realtime subscription for a user session
   const activateSync = async (sessionUser) => {
@@ -56,6 +58,10 @@ export function AuthProvider({ children }) {
     if (!realtimeCleanupRef.current) {
       realtimeCleanupRef.current = initUserRealtimeSync(sessionUser);
     }
+    // Register window focus/visibility sync so mobile devices auto-sync on return
+    if (!focusCleanupRef.current) {
+      focusCleanupRef.current = initWindowFocusSync(sessionUser);
+    }
   };
 
   // Deactivate realtime channel on logout
@@ -63,6 +69,10 @@ export function AuthProvider({ children }) {
     if (realtimeCleanupRef.current) {
       realtimeCleanupRef.current();
       realtimeCleanupRef.current = null;
+    }
+    if (focusCleanupRef.current) {
+      focusCleanupRef.current();
+      focusCleanupRef.current = null;
     }
     if (userId) cleanupUserRealtimeSync(userId);
   };
@@ -114,6 +124,10 @@ export function AuthProvider({ children }) {
       if (realtimeCleanupRef.current) {
         realtimeCleanupRef.current();
         realtimeCleanupRef.current = null;
+      }
+      if (focusCleanupRef.current) {
+        focusCleanupRef.current();
+        focusCleanupRef.current = null;
       }
     };
   }, []);

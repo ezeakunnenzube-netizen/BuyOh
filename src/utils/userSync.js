@@ -458,17 +458,31 @@ export const saveMyListingsForUser = async (user, listings) => {
 
       window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
 
-      // Session-aware cloud write: verify active session before updating
+      // Session-aware cloud write with auto-refresh fallback
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        let { data: { session } } = await supabase.auth.getSession();
+        
+        // If session is missing or token looks stale, attempt a refresh
+        if (!session?.access_token) {
+          const { data: refreshed } = await supabase.auth.refreshSession();
+          session = refreshed?.session;
+        }
+
         if (session?.access_token) {
-          const { error } = await supabase
+          const { error, data: updatedRows } = await supabase
             .from('profiles')
             .update({ my_listings: sanitizedListings, updated_at: new Date().toISOString() })
-            .eq('id', user.id);
-          if (error) console.warn('Cloud listings save warning:', error.message);
+            .eq('id', user.id)
+            .select('id, updated_at');
+          if (error) {
+            console.warn('Cloud listings save warning:', error.message);
+          } else if (!updatedRows || updatedRows.length === 0) {
+            console.warn('Cloud listings: update matched 0 rows — RLS may be blocking write');
+          } else {
+            console.log(`[BuyOh] Listings synced to cloud (${sanitizedListings.length} items)`);
+          }
         } else {
-          console.warn('saveMyListingsForUser: no active session, cloud write skipped');
+          console.warn('saveMyListingsForUser: no active session after refresh, cloud write skipped');
         }
       } catch (e) {
         console.warn('saveMyListingsForUser cloud write error:', e);
@@ -713,10 +727,12 @@ export const syncUserDataFromCloud = async (user) => {
   if (!user || !user.id || typeof window === 'undefined') return;
 
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const authHeader = session?.access_token
-      ? { Authorization: `Bearer ${session.access_token}` }
-      : {};
+    // Get session — attempt refresh if token is absent or stale
+    let { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      const { data: refreshed } = await supabase.auth.refreshSession();
+      session = refreshed?.session;
+    }
 
     const { data: dbProfile, error } = await supabase
       .from('profiles')
@@ -1024,4 +1040,45 @@ export const cleanupUserRealtimeSync = (userId) => {
     supabase.removeChannel(ch);
     delete _realtimeChannels[userId];
   }
+};
+
+/**
+ * initWindowFocusSync(user)
+ *
+ * Registers window focus + Page Visibility API listeners so data syncs
+ * automatically whenever the user switches back to the BuyOh tab or
+ * unlocks their phone (which triggers a visibilitychange to 'visible').
+ *
+ * This is critical for mobile: phones suspend background tasks, so
+ * realtime sockets may have been dropped. On visibility restore we run
+ * a full pull sync to guarantee freshness.
+ *
+ * Returns a cleanup function to remove the listeners.
+ */
+export const initWindowFocusSync = (user) => {
+  if (!user?.id || typeof window === 'undefined') return () => {};
+
+  let syncTimeout = null;
+
+  const triggerSync = () => {
+    // Debounce: only run once if the events fire rapidly together
+    clearTimeout(syncTimeout);
+    syncTimeout = setTimeout(() => {
+      syncUserDataFromCloud(user).catch(() => {});
+    }, 500);
+  };
+
+  const onFocus = () => triggerSync();
+  const onVisibility = () => {
+    if (document.visibilityState === 'visible') triggerSync();
+  };
+
+  window.addEventListener('focus', onFocus);
+  document.addEventListener('visibilitychange', onVisibility);
+
+  return () => {
+    clearTimeout(syncTimeout);
+    window.removeEventListener('focus', onFocus);
+    document.removeEventListener('visibilitychange', onVisibility);
+  };
 };

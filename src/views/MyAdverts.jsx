@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { 
   PanelTop, Trash2, Eye, MapPin, Tag, Plus, ArrowLeft, 
   MessageSquareMore, BellRing, Bookmark, UserRound, Sparkles, CheckCircle,
-  Search, X, ShieldCheck, Store, Clock, Layers
+  Search, X, ShieldCheck, Store, Clock, Layers, RefreshCcw, CloudUpload
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getMyListingsForUser, saveMyListingsForUser, syncUserDataFromCloud } from '../utils/userSync';
@@ -22,6 +22,8 @@ export default function MyAdverts() {
   const [activeFilter, setActiveFilter] = useState('All'); // 'All' | 'Active'
   const [toastMessage, setToastMessage] = useState('');
   const [deleteId, setDeleteId] = useState(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('idle'); // 'idle' | 'syncing' | 'synced' | 'error'
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -51,7 +53,18 @@ export default function MyAdverts() {
 
     // Pull latest from cloud in background; when done it fires buyoh_listings_updated
     if (user?.id) {
-      syncUserDataFromCloud(user).catch(() => {});
+      setIsSyncing(true);
+      setSyncStatus('syncing');
+      syncUserDataFromCloud(user)
+        .then(() => {
+          setSyncStatus('synced');
+          setTimeout(() => setSyncStatus('idle'), 4000);
+        })
+        .catch(() => {
+          setSyncStatus('error');
+          setTimeout(() => setSyncStatus('idle'), 4000);
+        })
+        .finally(() => setIsSyncing(false));
     }
 
     window.addEventListener('buyoh_listings_updated', loadAdverts);
@@ -61,6 +74,24 @@ export default function MyAdverts() {
       window.removeEventListener('storage', loadAdverts);
     };
   }, [user]);
+
+  const handleManualSync = async () => {
+    if (isSyncing || !user?.id) return;
+    setIsSyncing(true);
+    setSyncStatus('syncing');
+    try {
+      await syncUserDataFromCloud(user);
+      setSyncStatus('synced');
+      showToast(`Listings synced — ${getMyListingsForUser(user).length} active ads found`);
+      setTimeout(() => setSyncStatus('idle'), 4000);
+    } catch (e) {
+      setSyncStatus('error');
+      showToast('Sync failed. Please check your connection.');
+      setTimeout(() => setSyncStatus('idle'), 4000);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleDeleteAd = async (id) => {
     try {
@@ -219,6 +250,25 @@ export default function MyAdverts() {
                 <span className="adverts-stat-label">Avg. Price / Ad</span>
                 <span className="adverts-stat-value">{formatPrice(avgPrice)}</span>
               </div>
+              {/* Sync Status Button */}
+              <button
+                id="adverts-sync-btn"
+                className={`adverts-sync-btn adverts-sync-btn--${syncStatus}`}
+                onClick={handleManualSync}
+                disabled={isSyncing}
+                title={syncStatus === 'synced' ? 'Synced with cloud' : 'Tap to sync listings with cloud'}
+              >
+                <RefreshCcw
+                  size={14}
+                  className={isSyncing ? 'adverts-sync-spin' : ''}
+                />
+                <span>
+                  {syncStatus === 'syncing' && 'Syncing...'}
+                  {syncStatus === 'synced' && 'Synced ✓'}
+                  {syncStatus === 'error' && 'Sync Failed'}
+                  {syncStatus === 'idle' && 'Sync'}
+                </span>
+              </button>
             </div>
           </div>
 
