@@ -152,7 +152,9 @@ export default function SellItem() {
       }
     } catch (e) { console.error(e); }
   }, [user]);
-  // Helper to compress uploaded image files into persistent base64 data URLs
+  // Helper to compress uploaded image files into persistent base64 data URLs.
+  // Images are capped at 600x600px @ 65% quality to keep Supabase REST payloads
+  // well within the default 1MB body limit even with multiple images attached.
   const compressImageFile = (file) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -160,8 +162,8 @@ export default function SellItem() {
         const img = new Image();
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const maxWidth = 800;
-          const maxHeight = 800;
+          const maxWidth = 600;
+          const maxHeight = 600;
           let width = img.width;
           let height = img.height;
 
@@ -182,7 +184,7 @@ export default function SellItem() {
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
 
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
           resolve(dataUrl);
         };
         img.onerror = () => resolve(e.target.result);

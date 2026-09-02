@@ -12,7 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import AvatarModal from '../components/AvatarModal';
-import { getSavedItemsForUser, getMyListingsForUser, getUserProfileData, saveUserProfileData, getFollowedSellersForUser, getNotificationsForUser } from '../utils/userSync';
+import { getSavedItemsForUser, getMyListingsForUser, getUserProfileData, saveUserProfileData, getFollowedSellersForUser, getNotificationsForUser, syncUserDataFromCloud } from '../utils/userSync';
 import './Profile.css';
 
 export default function Profile() {
@@ -52,11 +52,13 @@ export default function Profile() {
     window.addEventListener('buyoh_listings_updated', loadCounts);
     window.addEventListener('buyoh_saved_updated', loadCounts);
     window.addEventListener('buyoh_profile_updated', loadCounts);
+    window.addEventListener('buyoh_notifications_updated', loadCounts);
     window.addEventListener('storage', loadCounts);
     return () => {
       window.removeEventListener('buyoh_listings_updated', loadCounts);
       window.removeEventListener('buyoh_saved_updated', loadCounts);
       window.removeEventListener('buyoh_profile_updated', loadCounts);
+      window.removeEventListener('buyoh_notifications_updated', loadCounts);
       window.removeEventListener('storage', loadCounts);
     };
   }, [user]);
@@ -85,6 +87,9 @@ export default function Profile() {
   // Sync profile data when user changes or loads from cloud
   useEffect(() => {
     if (!user) return;
+
+    // Kick off a background cloud sync so this device reflects any changes made on another device
+    syncUserDataFromCloud(user).catch(() => {});
 
     // Load synchronous cached profile data
     const current = getUserProfileData(user);

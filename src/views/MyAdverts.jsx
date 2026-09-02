@@ -9,7 +9,7 @@ import {
   Search, X, ShieldCheck, Store, Clock, Layers
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getMyListingsForUser, saveMyListingsForUser } from '../utils/userSync';
+import { getMyListingsForUser, saveMyListingsForUser, syncUserDataFromCloud } from '../utils/userSync';
 import './MyAdverts.css';
 
 export default function MyAdverts() {
@@ -48,6 +48,11 @@ export default function MyAdverts() {
     };
 
     loadAdverts();
+
+    // Pull latest from cloud in background; when done it fires buyoh_listings_updated
+    if (user?.id) {
+      syncUserDataFromCloud(user).catch(() => {});
+    }
 
     window.addEventListener('buyoh_listings_updated', loadAdverts);
     window.addEventListener('storage', loadAdverts);
@@ -172,9 +177,6 @@ export default function MyAdverts() {
       <div className="adverts-container">
         {/* Mobile Navigation Header Bar */}
         <div className="adverts-mobile-header">
-          <button onClick={handleBack} className="adverts-back-btn">
-            <ArrowLeft size={18} /> Back
-          </button>
           <h2 className="adverts-mobile-title">My Adverts</h2>
         </div>
 

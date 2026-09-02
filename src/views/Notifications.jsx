@@ -9,7 +9,7 @@ import {
   PanelTop, UserRound, Bookmark, Sparkles, ShoppingBag, Eye
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getNotificationsForUser, saveNotificationsForUser } from '../utils/userSync';
+import { getNotificationsForUser, saveNotificationsForUser, syncUserDataFromCloud } from '../utils/userSync';
 import './Notifications.css';
 
 const INITIAL_NOTIFICATIONS = [
@@ -71,7 +71,23 @@ export default function Notifications() {
 
   // Sync notifications when user changes or logs in on a new device
   useEffect(() => {
-    setNotifications(getNotificationsForUser(user, INITIAL_NOTIFICATIONS));
+    const loadNotifications = () => {
+      setNotifications(getNotificationsForUser(user, INITIAL_NOTIFICATIONS));
+    };
+
+    loadNotifications();
+
+    // Pull latest from cloud in background; fires buyoh_notifications_updated when done
+    if (user?.id) {
+      syncUserDataFromCloud(user).catch(() => {});
+    }
+
+    window.addEventListener('buyoh_notifications_updated', loadNotifications);
+    window.addEventListener('storage', loadNotifications);
+    return () => {
+      window.removeEventListener('buyoh_notifications_updated', loadNotifications);
+      window.removeEventListener('storage', loadNotifications);
+    };
   }, [user]);
 
   const updateAndSyncNotifications = (newNotifs) => {

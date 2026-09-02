@@ -9,7 +9,7 @@ import {
   Search, X, ShoppingBag, TrendingUp, ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getSavedItemsForUser, saveItemsForUser } from '../utils/userSync';
+import { getSavedItemsForUser, saveItemsForUser, syncUserDataFromCloud } from '../utils/userSync';
 import './SavedAdverts.css';
 
 export default function SavedAdverts() {
@@ -35,6 +35,11 @@ export default function SavedAdverts() {
     };
 
     loadSaved();
+
+    // Pull latest from cloud in background; fires buyoh_saved_updated when done
+    if (user?.id) {
+      syncUserDataFromCloud(user).catch(() => {});
+    }
 
     window.addEventListener('buyoh_saved_updated', loadSaved);
     window.addEventListener('storage', loadSaved);

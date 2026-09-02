@@ -4,6 +4,10 @@ import { products } from '../data/productData';
 /**
  * Enterprise synchronization layer between Supabase Database (public.profiles & storage.avatars)
  * and Client Local Storage across all user accounts and multiple devices.
+ *
+ * Cross-Device Sync Architecture:
+ *   - syncUserDataFromCloud(user) : Pull latest cloud data → merge with local → push merged back up
+ *   - initUserRealtimeSync(user)  : Subscribe to Supabase Realtime so Device B reflects Device A changes
  */
 
 export const DEFAULT_AVATAR = '';
@@ -454,12 +458,21 @@ export const saveMyListingsForUser = async (user, listings) => {
 
       window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
 
+      // Session-aware cloud write: verify active session before updating
       try {
-        await supabase
-          .from('profiles')
-          .update({ my_listings: sanitizedListings, updated_at: new Date().toISOString() })
-          .eq('id', user.id);
-      } catch (e) {}
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          const { error } = await supabase
+            .from('profiles')
+            .update({ my_listings: sanitizedListings, updated_at: new Date().toISOString() })
+            .eq('id', user.id);
+          if (error) console.warn('Cloud listings save warning:', error.message);
+        } else {
+          console.warn('saveMyListingsForUser: no active session, cloud write skipped');
+        }
+      } catch (e) {
+        console.warn('saveMyListingsForUser cloud write error:', e);
+      }
     } catch (e) {
       console.error("Error saving user listings:", e);
     }
@@ -671,4 +684,344 @@ export const getGeneralProductPool = (user) => {
   });
 
   return pool;
+};
+
+// =============================================================================
+// CROSS-DEVICE REALTIME SYNC ENGINE
+// =============================================================================
+
+/**
+ * Registry to track active Supabase Realtime channels per user so we can
+ * cleanly unsubscribe when the user logs out or the component unmounts.
+ */
+const _realtimeChannels = {};
+
+/**
+ * syncUserDataFromCloud(user)
+ *
+ * Fetches the authoritative profile row from Supabase and merges it with the
+ * current device's localStorage, then dispatches the appropriate custom events
+ * so all mounted views update their state automatically.
+ *
+ * Merge strategy:
+ *   - Profile fields (name, phone, whatsapp, location, avatar): cloud wins
+ *   - my_listings : merge(cloud ∪ local); push merged back to cloud if local had extras
+ *   - saved_items : merge(cloud ∪ local); push merged back to cloud if local had extras
+ *   - notifications: merge(cloud ∪ local); push merged back to cloud if local had extras
+ */
+export const syncUserDataFromCloud = async (user) => {
+  if (!user || !user.id || typeof window === 'undefined') return;
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const authHeader = session?.access_token
+      ? { Authorization: `Bearer ${session.access_token}` }
+      : {};
+
+    const { data: dbProfile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (error || !dbProfile) {
+      console.warn('syncUserDataFromCloud: could not fetch profile', error?.message);
+      return;
+    }
+
+    // --- 1. Sync profile fields ---
+    const cloudProfile = {
+      name: dbProfile.full_name || dbProfile.name || user.email?.split('@')[0] || 'Marketplace User',
+      email: dbProfile.email || user.email || '',
+      phone: dbProfile.phone || '',
+      whatsapp: dbProfile.whatsapp || dbProfile.phone || '',
+      location: dbProfile.location || 'Lagos, Nigeria',
+      avatar: dbProfile.avatar_url && !dbProfile.avatar_url.includes('photo-1535713875002-d1d0cf377fde')
+        ? dbProfile.avatar_url
+        : '',
+      banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
+    };
+
+    // Write to localStorage
+    const profileKey = `buyoh_user_profile_${user.id}`;
+    localStorage.setItem(profileKey, JSON.stringify(cloudProfile));
+    if (cloudProfile.name) {
+      localStorage.setItem(`buyoh_user_name_${user.id}`, cloudProfile.name);
+      localStorage.setItem('buyoh_user_name_v1', cloudProfile.name);
+    }
+    if (cloudProfile.phone) {
+      localStorage.setItem(`buyoh_user_phone_${user.id}`, cloudProfile.phone);
+      localStorage.setItem('buyoh_user_phone_v1', cloudProfile.phone);
+    }
+    if (cloudProfile.whatsapp) {
+      localStorage.setItem(`buyoh_user_whatsapp_${user.id}`, cloudProfile.whatsapp);
+      localStorage.setItem('buyoh_user_whatsapp_v1', cloudProfile.whatsapp);
+    }
+    if (cloudProfile.location) {
+      localStorage.setItem(`buyoh_user_location_${user.id}`, cloudProfile.location);
+      localStorage.setItem('buyoh_user_location_v1', cloudProfile.location);
+    }
+    if (cloudProfile.avatar) {
+      localStorage.setItem(`buyoh_user_avatar_${user.id}`, cloudProfile.avatar);
+      localStorage.setItem('buyoh_user_avatar_v1', cloudProfile.avatar);
+    }
+
+    // Notify Profile view to re-render with fresh data
+    window.dispatchEvent(new CustomEvent('buyoh_profile_updated', { detail: cloudProfile }));
+    if (cloudProfile.avatar) {
+      window.dispatchEvent(new CustomEvent('buyoh_avatar_updated', { detail: cloudProfile.avatar }));
+    }
+
+    // --- 2. Merge & sync my_listings ---
+    const cloudListings = Array.isArray(dbProfile.my_listings) ? dbProfile.my_listings : [];
+    const localListings = getMyListingsForUser(user);
+    const cloudIds = new Set(cloudListings.map(l => String(l.id)));
+    const onlyLocal = localListings.filter(l => !cloudIds.has(String(l.id)));
+
+    let mergedListings = cloudListings;
+    let listingsNeedCloudPush = false;
+    if (onlyLocal.length > 0) {
+      // Local device has listings not yet in cloud — merge and push
+      mergedListings = [...onlyLocal, ...cloudListings];
+      listingsNeedCloudPush = true;
+    }
+
+    const listingsKey = `buyoh_my_listings_${user.id}`;
+    localStorage.setItem(listingsKey, JSON.stringify(mergedListings));
+    localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(mergedListings));
+
+    // Rebuild public pool
+    try {
+      const rawPublic = localStorage.getItem('buyoh_public_listings_v1');
+      let publicPool = safeJsonParse(rawPublic, []);
+      if (!Array.isArray(publicPool)) publicPool = [];
+      publicPool = publicPool.filter(p => p.sellerId !== user.id);
+      publicPool = [...mergedListings, ...publicPool];
+      localStorage.setItem('buyoh_public_listings_v1', JSON.stringify(publicPool));
+    } catch (e) {}
+
+    window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
+
+    if (listingsNeedCloudPush && session?.access_token) {
+      // Push merged listings back to cloud
+      supabase.from('profiles')
+        .update({ my_listings: mergedListings, updated_at: new Date().toISOString() })
+        .eq('id', user.id)
+        .then(({ error: e }) => {
+          if (e) console.warn('syncUserDataFromCloud: listings push error', e.message);
+        });
+    }
+
+    // --- 3. Merge & sync saved_items ---
+    const cloudSaved = Array.isArray(dbProfile.saved_items) ? dbProfile.saved_items : [];
+    const localSaved = getSavedItemsForUser(user);
+    const cloudSavedIds = new Set(cloudSaved.map(s => String(typeof s === 'object' ? s.id : s)));
+    const onlyLocalSaved = localSaved.filter(s => {
+      const id = String(typeof s === 'object' ? s.id : s);
+      return !cloudSavedIds.has(id);
+    });
+
+    let mergedSaved = cloudSaved;
+    let savedNeedCloudPush = false;
+    if (onlyLocalSaved.length > 0) {
+      mergedSaved = [...onlyLocalSaved, ...cloudSaved];
+      savedNeedCloudPush = true;
+    }
+
+    const savedKey = `buyoh_saved_items_${user.id}`;
+    localStorage.setItem(savedKey, JSON.stringify(mergedSaved));
+    localStorage.setItem('buyoh_saved_items_v1', JSON.stringify(mergedSaved));
+    window.dispatchEvent(new CustomEvent('buyoh_saved_updated'));
+
+    if (savedNeedCloudPush && session?.access_token) {
+      supabase.from('profiles')
+        .update({ saved_items: mergedSaved, updated_at: new Date().toISOString() })
+        .eq('id', user.id)
+        .then(({ error: e }) => {
+          if (e) console.warn('syncUserDataFromCloud: saved_items push error', e.message);
+        });
+    }
+
+    // --- 4. Merge & sync notifications ---
+    const cloudNotifs = Array.isArray(dbProfile.notifications) ? dbProfile.notifications : [];
+    const localNotifs = getNotificationsForUser(user);
+    const cloudNotifIds = new Set(cloudNotifs.map(n => String(n.id)));
+    const onlyLocalNotifs = localNotifs.filter(n => n.id && !cloudNotifIds.has(String(n.id)));
+
+    let mergedNotifs = cloudNotifs;
+    let notifsNeedCloudPush = false;
+    if (onlyLocalNotifs.length > 0) {
+      mergedNotifs = [...onlyLocalNotifs, ...cloudNotifs];
+      notifsNeedCloudPush = true;
+    }
+
+    const notifKey = `buyoh_notifications_${user.id}`;
+    localStorage.setItem(notifKey, JSON.stringify(mergedNotifs));
+    localStorage.setItem('buyoh_notifications_v1', JSON.stringify(mergedNotifs));
+    window.dispatchEvent(new CustomEvent('buyoh_notifications_updated'));
+
+    if (notifsNeedCloudPush && session?.access_token) {
+      supabase.from('profiles')
+        .update({ notifications: mergedNotifs, updated_at: new Date().toISOString() })
+        .eq('id', user.id)
+        .then(({ error: e }) => {
+          if (e) console.warn('syncUserDataFromCloud: notifications push error', e.message);
+        });
+    }
+
+    // --- 5. Merge & sync followed_sellers ---
+    const cloudFollowed = Array.isArray(dbProfile.followed_sellers) ? dbProfile.followed_sellers : [];
+    const localFollowed = getFollowedSellersForUser(user);
+    const cloudFollowedIds = new Set(cloudFollowed.map(f => String(typeof f === 'object' ? (f.id || f) : f)));
+    const onlyLocalFollowed = localFollowed.filter(f => {
+      const id = String(typeof f === 'object' ? (f.id || f) : f);
+      return !cloudFollowedIds.has(id);
+    });
+    let mergedFollowed = cloudFollowed;
+    if (onlyLocalFollowed.length > 0) {
+      mergedFollowed = [...onlyLocalFollowed, ...cloudFollowed];
+    }
+    const followedKey = `buyoh_followed_sellers_${user.id}`;
+    localStorage.setItem(followedKey, JSON.stringify(mergedFollowed));
+    localStorage.setItem('buyoh_followed_sellers_v1', JSON.stringify(mergedFollowed));
+
+  } catch (err) {
+    console.warn('syncUserDataFromCloud error:', err);
+  }
+};
+
+/**
+ * initUserRealtimeSync(user)
+ *
+ * Opens a Supabase Realtime WebSocket channel that listens for any UPDATE to
+ * this user's row in public.profiles.
+ *
+ * When Device A saves new data → Supabase broadcasts the change → Device B's
+ * realtime handler fires → local storage is updated → custom events trigger
+ * UI re-render. No manual refresh needed.
+ *
+ * Returns a cleanup function that unsubscribes the channel.
+ */
+export const initUserRealtimeSync = (user) => {
+  if (!user?.id || typeof window === 'undefined') return () => {};
+
+  // Avoid duplicate channels for the same user
+  if (_realtimeChannels[user.id]) {
+    return () => {};
+  }
+
+  const channelName = `cross-device-sync-${user.id}`;
+  const channel = supabase
+    .channel(channelName)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${user.id}`
+      },
+      async (payload) => {
+        if (!payload.new) return;
+        const row = payload.new;
+
+        // Update profile fields in localStorage
+        const updatedProfile = {
+          name: row.full_name || row.name || 'Marketplace User',
+          email: row.email || user.email || '',
+          phone: row.phone || '',
+          whatsapp: row.whatsapp || row.phone || '',
+          location: row.location || 'Lagos, Nigeria',
+          avatar: row.avatar_url && !row.avatar_url.includes('photo-1535713875002-d1d0cf377fde')
+            ? row.avatar_url : '',
+          banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
+        };
+
+        localStorage.setItem(`buyoh_user_profile_${user.id}`, JSON.stringify(updatedProfile));
+        if (updatedProfile.name) {
+          localStorage.setItem(`buyoh_user_name_${user.id}`, updatedProfile.name);
+          localStorage.setItem('buyoh_user_name_v1', updatedProfile.name);
+        }
+        if (updatedProfile.phone) {
+          localStorage.setItem(`buyoh_user_phone_${user.id}`, updatedProfile.phone);
+          localStorage.setItem('buyoh_user_phone_v1', updatedProfile.phone);
+        }
+        if (updatedProfile.whatsapp) {
+          localStorage.setItem(`buyoh_user_whatsapp_${user.id}`, updatedProfile.whatsapp);
+          localStorage.setItem('buyoh_user_whatsapp_v1', updatedProfile.whatsapp);
+        }
+        if (updatedProfile.location) {
+          localStorage.setItem(`buyoh_user_location_${user.id}`, updatedProfile.location);
+          localStorage.setItem('buyoh_user_location_v1', updatedProfile.location);
+        }
+        if (updatedProfile.avatar) {
+          localStorage.setItem(`buyoh_user_avatar_${user.id}`, updatedProfile.avatar);
+          localStorage.setItem('buyoh_user_avatar_v1', updatedProfile.avatar);
+          window.dispatchEvent(new CustomEvent('buyoh_avatar_updated', { detail: updatedProfile.avatar }));
+        }
+        window.dispatchEvent(new CustomEvent('buyoh_profile_updated', { detail: updatedProfile }));
+
+        // Update listings
+        if (Array.isArray(row.my_listings)) {
+          localStorage.setItem(`buyoh_my_listings_${user.id}`, JSON.stringify(row.my_listings));
+          localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(row.my_listings));
+          // Rebuild public pool
+          try {
+            const rawPublic = localStorage.getItem('buyoh_public_listings_v1');
+            let publicPool = safeJsonParse(rawPublic, []);
+            if (!Array.isArray(publicPool)) publicPool = [];
+            publicPool = publicPool.filter(p => p.sellerId !== user.id);
+            publicPool = [...row.my_listings, ...publicPool];
+            localStorage.setItem('buyoh_public_listings_v1', JSON.stringify(publicPool));
+          } catch (e) {}
+          window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
+        }
+
+        // Update saved items
+        if (Array.isArray(row.saved_items)) {
+          localStorage.setItem(`buyoh_saved_items_${user.id}`, JSON.stringify(row.saved_items));
+          localStorage.setItem('buyoh_saved_items_v1', JSON.stringify(row.saved_items));
+          window.dispatchEvent(new CustomEvent('buyoh_saved_updated'));
+        }
+
+        // Update notifications
+        if (Array.isArray(row.notifications)) {
+          localStorage.setItem(`buyoh_notifications_${user.id}`, JSON.stringify(row.notifications));
+          localStorage.setItem('buyoh_notifications_v1', JSON.stringify(row.notifications));
+          window.dispatchEvent(new CustomEvent('buyoh_notifications_updated'));
+        }
+
+        // Update followed sellers
+        if (Array.isArray(row.followed_sellers)) {
+          localStorage.setItem(`buyoh_followed_sellers_${user.id}`, JSON.stringify(row.followed_sellers));
+          localStorage.setItem('buyoh_followed_sellers_v1', JSON.stringify(row.followed_sellers));
+        }
+      }
+    )
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log(`[BuyOh Realtime] Cross-device sync active for user ${user.id}`);
+      }
+    });
+
+  _realtimeChannels[user.id] = channel;
+
+  // Return cleanup function
+  return () => {
+    supabase.removeChannel(channel);
+    delete _realtimeChannels[user.id];
+  };
+};
+
+/**
+ * cleanupUserRealtimeSync(userId)
+ * Call this on logout to remove the Realtime channel for the given user.
+ */
+export const cleanupUserRealtimeSync = (userId) => {
+  if (!userId) return;
+  const ch = _realtimeChannels[userId];
+  if (ch) {
+    supabase.removeChannel(ch);
+    delete _realtimeChannels[userId];
+  }
 };

@@ -158,3 +158,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION public.delete_own_account() TO authenticated;
 
+-- 8. Enable Realtime on public.profiles so cross-device sync works via WebSocket
+-- This broadcasts any INSERT/UPDATE/DELETE on profiles to all subscribed clients.
+ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
+
+-- 9. Also ensure notifications column exists if missing (for earlier setups)
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS notifications JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS my_listings JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS saved_items JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS followed_sellers JSONB DEFAULT '[]'::jsonb;
