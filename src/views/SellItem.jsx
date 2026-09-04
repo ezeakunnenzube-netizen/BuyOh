@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import NavLink from '../components/NavLink';
 import { useRouter } from 'next/navigation';
 import { 
@@ -48,9 +48,23 @@ export default function SellItem() {
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
   const [condition, setCondition] = useState('');
+  const [country, setCountry] = useState('Nigeria');
   const [location, setLocation] = useState('');
   const [negotiable, setNegotiable] = useState(true);
   const [images, setImages] = useState([]);
+
+  // Detect if listing location is in Ghana to display GH₵ currency
+  const isGhana = useMemo(() => {
+    if (country === 'Ghana') return true;
+    if (!location) return false;
+    const l = location.toLowerCase();
+    return l.includes('ghana') || l.includes('accra') || GHANA_REGIONS.some(r => {
+      const cleanR = r.name.toLowerCase().replace('region', '').trim();
+      return l.includes(cleanR);
+    });
+  }, [country, location]);
+
+  const currencySymbol = isGhana ? 'GH₵' : '₦';
   const getProfilePhone = (targetUser = user) => {
     try {
       const prof = getUserProfileData(targetUser);
@@ -373,6 +387,9 @@ export default function SellItem() {
       id: `listing-${Date.now()}`,
       name: title,
       price: Number(price),
+      currency: isGhana ? 'GHS' : 'NGN',
+      currencySymbol,
+      country: isGhana ? 'Ghana' : 'Nigeria',
       category,
       subcategory,
       condition: !isConditionApplicable(category, subcategory) ? '' : (condition || 'Used'),
@@ -1121,11 +1138,73 @@ export default function SellItem() {
           <div className="sell-form-card">
             <h3 className="form-section-title"><DollarSign size={16} /> Pricing & Description</h3>
 
+            {/* Location & Country */}
+            <div className="form-row-location-grid">
+              {/* Country */}
+              <div className="form-group">
+                <label className="form-label"><MapPin size={14} /> Country <span className="required">*</span></label>
+                <div className="form-select-wrap">
+                  <select
+                    className="form-select"
+                    value={country}
+                    onChange={e => {
+                      const newCtry = e.target.value;
+                      setCountry(newCtry);
+                      if (newCtry === 'Ghana') {
+                        if (!GHANA_REGIONS.some(r => r.name === location)) {
+                          setLocation('');
+                        }
+                      } else {
+                        if (!NIGERIA_STATES.some(s => s.name === location)) {
+                          setLocation('');
+                        }
+                      }
+                    }}
+                  >
+                    <option value="Nigeria">🇳🇬 Nigeria (₦ NGN)</option>
+                    <option value="Ghana">🇬🇭 Ghana (GH₵ GHS)</option>
+                  </select>
+                  <ChevronDown size={16} className="select-chevron" />
+                </div>
+              </div>
+
+              {/* State or Region */}
+              <div className="form-group">
+                <label className="form-label">
+                  <MapPin size={14} /> {country === 'Ghana' ? 'Ghana Region' : 'Nigeria State'} <span className="required">*</span>
+                </label>
+                <div className={`form-select-wrap ${errors.location ? 'input-error' : ''}`}>
+                  <select 
+                    className="form-select"
+                    value={location}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setLocation(val);
+                      if (GHANA_REGIONS.some(r => r.name === val)) {
+                        setCountry('Ghana');
+                      } else if (NIGERIA_STATES.some(s => s.name === val)) {
+                        setCountry('Nigeria');
+                      }
+                    }}
+                  >
+                    <option value="">Select your {country === 'Ghana' ? 'region' : 'state'}</option>
+                    {(country === 'Ghana' ? GHANA_REGIONS : NIGERIA_STATES).map(item => (
+                      <option key={item.name} value={item.name}>
+                        {item.flag} {item.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={16} className="select-chevron" />
+                </div>
+                {errors.location && <span className="error-text"><AlertCircle size={12} /> {errors.location}</span>}
+              </div>
+            </div>
+
             {/* Price */}
             <div className="form-group">
-              <label className="form-label">Price (₦) <span className="required">*</span></label>
+              <label className="form-label">Price ({currencySymbol}) <span className="required">*</span></label>
               <div className={`price-input-wrap ${errors.price ? 'input-error' : ''}`}>
-                <span className="price-currency">₦</span>
+                <span className="price-currency">{currencySymbol}</span>
                 <input 
                   type="number"
                   className="form-input price-input"
@@ -1135,7 +1214,7 @@ export default function SellItem() {
                   min="0"
                 />
               </div>
-              {price && <span className="price-preview">₦ {formatPrice(price)}</span>}
+              {price && <span className="price-preview">{currencySymbol} {formatPrice(price)}</span>}
               {errors.price && <span className="error-text"><AlertCircle size={12} /> {errors.price}</span>}
               
               <label className="negotiable-toggle">
@@ -1146,32 +1225,6 @@ export default function SellItem() {
                 />
                 <span className="toggle-label">Price is negotiable</span>
               </label>
-            </div>
-
-            {/* Location */}
-            <div className="form-group">
-              <label className="form-label"><MapPin size={14} /> Location / Region <span className="required">*</span></label>
-              <div className={`form-select-wrap ${errors.location ? 'input-error' : ''}`}>
-                <select 
-                  className="form-select"
-                  value={location}
-                  onChange={e => setLocation(e.target.value)}
-                >
-                  <option value="">Select your state or region</option>
-                  <optgroup label="🇬🇭 Ghana Regions">
-                    {GHANA_REGIONS.map(r => (
-                      <option key={r.name} value={r.name}>🇬🇭 {r.name}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="🇳🇬 Nigeria States">
-                    {NIGERIA_STATES.map(s => (
-                      <option key={s.name} value={s.name}>🇳🇬 {s.name}</option>
-                    ))}
-                  </optgroup>
-                </select>
-                <ChevronDown size={16} className="select-chevron" />
-              </div>
-              {errors.location && <span className="error-text"><AlertCircle size={12} /> {errors.location}</span>}
             </div>
 
             {/* Description */}
@@ -1290,7 +1343,7 @@ export default function SellItem() {
                 )}
                 <div className="preview-info">
                   <h3 className="preview-title">{title || 'Your listing title'}</h3>
-                  <p className="preview-price">₦ {formatPrice(price) || '0'} {negotiable && <span className="preview-negotiable">Negotiable</span>}</p>
+                  <p className="preview-price">{currencySymbol} {formatPrice(price) || '0'} {negotiable && <span className="preview-negotiable">Negotiable</span>}</p>
                   <div className="preview-meta">
                     <span><MapPin size={12} /> {location || 'Location'}</span>
                     <span><Layers size={12} /> {category || 'Category'} {subcategory ? `› ${subcategory}` : ''}</span>
@@ -1342,7 +1395,7 @@ export default function SellItem() {
               </div>
               <div className="summary-row">
                 <span>Price</span>
-                <strong>₦ {formatPrice(price)} {negotiable ? '(Negotiable)' : ''}</strong>
+                <strong>{currencySymbol} {formatPrice(price)} {negotiable ? '(Negotiable)' : ''}</strong>
               </div>
               {isConditionApplicable(category, subcategory) && condition && (
                 <div className="summary-row">

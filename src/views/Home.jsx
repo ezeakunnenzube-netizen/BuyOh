@@ -190,10 +190,11 @@ const JOBS_SUBCATEGORIES = [
 
 export default function Home(){
   const { user, loading, setIsAuthOpen } = useAuth();
-  const [isOpen, setIsOpen]                     = useState(false)
-  const [selectedLocation, setSelectedLocation] = useState(locations[0].name)
-  const [selectedCountryTab, setSelectedCountryTab] = useState('all') // 'all' | 'nigeria' | 'ghana'
-  const [locationSearchText, setLocationSearchText] = useState('')
+  const [selectedCountry, setSelectedCountry]   = useState('all') // 'all' | 'nigeria' | 'ghana'
+  const [selectedRegion, setSelectedRegion]     = useState('All Locations')
+  const [isCountryOpen, setIsCountryOpen]       = useState(false)
+  const [isRegionOpen, setIsRegionOpen]         = useState(false)
+  const [regionSearchText, setRegionSearchText] = useState('')
   const [searchQuery, setSearchQuery]           = useState('')
 
   /* ── single-select category & subcategory ── */
@@ -300,7 +301,8 @@ export default function Home(){
 
 
 
-  const containerRef    = useRef(null)
+  const countryDropdownRef = useRef(null)
+  const regionDropdownRef  = useRef(null)
   const vehicleMenuRef  = useRef(null); const vehicleBtnRef   = useRef(null)
   const elecMenuRef     = useRef(null); const elecBtnRef      = useRef(null)
   const phonesMenuRef   = useRef(null); const phonesBtnRef    = useRef(null)
@@ -406,8 +408,10 @@ export default function Home(){
   /* ── close dropdowns on outside click ── */
   useEffect(()=>{
     function handleClickOutside(e){
-      if(containerRef.current && !containerRef.current.contains(e.target))
-        setIsOpen(false)
+      if(countryDropdownRef.current && !countryDropdownRef.current.contains(e.target))
+        setIsCountryOpen(false)
+      if(regionDropdownRef.current && !regionDropdownRef.current.contains(e.target))
+        setIsRegionOpen(false)
       if(vehicleMenuRef.current && !vehicleMenuRef.current.contains(e.target))
         setVehicleMenuOpen(false)
       if(elecMenuRef.current && !elecMenuRef.current.contains(e.target))
@@ -526,22 +530,44 @@ export default function Home(){
   }
   const selectSub = (cat, sub) => { setActiveSubcategory(p=>p===sub?'':sub); setActiveCategory(cat) }
 
-  /* ── Locations list computation for location modal ── */
-  const displayLocations = useMemo(() => {
-    let pool = locations;
-    if (selectedCountryTab === 'nigeria') {
+  /* ── Handler for selecting country (updates regions accordingly) ── */
+  const handleSelectCountry = (countryId) => {
+    setSelectedCountry(countryId);
+    if (countryId === 'nigeria') {
+      setSelectedRegion('All Nigeria');
+    } else if (countryId === 'ghana') {
+      setSelectedRegion('All Ghana');
+    } else {
+      setSelectedRegion('All Locations');
+    }
+    setIsCountryOpen(false);
+    setRegionSearchText('');
+  };
+
+  /* ── Regions list computation (strictly reflects chosen country) ── */
+  const displayRegions = useMemo(() => {
+    let pool = [];
+    if (selectedCountry === 'nigeria') {
       pool = [{ name: 'All Nigeria', country: 'Nigeria', flag: '🇳🇬' }, ...NIGERIA_STATES];
-    } else if (selectedCountryTab === 'ghana') {
+    } else if (selectedCountry === 'ghana') {
       pool = [{ name: 'All Ghana', country: 'Ghana', flag: '🇬🇭' }, ...GHANA_REGIONS];
+    } else {
+      pool = [
+        { name: 'All Locations', country: 'All', flag: '🌍' },
+        { name: 'All Nigeria', country: 'Nigeria', flag: '🇳🇬' },
+        ...NIGERIA_STATES,
+        { name: 'All Ghana', country: 'Ghana', flag: '🇬🇭' },
+        ...GHANA_REGIONS
+      ];
     }
 
-    if (!locationSearchText.trim()) return pool;
-    const query = locationSearchText.toLowerCase().trim();
+    if (!regionSearchText.trim()) return pool;
+    const query = regionSearchText.toLowerCase().trim();
     return pool.filter(loc => 
       loc.name.toLowerCase().includes(query) || 
       (loc.country && loc.country.toLowerCase().includes(query))
     );
-  }, [selectedCountryTab, locationSearchText]);
+  }, [selectedCountry, regionSearchText]);
 
   /* ── filter products ── */
   const filteredProducts = useMemo(() => {
@@ -552,21 +578,34 @@ export default function Home(){
         product.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (product.subcategory || '').toLowerCase().includes(searchQuery.toLowerCase());
 
-      let matchesLocation = true;
-      if (selectedLocation === 'All Locations') {
-        matchesLocation = true;
-      } else if (selectedLocation === 'All Nigeria') {
-        const pLoc = (product.location || '').toLowerCase();
-        const pCtry = (product.country || '').toLowerCase();
-        matchesLocation = pCtry === 'nigeria' || !pLoc.includes('region') || NIGERIA_STATES.some(s => pLoc.includes(s.name.toLowerCase().replace('state', '').trim()));
-      } else if (selectedLocation === 'All Ghana') {
-        const pLoc = (product.location || '').toLowerCase();
-        const pCtry = (product.country || '').toLowerCase();
-        matchesLocation = pCtry === 'ghana' || pLoc.includes('ghana') || GHANA_REGIONS.some(r => pLoc.includes(r.name.toLowerCase().replace('region', '').trim()));
+      const pLoc = (product.location || '').toLowerCase();
+      const pCtry = (product.country || '').toLowerCase();
+      const isGhanaProduct =
+        pCtry === 'ghana' ||
+        product.currency === 'GHS' ||
+        pLoc.includes('ghana') ||
+        pLoc.includes('accra') ||
+        GHANA_REGIONS.some(r => pLoc.includes(r.name.toLowerCase().replace('region', '').trim()));
+
+      // 1. Country match
+      let matchesCountry = true;
+      if (selectedCountry === 'nigeria') {
+        matchesCountry = !isGhanaProduct;
+      } else if (selectedCountry === 'ghana') {
+        matchesCountry = isGhanaProduct;
+      }
+
+      // 2. Region match
+      let matchesRegion = true;
+      if (selectedRegion === 'All Locations') {
+        matchesRegion = true;
+      } else if (selectedRegion === 'All Nigeria') {
+        matchesRegion = !isGhanaProduct;
+      } else if (selectedRegion === 'All Ghana') {
+        matchesRegion = isGhanaProduct;
       } else {
-        const pLoc = (product.location || '').toLowerCase();
-        const cleanTarget = selectedLocation.toLowerCase().replace(/(state|region)/g, '').trim();
-        matchesLocation = product.location === selectedLocation || pLoc.includes(cleanTarget);
+        const cleanTarget = selectedRegion.toLowerCase().replace(/(state|region)/g, '').trim();
+        matchesRegion = product.location === selectedRegion || pLoc.includes(cleanTarget);
       }
 
       let matchesCategory;
@@ -582,9 +621,9 @@ export default function Home(){
         (minPrice === '' || product.price >= Number(minPrice)) &&
         (maxPrice === '' || product.price <= Number(maxPrice));
 
-      return matchesSearch && matchesLocation && matchesCategory && matchesPrice;
+      return matchesSearch && matchesCountry && matchesRegion && matchesCategory && matchesPrice;
     });
-  }, [allProducts, searchQuery, selectedLocation, activeCategory, activeSubcategory, minPrice, maxPrice]);
+  }, [allProducts, searchQuery, selectedCountry, selectedRegion, activeCategory, activeSubcategory, minPrice, maxPrice]);
 
   const formatPrice = (price, product) => {
     const isGhana = product?.currency === 'GHS' || product?.country === 'Ghana' || (product?.location && product?.location.includes('Ghana')) || (product?.location && product?.location.includes('Accra'));
@@ -595,7 +634,8 @@ export default function Home(){
     setSearchQuery('')
     setActiveCategory('All')
     setActiveSubcategory('')
-    setSelectedLocation(locations[0].name)
+    setSelectedCountry('all')
+    setSelectedRegion('All Locations')
     setMinPrice('')
     setMaxPrice('')
     closeAllMenus()
@@ -604,7 +644,8 @@ export default function Home(){
   const hasActiveFilters =
     searchQuery ||
     activeCategory !== 'All' ||
-    selectedLocation !== locations[0].name ||
+    selectedCountry !== 'all' ||
+    (selectedRegion !== 'All Locations' && selectedRegion !== 'All Nigeria' && selectedRegion !== 'All Ghana') ||
     minPrice !== '' ||
     maxPrice !== ''
 
@@ -672,121 +713,167 @@ export default function Home(){
     {/* ── Hero Header ── */}
     <section className="home-header">
       <p className="home-header-text">Wetin you dey find?</p>
-      <div ref={containerRef} className="search-area">
+      <div className="search-area">
+        <div className="search-area-filters-row">
+          {/* 1. Country Filter Option */}
+          <div ref={countryDropdownRef} className="filter-select-wrapper country-select-wrapper">
+            <button
+              type="button"
+              className={`filter-pill-button country-pill-btn ${isCountryOpen ? 'pill-active' : ''}`}
+              onClick={() => {
+                setIsCountryOpen(p => !p);
+                setIsRegionOpen(false);
+              }}
+              title="Select Country"
+            >
+              <span className="pill-flag">
+                {selectedCountry === 'nigeria' ? '🇳🇬' : selectedCountry === 'ghana' ? '🇬🇭' : '🌍'}
+              </span>
+              <span className="pill-text">
+                {selectedCountry === 'nigeria' ? 'Nigeria' : selectedCountry === 'ghana' ? 'Ghana' : 'All Countries'}
+              </span>
+              <ChevronDown className={isCountryOpen ? 'pill-chevron-rotated' : 'pill-chevron'} size={15} />
+            </button>
 
-        {/* Location picker */}
-        <button className="location-button" onClick={()=>setIsOpen(p=>!p)}>
-          <span className="location-text">{selectedLocation}</span>
-          <ChevronDown className={isOpen ? 'location-icon-rotated' : 'location-icon'}/>
-        </button>
-
-        {isOpen && (
-          <div className="location-header-options">
-            <div className="location-modal-head">
-              <div className="location-modal-title-row">
-                <div className="location-modal-title">
-                  <MapPin size={18} className="location-pin-accent" />
-                  <span>Choose Location / Region</span>
+            {isCountryOpen && (
+              <div className="filter-dropdown-menu country-dropdown-menu">
+                <div className="dropdown-menu-header">
+                  <span>Choose Country</span>
                 </div>
-                <button 
-                  type="button" 
-                  className="location-modal-close-btn"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Country Selection Tabs */}
-              <div className="location-country-tabs">
-                <button
-                  type="button"
-                  className={`country-tab-btn ${selectedCountryTab === 'all' ? 'active-country-tab' : ''}`}
-                  onClick={() => setSelectedCountryTab('all')}
-                >
-                  <span className="tab-flag">🌍</span> All Locations
-                </button>
-                <button
-                  type="button"
-                  className={`country-tab-btn ${selectedCountryTab === 'ghana' ? 'active-country-tab' : ''}`}
-                  onClick={() => setSelectedCountryTab('ghana')}
-                >
-                  <span className="tab-flag">🇬🇭</span> Ghana (16 Regions)
-                </button>
-                <button
-                  type="button"
-                  className={`country-tab-btn ${selectedCountryTab === 'nigeria' ? 'active-country-tab' : ''}`}
-                  onClick={() => setSelectedCountryTab('nigeria')}
-                >
-                  <span className="tab-flag">🇳🇬</span> Nigeria (37 States)
-                </button>
-              </div>
-
-              {/* Live Search inside Location Modal */}
-              <div className="location-modal-search-wrap">
-                <Search size={16} className="location-search-icon" />
-                <input
-                  type="text"
-                  placeholder="Search state, region or city (e.g. Accra, Kumasi, Lagos, Abuja)..."
-                  value={locationSearchText}
-                  onChange={(e) => setLocationSearchText(e.target.value)}
-                  className="location-search-input"
-                  autoFocus
-                />
-                {locationSearchText && (
-                  <button 
-                    type="button" 
-                    className="location-search-clear"
-                    onClick={() => setLocationSearchText('')}
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Location Cards Grid */}
-            <div className="location-options-container">
-              {displayLocations.map(loc => {
-                const isSelected = selectedLocation === loc.name;
-                return (
-                  <button
-                    type="button"
-                    className={`location-option-card ${isSelected ? 'location-option-active' : ''}`}
-                    key={loc.name}
-                    onClick={() => {
-                      setSelectedLocation(loc.name);
-                      setIsOpen(false);
-                    }}
-                  >
-                    <span className="location-card-flag">{loc.flag || '📍'}</span>
-                    <span className="location-card-name">{loc.name}</span>
-                    {loc.country && loc.country !== 'All' && (
-                      <span className="location-card-country-badge">{loc.country}</span>
-                    )}
-                    {isSelected && <span className="location-card-check">✓</span>}
-                  </button>
-                );
-              })}
-
-              {displayLocations.length === 0 && (
-                <div className="location-no-results">
-                  <p>No regions or states found matching &quot;{locationSearchText}&quot;</p>
-                  <button 
-                    type="button" 
-                    className="location-reset-btn"
-                    onClick={() => {
-                      setLocationSearchText('');
-                      setSelectedCountryTab('all');
-                    }}
-                  >
-                    Show all regions
-                  </button>
+                <div className="dropdown-menu-list">
+                  {COUNTRIES.map(ctry => {
+                    const isSelected = selectedCountry === ctry.id;
+                    return (
+                      <button
+                        key={ctry.id}
+                        type="button"
+                        className={`dropdown-menu-item ${isSelected ? 'menu-item-active' : ''}`}
+                        onClick={() => handleSelectCountry(ctry.id)}
+                      >
+                        <span className="menu-item-flag">{ctry.flag}</span>
+                        <div className="menu-item-text-group">
+                          <span className="menu-item-title">{ctry.name}</span>
+                          {ctry.regions && (
+                            <span className="menu-item-subtitle">
+                              {ctry.regions.length} {ctry.id === 'nigeria' ? 'States' : 'Regions'}
+                            </span>
+                          )}
+                        </div>
+                        {isSelected && <span className="menu-item-check">✓</span>}
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-        )}
+
+          {/* 2. Region / State Filter Option (reflects country chosen) */}
+          <div ref={regionDropdownRef} className="filter-select-wrapper region-select-wrapper">
+            <button
+              type="button"
+              className={`filter-pill-button region-pill-btn ${isRegionOpen ? 'pill-active' : ''}`}
+              onClick={() => {
+                setIsRegionOpen(p => !p);
+                setIsCountryOpen(false);
+              }}
+              title="Select Region or State"
+            >
+              <MapPin size={15} className="pill-pin-icon" />
+              <span className="pill-text">{selectedRegion}</span>
+              <ChevronDown className={isRegionOpen ? 'pill-chevron-rotated' : 'pill-chevron'} size={15} />
+            </button>
+
+            {isRegionOpen && (
+              <div className="filter-dropdown-menu region-dropdown-menu">
+                <div className="region-dropdown-head">
+                  <div className="region-dropdown-title-row">
+                    <span className="region-dropdown-title">
+                      {selectedCountry === 'nigeria'
+                        ? '🇳🇬 Nigeria States (37)'
+                        : selectedCountry === 'ghana'
+                        ? '🇬🇭 Ghana Regions (16)'
+                        : '🌍 All Regions & States'}
+                    </span>
+                    <button
+                      type="button"
+                      className="region-dropdown-close"
+                      onClick={() => setIsRegionOpen(false)}
+                      title="Close"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+
+                  <div className="region-search-bar">
+                    <Search size={14} className="region-search-icon" />
+                    <input
+                      type="text"
+                      placeholder={
+                        selectedCountry === 'nigeria'
+                          ? "Search Nigeria states..."
+                          : selectedCountry === 'ghana'
+                          ? "Search Ghana regions..."
+                          : "Search states or regions..."
+                      }
+                      value={regionSearchText}
+                      onChange={e => setRegionSearchText(e.target.value)}
+                      className="region-search-input"
+                      autoFocus
+                    />
+                    {regionSearchText && (
+                      <button
+                        type="button"
+                        className="region-search-clear"
+                        onClick={() => setRegionSearchText('')}
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="dropdown-menu-list region-options-list">
+                  {displayRegions.map(reg => {
+                    const isSelected = selectedRegion === reg.name;
+                    return (
+                      <button
+                        key={reg.name}
+                        type="button"
+                        className={`dropdown-menu-item ${isSelected ? 'menu-item-active' : ''}`}
+                        onClick={() => {
+                          setSelectedRegion(reg.name);
+                          setIsRegionOpen(false);
+                          setRegionSearchText('');
+                        }}
+                      >
+                        <span className="menu-item-flag">{reg.flag || '📍'}</span>
+                        <span className="menu-item-name">{reg.name}</span>
+                        {reg.country && reg.country !== 'All' && selectedCountry === 'all' && (
+                          <span className="menu-item-country-badge">{reg.country}</span>
+                        )}
+                        {isSelected && <span className="menu-item-check">✓</span>}
+                      </button>
+                    );
+                  })}
+
+                  {displayRegions.length === 0 && (
+                    <div className="region-no-results">
+                      <p>No regions matching &quot;{regionSearchText}&quot;</p>
+                      <button
+                        type="button"
+                        className="region-reset-filter-btn"
+                        onClick={() => setRegionSearchText('')}
+                      >
+                        Clear search
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Search input */}
         <div className="search-right">
@@ -1284,10 +1371,27 @@ export default function Home(){
               <button className="chip-remove" onClick={()=>setSearchQuery('')}><X size={12}/></button>
             </span>
           )}
-          {selectedLocation !== locations[0].name && (
+          {selectedCountry !== 'all' && (
+            <span className="filter-chip filter-chip-country">
+              {selectedCountry === 'nigeria' ? '🇳🇬 Nigeria' : '🇬🇭 Ghana'}
+              <button className="chip-remove" onClick={() => {
+                setSelectedCountry('all');
+                setSelectedRegion('All Locations');
+              }}>
+                <X size={12}/>
+              </button>
+            </span>
+          )}
+          {selectedRegion !== 'All Locations' && selectedRegion !== 'All Nigeria' && selectedRegion !== 'All Ghana' && (
             <span className="filter-chip filter-chip-location">
-              📍 {selectedLocation}
-              <button className="chip-remove" onClick={()=>setSelectedLocation(locations[0].name)}><X size={12}/></button>
+              📍 {selectedRegion}
+              <button className="chip-remove" onClick={() => {
+                if (selectedCountry === 'nigeria') setSelectedRegion('All Nigeria');
+                else if (selectedCountry === 'ghana') setSelectedRegion('All Ghana');
+                else setSelectedRegion('All Locations');
+              }}>
+                <X size={12}/>
+              </button>
             </span>
           )}
           {(minPrice || maxPrice) && (
