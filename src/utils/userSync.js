@@ -289,6 +289,22 @@ export const saveUserProfileData = async (user, profileData) => {
       } catch (dbErr) {
         console.warn("Supabase profiles table upsert notice:", dbErr);
       }
+
+      // Also sync auth user_metadata so user session stays aligned
+      try {
+        await supabase.auth.updateUser({
+          data: {
+            full_name: profileData.name,
+            name: profileData.name,
+            phone: profileData.phone,
+            whatsapp: profileData.whatsapp,
+            location: profileData.location,
+            avatar_url: profileData.avatar
+          }
+        });
+      } catch (authErr) {
+        // Safe notice
+      }
     }
 
     window.dispatchEvent(new CustomEvent('buyoh_profile_updated', { detail: profileData }));

@@ -51,14 +51,72 @@ export default function SellItem() {
   const [location, setLocation] = useState('');
   const [negotiable, setNegotiable] = useState(true);
   const [images, setImages] = useState([]);
-  const [contactPhone, setContactPhone] = useState(() => user?.user_metadata?.phone || '');
-  const [contactWhatsApp, setContactWhatsApp] = useState(() => {
-    if (user?.user_metadata?.whatsapp) return user.user_metadata.whatsapp;
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('buyoh_user_whatsapp_v1') || user?.user_metadata?.phone || '';
-    }
-    return user?.user_metadata?.phone || '';
-  });
+  const getProfilePhone = (targetUser = user) => {
+    try {
+      const prof = getUserProfileData(targetUser);
+      if (prof?.phone && prof.phone !== 'Not provided' && prof.phone !== '+234 812 345 6789') {
+        return prof.phone;
+      }
+      if (targetUser?.user_metadata?.phone) return targetUser.user_metadata.phone;
+      if (typeof window !== 'undefined') {
+        const saved = (targetUser?.id && localStorage.getItem(`buyoh_user_phone_${targetUser.id}`)) || localStorage.getItem('buyoh_user_phone_v1');
+        if (saved && saved !== 'Not provided') return saved;
+      }
+    } catch (e) {}
+    return '';
+  };
+
+  const getProfileWhatsApp = (targetUser = user) => {
+    try {
+      const prof = getUserProfileData(targetUser);
+      if (prof?.whatsapp && prof.whatsapp !== 'Not provided' && prof.whatsapp !== '+234 812 345 6789') {
+        return prof.whatsapp;
+      }
+      if (targetUser?.user_metadata?.whatsapp) return targetUser.user_metadata.whatsapp;
+      if (typeof window !== 'undefined') {
+        const saved = (targetUser?.id && localStorage.getItem(`buyoh_user_whatsapp_${targetUser.id}`)) || localStorage.getItem('buyoh_user_whatsapp_v1');
+        if (saved && saved !== 'Not provided') return saved;
+      }
+    } catch (e) {}
+    return getProfilePhone(targetUser);
+  };
+
+  const [contactPhone, setContactPhone] = useState(() => getProfilePhone(user));
+  const [contactWhatsApp, setContactWhatsApp] = useState(() => getProfileWhatsApp(user));
+  const hasManuallyEditedPhone = useRef(false);
+  const hasManuallyEditedWhatsApp = useRef(false);
+
+  // Synchronize contact phone & WhatsApp when profile is updated or user is hydrated
+  useEffect(() => {
+    const syncProfileNumbers = (override = false, freshPhone = null, freshWhatsApp = null) => {
+      const p = freshPhone !== null ? freshPhone : getProfilePhone(user);
+      const w = freshWhatsApp !== null ? freshWhatsApp : getProfileWhatsApp(user);
+
+      if (p && (override || !hasManuallyEditedPhone.current || !contactPhone)) {
+        setContactPhone(p);
+      }
+      if (w && (override || !hasManuallyEditedWhatsApp.current || !contactWhatsApp)) {
+        setContactWhatsApp(w);
+      }
+    };
+
+    syncProfileNumbers();
+
+    const handleProfileUpdated = (e) => {
+      const detail = e?.detail;
+      const p = detail?.phone && detail.phone !== 'Not provided' ? detail.phone : null;
+      const w = detail?.whatsapp && detail.whatsapp !== 'Not provided' ? detail.whatsapp : null;
+      syncProfileNumbers(true, p, w);
+    };
+
+    window.addEventListener('buyoh_profile_updated', handleProfileUpdated);
+    window.addEventListener('storage', () => syncProfileNumbers());
+
+    return () => {
+      window.removeEventListener('buyoh_profile_updated', handleProfileUpdated);
+      window.removeEventListener('storage', () => syncProfileNumbers());
+    };
+  }, [user]);
 
   // Category Specific Specs State (all initialized to empty strings)
   const [brand, setBrand] = useState('');
@@ -1147,7 +1205,10 @@ export default function SellItem() {
                 className="form-input"
                 placeholder="+234 809 123 4567"
                 value={contactPhone}
-                onChange={e => setContactPhone(e.target.value)}
+                onChange={e => {
+                  setContactPhone(e.target.value);
+                  hasManuallyEditedPhone.current = true;
+                }}
               />
             </div>
             <div className="form-group">
@@ -1157,7 +1218,10 @@ export default function SellItem() {
                 className="form-input"
                 placeholder="+234 809 123 4567"
                 value={contactWhatsApp}
-                onChange={e => setContactWhatsApp(e.target.value)}
+                onChange={e => {
+                  setContactWhatsApp(e.target.value);
+                  hasManuallyEditedWhatsApp.current = true;
+                }}
               />
             </div>
 
@@ -1300,8 +1364,12 @@ export default function SellItem() {
                 // Reset form
                 setTitle(''); setDescription(''); setPrice(''); setCategory('');
                 setSubcategory(''); setCondition(''); setLocation('');
-                setNegotiable(true); setImages([]); setContactPhone('');
-                setContactWhatsApp(''); setCurrentStep(1); setErrors({});
+                setNegotiable(true); setImages([]);
+                setContactPhone(getProfilePhone(user));
+                setContactWhatsApp(getProfileWhatsApp(user));
+                hasManuallyEditedPhone.current = false;
+                hasManuallyEditedWhatsApp.current = false;
+                setCurrentStep(1); setErrors({});
               }}>
                 Post Another Ad
               </button>
