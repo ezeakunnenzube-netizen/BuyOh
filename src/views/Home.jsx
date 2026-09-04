@@ -8,6 +8,7 @@ import {locations, COUNTRIES, NIGERIA_STATES, GHANA_REGIONS} from "../data/state
 import {products} from "../data/productData.js"
 import {useAuth} from "../context/AuthContext"
 import {getSavedItemsForUser, saveItemsForUser, getAllPublicListings, getGeneralProductPool} from "../utils/userSync"
+import {shouldShowConditionBadge} from "../utils/productUtils"
 
 const CATEGORIES = [
   { label: 'All',                    emoji: '🛒' },
@@ -1331,7 +1332,7 @@ export default function Home(){
                       e.target.src = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
                     }}
                   />
-                  {product.condition && product.category !== 'Services' && product.category !== 'Jobs' && (
+                  {shouldShowConditionBadge(product) && (
                     <span className={`product-condition-badge ${product.condition === 'Brand New' ? 'badge-new' : 'badge-used'}`}>
                       {product.condition}
                     </span>

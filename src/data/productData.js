@@ -657,7 +657,7 @@ export const products = [
     name: "4 Bedroom Semi-Detached Duplex in Lekki Phase 1",
     price: 120000000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Property",
     subcategory: "Houses & Apartments for Sale",
     image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=800&q=80"
@@ -667,7 +667,7 @@ export const products = [
     name: "Serviced 2 Bedroom Apartment in Wuse 2",
     price: 4500000,
     location: "Abuja (FCT)",
-    condition: "Used",
+    condition: "",
     category: "Property",
     subcategory: "Houses & Apartments for Rent",
     image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80"
@@ -701,7 +701,7 @@ export const products = [
     name: "Professional Wedding Photography & Video Package",
     price: 350000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Services",
     subcategory: "Photography & Videography",
     image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80"
@@ -711,7 +711,7 @@ export const products = [
     name: "House Cleaning and Deep Fumigation Service",
     price: 45000,
     location: "Oyo State",
-    condition: "Brand New",
+    condition: "",
     category: "Services",
     subcategory: "Cleaning Services",
     image: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=800&q=80"
@@ -777,7 +777,7 @@ export const products = [
     name: "Healthy Live Boer Goat for Sale",
     price: 95000,
     location: "Kano State",
-    condition: "Brand New",
+    condition: "",
     category: "Agriculture",
     subcategory: "Livestock & Poultry",
     image: "https://images.unsplash.com/photo-1524413840807-0c3cb6fa808d?auto=format&fit=crop&w=800&q=80"
@@ -789,7 +789,7 @@ export const products = [
     name: "Purebred Siberian Husky Puppies (8 Weeks)",
     price: 350000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Animals",
     subcategory: "Dogs",
     image: "https://images.unsplash.com/photo-1531804055935-76f44d7c3621?auto=format&fit=crop&w=800&q=80"
@@ -811,7 +811,7 @@ export const products = [
     name: "Remote Senior React Developer Position",
     price: 850000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Jobs",
     subcategory: "Accounting & Finance", // Mapping to one of the job subcategories in lists
     image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80"
@@ -821,7 +821,7 @@ export const products = [
     name: "Customer Service Representative - Call Center",
     price: 150000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Jobs",
     subcategory: "Admin & Office",
     image: "https://images.unsplash.com/photo-1556742044-3c52d6e88c62?auto=format&fit=crop&w=800&q=80"
@@ -1211,7 +1211,7 @@ export const products = [
     name: "1000sqm Residential Land at Ajah - C of O",
     price: 35000000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Property",
     subcategory: "Land & Plots",
     image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80"
@@ -1221,7 +1221,7 @@ export const products = [
     name: "Furnished Short Let Studio in Victoria Island",
     price: 85000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Property",
     subcategory: "Short Let",
     image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80"
@@ -1231,7 +1231,7 @@ export const products = [
     name: "5 Bedroom Luxury Detached Duplex - Off Plan",
     price: 180000000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Property",
     subcategory: "Houses & Apartments for Sale",
     image: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=800&q=80"
@@ -1241,7 +1241,7 @@ export const products = [
     name: "Agricultural Land for Lease - 10 Hectares",
     price: 5000000,
     location: "Ogun State",
-    condition: "Brand New",
+    condition: "",
     category: "Property",
     subcategory: "Land & Plots",
     image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80"
@@ -1251,7 +1251,7 @@ export const products = [
     name: "350-Seater Event Centre Hall in Ikeja",
     price: 500000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Property",
     subcategory: "Commercial Property",
     image: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=800&q=80"
@@ -1261,7 +1261,7 @@ export const products = [
     name: "Shop Space for Rent at Computer Village Ikeja",
     price: 1200000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Property",
     subcategory: "Commercial Property",
     image: "https://images.unsplash.com/photo-1604754742629-3e5728249d73?auto=format&fit=crop&w=800&q=80"
@@ -1271,7 +1271,7 @@ export const products = [
     name: "Office Complex for Sale in Wuse Zone 5",
     price: 450000000,
     location: "Abuja (FCT)",
-    condition: "Brand New",
+    condition: "",
     category: "Property",
     subcategory: "Commercial Property",
     image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80"
@@ -1353,7 +1353,7 @@ export const products = [
     name: "Mobile Spa and Wellness Service - At-Home Package",
     price: 50000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Beauty & Personal Care",
     subcategory: "Health & Beauty Services",
     image: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=800&q=80"
@@ -1375,7 +1375,7 @@ export const products = [
     name: "Professional Plumbing & Pipe Installation Service",
     price: 35000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Services",
     subcategory: "Home Services",
     image: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=800&q=80"
@@ -1385,7 +1385,7 @@ export const products = [
     name: "Private Maths & Science Tutor (WAEC/JAMB Prep)",
     price: 30000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Services",
     subcategory: "Tutoring & Lessons",
     image: "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80"
@@ -1395,7 +1395,7 @@ export const products = [
     name: "Full Event Decoration & Planning Package",
     price: 250000,
     location: "Abuja (FCT)",
-    condition: "Brand New",
+    condition: "",
     category: "Services",
     subcategory: "Event Planning",
     image: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=800&q=80"
@@ -1405,7 +1405,7 @@ export const products = [
     name: "Corporate Legal Advisory & Contract Review",
     price: 150000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Services",
     subcategory: "Legal Services",
     image: "https://images.unsplash.com/photo-1589391886645-d51941baf7fb?auto=format&fit=crop&w=800&q=80"
@@ -1415,7 +1415,7 @@ export const products = [
     name: "IT Support & Computer Repair - Home/Office Visit",
     price: 20000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Services",
     subcategory: "IT & Tech Support",
     image: "https://images.unsplash.com/photo-1531498860502-7c67cf02f657?auto=format&fit=crop&w=800&q=80"
@@ -1425,7 +1425,7 @@ export const products = [
     name: "Interstate Goods Delivery Service (Lagos to Abuja)",
     price: 45000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Services",
     subcategory: "Logistics & Delivery",
     image: "https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?auto=format&fit=crop&w=800&q=80"
@@ -1435,7 +1435,7 @@ export const products = [
     name: "Small Chops & Catering Service (100 Guests)",
     price: 180000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Services",
     subcategory: "Catering & Food",
     image: "https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=800&q=80"
@@ -1447,7 +1447,7 @@ export const products = [
     name: "Professional Plumber - Pipe Fitting & Repairs",
     price: 25000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Repair & Construction",
     subcategory: "Plumbing",
     image: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=800&q=80"
@@ -1457,7 +1457,7 @@ export const products = [
     name: "Interior & Exterior House Painting Service",
     price: 120000,
     location: "Abuja (FCT)",
-    condition: "Brand New",
+    condition: "",
     category: "Repair & Construction",
     subcategory: "Painting & Decorating",
     image: "https://images.unsplash.com/photo-1562259929-b4e1fd3aef09?auto=format&fit=crop&w=800&q=80"
@@ -1571,7 +1571,7 @@ export const products = [
     name: "Hybrid Maize Seeds (25kg Bag) - Drought Resistant",
     price: 12000,
     location: "Kano State",
-    condition: "Brand New",
+    condition: "",
     category: "Agriculture",
     subcategory: "Seeds & Seedlings",
     image: "https://images.unsplash.com/photo-1592417817098-8f3d6eb19675?auto=format&fit=crop&w=800&q=80"
@@ -1581,7 +1581,7 @@ export const products = [
     name: "Fresh Organic Farm Produce Bundle (Tomatoes, Peppers, Onions)",
     price: 8000,
     location: "Oyo State",
-    condition: "Brand New",
+    condition: "",
     category: "Agriculture",
     subcategory: "Farm Produce",
     image: "https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=800&q=80"
@@ -1601,7 +1601,7 @@ export const products = [
     name: "Professional Farm Clearing & Cultivation Service",
     price: 200000,
     location: "Ogun State",
-    condition: "Brand New",
+    condition: "",
     category: "Agriculture",
     subcategory: "Agricultural Services",
     image: "https://images.unsplash.com/photo-1530267981375-f0de937f5f13?auto=format&fit=crop&w=800&q=80"
@@ -1613,7 +1613,7 @@ export const products = [
     name: "Persian Kitten - 3 Months (Vaccinated, Dewormed)",
     price: 180000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Animals",
     subcategory: "Cats",
     image: "https://images.unsplash.com/photo-1592194996308-7b43878e84a6?auto=format&fit=crop&w=800&q=80"
@@ -1623,7 +1623,7 @@ export const products = [
     name: "African Grey Parrot - Tamed & Talking",
     price: 450000,
     location: "Abuja (FCT)",
-    condition: "Brand New",
+    condition: "",
     category: "Animals",
     subcategory: "Birds",
     image: "https://images.unsplash.com/photo-1544923408-75c5cef46f14?auto=format&fit=crop&w=800&q=80"
@@ -1633,7 +1633,7 @@ export const products = [
     name: "Complete Aquarium Kit (60L Tank + Filter + LED)",
     price: 85000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Animals",
     subcategory: "Fish & Aquarium",
     image: "https://images.unsplash.com/photo-1520301255226-bf5f144451c1?auto=format&fit=crop&w=800&q=80"
@@ -1643,7 +1643,7 @@ export const products = [
     name: "Bearded Dragon Lizard (Juvenile) with Terrarium",
     price: 120000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Animals",
     subcategory: "Reptiles",
     image: "https://images.unsplash.com/photo-1504450874802-0ba2bcd659e3?auto=format&fit=crop&w=800&q=80"
@@ -1653,7 +1653,7 @@ export const products = [
     name: "Mobile Veterinary Clinic Visit - Vaccination & Checkup",
     price: 15000,
     location: "Lagos State",
-    condition: "Brand New",
+    condition: "",
     category: "Animals",
     subcategory: "Veterinary Services",
     image: "https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?auto=format&fit=crop&w=800&q=80"
@@ -1703,7 +1703,7 @@ export const products = [
     currency: "GHS",
     location: "Greater Accra Region",
     country: "Ghana",
-    condition: "Brand New",
+    condition: "",
     category: "Property",
     subcategory: "Houses & Apartments for Rent",
     image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80"

@@ -13,6 +13,7 @@ import { products } from '../data/productData';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { getSavedItemsForUser, saveItemsForUser, getAllPublicListings, getGeneralProductPool, getMyListingsForUser, saveMyListingsForUser } from '../utils/userSync';
+import { isConditionApplicable, shouldShowConditionBadge } from '../utils/productUtils';
 import './ProductDetails.css';
 
 export default function ProductDetails({ params: serverParams }) {
@@ -595,7 +596,7 @@ export default function ProductDetails({ params: serverParams }) {
         customSpecs.push({ label: 'PLATFORM', value: s.console });
       }
 
-      if (product.condition && product.category !== 'Services' && product.category !== 'Jobs' && product.condition !== 'Service' && product.condition !== 'N/A') {
+      if (isConditionApplicable(product.category, product.subcategory) && product.condition && product.condition !== 'Service' && product.condition !== 'N/A') {
         customSpecs.push({ label: 'CONDITION', value: product.condition });
       }
       if (customSpecs.length > 0) return customSpecs;
@@ -728,13 +729,47 @@ export default function ProductDetails({ params: serverParams }) {
       ];
     }
 
+    // 11. ANIMALS & PETS
+    if (product.category === 'Animals') {
+      return [
+        { label: 'ANIMAL TYPE', value: product.subcategory || 'Pet' },
+        { label: 'LOCATION', value: product.location || 'Verified Seller' },
+        { label: 'HEALTH STATUS', value: 'Healthy & Checked' },
+        { label: 'DELIVERY AVAILABLE', value: 'Yes' }
+      ];
+    }
+
+    // 12. SERVICES & JOBS
+    if (product.category === 'Services' || product.category === 'Jobs') {
+      return [
+        { label: 'SERVICE TYPE', value: product.subcategory || product.category },
+        { label: 'LOCATION', value: product.location || 'Nigeria' },
+        { label: 'BOOKING TYPE', value: 'Direct Contact' },
+        { label: 'AVAILABILITY', value: 'Available' }
+      ];
+    }
+
+    // 13. PROPERTY & REAL ESTATE
+    if (product.category === 'Property') {
+      return [
+        { label: 'PROPERTY TYPE', value: product.subcategory || 'Real Estate' },
+        { label: 'LOCATION', value: product.location || 'Nigeria' },
+        { label: 'LISTING TYPE', value: nameLower.includes('rent') ? 'For Rent' : nameLower.includes('short let') ? 'Short Let' : 'For Sale' },
+        { label: 'VERIFIED LISTING', value: 'Yes' }
+      ];
+    }
+
     // DEFAULT FALLBACK
-    return [
-      { label: 'CONDITION', value: product.condition || 'Brand New' },
+    const defaultSpecs = [];
+    if (isConditionApplicable(product.category, product.subcategory) && product.condition && product.condition !== 'Service' && product.condition !== 'N/A') {
+      defaultSpecs.push({ label: 'CONDITION', value: product.condition });
+    }
+    defaultSpecs.push(
       { label: 'AVAILABILITY', value: 'In stock' },
       { label: 'DELIVERY AVAILABLE', value: 'Yes' },
       { label: 'RETURNS ACCEPTED', value: 'Within 7 days' }
-    ];
+    );
+    return defaultSpecs;
   };
 
   const thumbnails = (product.images && Array.isArray(product.images) && product.images.length > 0)
@@ -836,7 +871,7 @@ export default function ProductDetails({ params: serverParams }) {
           <div className="detail-left-col">
             {/* Cover Carousel */}
             <div className="detail-carousel-card">
-              {product.category !== 'Services' && product.category !== 'Jobs' && product.condition && product.condition !== 'Service' && product.condition !== 'N/A' && (
+              {shouldShowConditionBadge(product) && (
                 <span className="carousel-badge">{product.condition}</span>
               )}
               <div className="carousel-main-image-wrap">
@@ -906,7 +941,11 @@ export default function ProductDetails({ params: serverParams }) {
             <div className="detail-desc-card">
               <h3 className="desc-title">Description</h3>
               <p className="desc-paragraph" style={{ whiteSpace: 'pre-line' }}>
-                {product.description || `${product.condition === 'Brand New' ? 'Brand new' : 'Neatly used'} ${product.name} in excellent condition. Verified physical hardware check, all components intact. Ready for instant use.`}
+                {product.description || (
+                  shouldShowConditionBadge(product)
+                    ? `${product.condition === 'Brand New' ? 'Brand new' : 'Neatly used'} ${product.name} in excellent condition. Verified inspection check, ready for instant use.`
+                    : `${product.name} available now on BuyOh! marketplace. Contact the seller for inquiries, bookings, or arrangements.`
+                )}
               </p>
               
               {/* Social Share Buttons */}
@@ -1214,9 +1253,11 @@ export default function ProductDetails({ params: serverParams }) {
                   <div className="similar-card">
                     <div className="similar-img-wrap">
                       <img src={sp.image} alt={sp.name} className="similar-img" loading="lazy" />
-                      <span className={`similar-condition ${sp.condition === 'Brand New' ? 'sim-new' : 'sim-used'}`}>
-                        {sp.condition}
-                      </span>
+                      {shouldShowConditionBadge(sp) && (
+                        <span className={`similar-condition ${sp.condition === 'Brand New' ? 'sim-new' : 'sim-used'}`}>
+                          {sp.condition}
+                        </span>
+                      )}
                     </div>
                     <div className="similar-info">
                       <p className="similar-name">{sp.name}</p>

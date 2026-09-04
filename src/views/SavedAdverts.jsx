@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getSavedItemsForUser, saveItemsForUser, syncUserDataFromCloud } from '../utils/userSync';
+import { shouldShowConditionBadge } from '../utils/productUtils';
 import './SavedAdverts.css';
 
 export default function SavedAdverts() {
@@ -277,7 +278,7 @@ export default function SavedAdverts() {
                         e.target.src = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
                       }}
                     />
-                    {item.category !== 'Services' && item.category !== 'Jobs' && item.condition && item.condition !== 'Service' && item.condition !== 'N/A' && (
+                    {shouldShowConditionBadge(item) && (
                       <span className={`saved-condition-badge ${item.condition === 'Brand New' ? 'badge-new' : 'badge-used'}`}>
                         {item.condition}
                       </span>

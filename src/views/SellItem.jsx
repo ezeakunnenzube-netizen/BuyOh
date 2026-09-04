@@ -33,6 +33,7 @@ const CATEGORIES = [
 
 const CONDITIONS = ['Brand New', 'Used'];
 import { NIGERIA_STATES, GHANA_REGIONS } from '../data/statesData.js';
+import { isConditionApplicable } from '../utils/productUtils';
 
 export default function SellItem() {
   const router = useRouter();
@@ -229,7 +230,9 @@ export default function SellItem() {
       if (title.trim().length < 5) errs.title = 'Title must be at least 5 characters';
       if (!category) errs.category = 'Select a category';
       if (!subcategory) errs.subcategory = 'Select a subcategory';
-      if (category !== 'Services' && category !== 'Jobs' && !condition) errs.condition = 'Select item condition';
+      if (category && subcategory && isConditionApplicable(category, subcategory) && !condition) {
+        errs.condition = 'Select item condition';
+      }
     }
     if (step === 2) {
       if (!price || Number(price) <= 0) errs.price = 'Enter a valid price';
@@ -314,7 +317,7 @@ export default function SellItem() {
       price: Number(price),
       category,
       subcategory,
-      condition: (category === 'Services' || category === 'Jobs') ? '' : (condition || 'Used'),
+      condition: !isConditionApplicable(category, subcategory) ? '' : (condition || 'Used'),
       location,
       description,
       negotiable,
@@ -558,7 +561,12 @@ export default function SellItem() {
                 <select 
                   className="form-select"
                   value={category}
-                  onChange={e => { setCategory(e.target.value); setSubcategory(''); }}
+                  onChange={e => {
+                    const newCat = e.target.value;
+                    setCategory(newCat);
+                    setSubcategory('');
+                    if (!isConditionApplicable(newCat, '')) setCondition('');
+                  }}
                 >
                   <option value="">Select a category</option>
                   {CATEGORIES.map(c => (
@@ -578,7 +586,11 @@ export default function SellItem() {
                   <select 
                     className="form-select"
                     value={subcategory}
-                    onChange={e => setSubcategory(e.target.value)}
+                    onChange={e => {
+                      const newSub = e.target.value;
+                      setSubcategory(newSub);
+                      if (!isConditionApplicable(category, newSub)) setCondition('');
+                    }}
                   >
                     <option value="">Select subcategory</option>
                     {subcategories.map(sub => (
@@ -591,8 +603,8 @@ export default function SellItem() {
               </div>
             )}
 
-            {/* Condition (Only for physical items, not Services or Jobs) */}
-            {category !== 'Services' && category !== 'Jobs' && (
+            {/* Condition (Only for physical items, not Animals, Services, Property, Jobs, etc.) */}
+            {isConditionApplicable(category, subcategory) && (
               <div className="form-group">
                 <label className="form-label">Condition <span className="required">*</span></label>
                 <div className="condition-pills">
@@ -1219,7 +1231,7 @@ export default function SellItem() {
                     <span><MapPin size={12} /> {location || 'Location'}</span>
                     <span><Layers size={12} /> {category || 'Category'} {subcategory ? `› ${subcategory}` : ''}</span>
                   </div>
-                  {category !== 'Services' && category !== 'Jobs' && condition && (
+                  {isConditionApplicable(category, subcategory) && condition && (
                     <span className={`preview-condition ${condition === 'Brand New' ? 'cond-new' : 'cond-used'}`}>
                       {condition}
                     </span>
@@ -1268,7 +1280,7 @@ export default function SellItem() {
                 <span>Price</span>
                 <strong>₦ {formatPrice(price)} {negotiable ? '(Negotiable)' : ''}</strong>
               </div>
-              {category !== 'Services' && category !== 'Jobs' && condition && (
+              {isConditionApplicable(category, subcategory) && condition && (
                 <div className="summary-row">
                   <span>Condition</span>
                   <strong>{condition}</strong>
