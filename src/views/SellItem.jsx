@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { 
   Camera, X, MapPin, Tag, DollarSign, FileText, Layers, ChevronDown,
   ImagePlus, Sparkles, AlertCircle, CheckCircle, MessageSquareMore,
-  BellRing, Bookmark, PanelTop, UserRound, ArrowLeft, Info
+  BellRing, Bookmark, PanelTop, UserRound, ArrowLeft, Info, Search
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getMyListingsForUser, saveMyListingsForUser, registerPublicListing, getUserProfileData, getNotificationsForUser, saveNotificationsForUser } from '../utils/userSync';
@@ -65,6 +65,35 @@ export default function SellItem() {
   }, [country, location]);
 
   const currencySymbol = isGhana ? 'GH₵' : '₦';
+
+  // Dropdown popover and search state for Country & Region
+  const [isCountryOpen, setIsCountryOpen]       = useState(false);
+  const [isRegionOpen, setIsRegionOpen]         = useState(false);
+  const [regionSearchText, setRegionSearchText] = useState('');
+
+  const countryDropdownRef = useRef(null);
+  const regionDropdownRef  = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (countryDropdownRef.current && !countryDropdownRef.current.contains(e.target)) {
+        setIsCountryOpen(false);
+      }
+      if (regionDropdownRef.current && !regionDropdownRef.current.contains(e.target)) {
+        setIsRegionOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const availableRegions = useMemo(() => {
+    const list = country === 'Ghana' ? GHANA_REGIONS : NIGERIA_STATES;
+    if (!regionSearchText.trim()) return list;
+
+    const query = regionSearchText.toLowerCase().trim();
+    return list.filter(item => item.name.toLowerCase().includes(query));
+  }, [country, regionSearchText]);
   const getProfilePhone = (targetUser = user) => {
     try {
       const prof = getUserProfileData(targetUser);
@@ -1138,63 +1167,145 @@ export default function SellItem() {
           <div className="sell-form-card">
             <h3 className="form-section-title"><DollarSign size={16} /> Pricing & Description</h3>
 
-            {/* Location & Country */}
+            {/* Location & Country (Cascading Custom Filter matching Home) */}
             <div className="form-row-location-grid">
-              {/* Country */}
-              <div className="form-group">
+              {/* 1. Country Custom Pill & Popover */}
+              <div className="form-group" ref={countryDropdownRef}>
                 <label className="form-label"><MapPin size={14} /> Country <span className="required">*</span></label>
-                <div className="form-select-wrap">
-                  <select
-                    className="form-select"
-                    value={country}
-                    onChange={e => {
-                      const newCtry = e.target.value;
-                      setCountry(newCtry);
-                      if (newCtry === 'Ghana') {
-                        if (!GHANA_REGIONS.some(r => r.name === location)) {
-                          setLocation('');
-                        }
-                      } else {
-                        if (!NIGERIA_STATES.some(s => s.name === location)) {
-                          setLocation('');
-                        }
-                      }
+                <div className="custom-dropdown-container">
+                  <button
+                    type="button"
+                    className={`custom-select-pill ${isCountryOpen ? 'pill-focused' : ''}`}
+                    onClick={() => {
+                      setIsCountryOpen(prev => !prev);
+                      setIsRegionOpen(false);
                     }}
                   >
-                    <option value="Nigeria">🇳🇬 Nigeria (₦ NGN)</option>
-                    <option value="Ghana">🇬🇭 Ghana (GH₵ GHS)</option>
-                  </select>
-                  <ChevronDown size={16} className="select-chevron" />
+                    <span className="pill-flag-badge">{country === 'Ghana' ? '🇬🇭' : '🇳🇬'}</span>
+                    <span className="pill-value">{country === 'Ghana' ? 'Ghana (GH₵)' : 'Nigeria (₦)'}</span>
+                    <ChevronDown size={16} className={`pill-chevron ${isCountryOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {isCountryOpen && (
+                    <div className="custom-dropdown-popover country-popover">
+                      <div className="popover-section-head">
+                        <span>Choose Country</span>
+                      </div>
+                      <div className="popover-options-scroll">
+                        <button
+                          type="button"
+                          className={`popover-option-item ${country === 'Nigeria' ? 'option-selected' : ''}`}
+                          onClick={() => {
+                            setCountry('Nigeria');
+                            setLocation('');
+                            setIsCountryOpen(false);
+                            setRegionSearchText('');
+                          }}
+                        >
+                          <span className="option-flag">🇳🇬</span>
+                          <div className="option-info">
+                            <span className="option-title">Nigeria</span>
+                            <span className="option-subtitle">37 States • ₦ (NGN)</span>
+                          </div>
+                          {country === 'Nigeria' && <span className="option-check">✓</span>}
+                        </button>
+
+                        <button
+                          type="button"
+                          className={`popover-option-item ${country === 'Ghana' ? 'option-selected' : ''}`}
+                          onClick={() => {
+                            setCountry('Ghana');
+                            setLocation('');
+                            setIsCountryOpen(false);
+                            setRegionSearchText('');
+                          }}
+                        >
+                          <span className="option-flag">🇬🇭</span>
+                          <div className="option-info">
+                            <span className="option-title">Ghana</span>
+                            <span className="option-subtitle">16 Regions • GH₵ (GHS)</span>
+                          </div>
+                          {country === 'Ghana' && <span className="option-check">✓</span>}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* State or Region */}
-              <div className="form-group">
+              {/* 2. Region / State Custom Pill & Searchable Popover */}
+              <div className="form-group" ref={regionDropdownRef}>
                 <label className="form-label">
                   <MapPin size={14} /> {country === 'Ghana' ? 'Ghana Region' : 'Nigeria State'} <span className="required">*</span>
                 </label>
-                <div className={`form-select-wrap ${errors.location ? 'input-error' : ''}`}>
-                  <select 
-                    className="form-select"
-                    value={location}
-                    onChange={e => {
-                      const val = e.target.value;
-                      setLocation(val);
-                      if (GHANA_REGIONS.some(r => r.name === val)) {
-                        setCountry('Ghana');
-                      } else if (NIGERIA_STATES.some(s => s.name === val)) {
-                        setCountry('Nigeria');
-                      }
+                <div className="custom-dropdown-container">
+                  <button
+                    type="button"
+                    className={`custom-select-pill ${errors.location ? 'pill-error' : ''} ${isRegionOpen ? 'pill-focused' : ''}`}
+                    onClick={() => {
+                      setIsRegionOpen(prev => !prev);
+                      setIsCountryOpen(false);
                     }}
                   >
-                    <option value="">Select your {country === 'Ghana' ? 'region' : 'state'}</option>
-                    {(country === 'Ghana' ? GHANA_REGIONS : NIGERIA_STATES).map(item => (
-                      <option key={item.name} value={item.name}>
-                        {item.flag} {item.name}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown size={16} className="select-chevron" />
+                    <MapPin size={15} className="pill-pin-icon" />
+                    <span className="pill-value">{location || `Select your ${country === 'Ghana' ? 'region' : 'state'}`}</span>
+                    <ChevronDown size={16} className={`pill-chevron ${isRegionOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {isRegionOpen && (
+                    <div className="custom-dropdown-popover region-popover">
+                      {/* Search bar inside Region Popover */}
+                      <div className="popover-search-wrap">
+                        <Search size={14} className="popover-search-icon" />
+                        <input
+                          type="text"
+                          className="popover-search-input"
+                          placeholder={`Search ${country === 'Ghana' ? 'Ghana regions' : 'Nigeria states'}...`}
+                          value={regionSearchText}
+                          onChange={e => setRegionSearchText(e.target.value)}
+                          autoFocus
+                        />
+                        {regionSearchText && (
+                          <button
+                            type="button"
+                            className="popover-search-clear"
+                            onClick={() => setRegionSearchText('')}
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Filtered Region options list */}
+                      <div className="popover-options-scroll">
+                        {availableRegions.map(reg => {
+                          const isSelected = location === reg.name;
+                          return (
+                            <button
+                              key={reg.name}
+                              type="button"
+                              className={`popover-option-item ${isSelected ? 'option-selected' : ''}`}
+                              onClick={() => {
+                                setLocation(reg.name);
+                                setIsRegionOpen(false);
+                                setRegionSearchText('');
+                              }}
+                            >
+                              <span className="option-flag">{reg.flag || '📍'}</span>
+                              <span className="option-name">{reg.name}</span>
+                              {isSelected && <span className="option-check">✓</span>}
+                            </button>
+                          );
+                        })}
+
+                        {availableRegions.length === 0 && (
+                          <div className="popover-no-results">
+                            No regions found matching &quot;{regionSearchText}&quot;
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 {errors.location && <span className="error-text"><AlertCircle size={12} /> {errors.location}</span>}
               </div>
