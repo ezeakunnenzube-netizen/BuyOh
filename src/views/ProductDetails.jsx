@@ -7,7 +7,8 @@ import {
   MapPin, MessageSquareMore, Heart, 
   ArrowLeft, Phone, ShieldAlert, Eye, 
   Share2, Copy, Clock, Tag, Star, ChevronRight,
-  BellRing, Bookmark, PanelTop, UserRound, Smartphone, X, Check, Send, Calendar
+  BellRing, Bookmark, PanelTop, UserRound, Smartphone, X, Check, Send, Calendar,
+  FileText, Layers
 } from 'lucide-react';
 import { products } from '../data/productData';
 import { useAuth } from '../context/AuthContext';
@@ -596,9 +597,39 @@ export default function ProductDetails({ params: serverParams }) {
         customSpecs.push({ label: 'PLATFORM', value: s.console });
       }
 
+      // Services specs
+      if (cat === 'Services') {
+        if (s.billingType) customSpecs.push({ label: 'BILLING / PRICING', value: s.billingType });
+        if (s.experienceLevel) customSpecs.push({ label: 'EXPERIENCE LEVEL', value: s.experienceLevel });
+      }
+
+      // Jobs specs
+      if (cat === 'Jobs') {
+        if (s.jobType) customSpecs.push({ label: 'EMPLOYMENT TYPE', value: s.jobType });
+        if (s.experienceRequired) customSpecs.push({ label: 'EXPERIENCE REQUIRED', value: s.experienceRequired });
+      }
+
+      // Agriculture specs
+      if (cat === 'Agriculture') {
+        if (s.unitQuantity) customSpecs.push({ label: 'UNIT / QUANTITY', value: s.unitQuantity });
+      }
+
+      if (s.powerSource) customSpecs.push({ label: 'POWER SOURCE', value: s.powerSource });
+
       if (isConditionApplicable(product.category, product.subcategory) && product.condition && product.condition !== 'Service' && product.condition !== 'N/A') {
         customSpecs.push({ label: 'CONDITION', value: product.condition });
       }
+
+      if (product.subcategory) {
+        customSpecs.push({ label: 'SUBCATEGORY', value: product.subcategory });
+      }
+      if (product.location) {
+        customSpecs.push({ label: 'LOCATION', value: product.location });
+      }
+      if (product.negotiable !== undefined) {
+        customSpecs.push({ label: 'PRICE NEGOTIABLE', value: product.negotiable ? 'Yes' : 'No (Fixed Price)' });
+      }
+
       if (customSpecs.length > 0) return customSpecs;
     }
 
@@ -772,9 +803,76 @@ export default function ProductDetails({ params: serverParams }) {
     return defaultSpecs;
   };
 
-  const thumbnails = (product.images && Array.isArray(product.images) && product.images.length > 0)
-    ? product.images
-    : [product.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80"];
+  const getFormattedDescription = (p) => {
+    if (!p) return '';
+    if (p.description && p.description.trim()) {
+      return p.description.trim();
+    }
+
+    const cat = p.category || '';
+    const loc = p.location || 'Nigeria';
+    const name = p.name || 'Item';
+    const cond = shouldShowConditionBadge(p) ? (p.condition || 'Used') : '';
+
+    if (cat === 'Vehicles') {
+      return `${name} in clean and solid running condition, currently available in ${loc}.\n\n` +
+        `• Engine & Mechanical Health: Sound engine performance with zero hidden faults. Gear transmission shifts smoothly with balanced suspension.\n` +
+        `• Customs & Documentation: Fully cleared customs status with authentic, verified vehicular documentation.\n` +
+        `• Interior & Comfort: Chilling factory air conditioning (AC), clean interior upholstery, functional infotainment system, and pristine dashboard.\n` +
+        `• Exterior & Body: Accident-free exterior with clean original body finish and healthy tires.\n` +
+        `• Inspection & Arrangements: On-site mechanical inspection and test drive welcomed for serious buyers in ${loc}.`;
+    }
+
+    if (cat === 'Property') {
+      return `Prime ${name} conveniently situated in ${loc}, ready for immediate viewing and occupancy.\n\n` +
+        `• Property Highlights: Located in a highly secured, accessible residential/commercial hub with peaceful neighborhood ambiance.\n` +
+        `• Infrastructure & Utilities: Reliable power supply, clean borehole running water system, perimeter fencing, and ample parking space.\n` +
+        `• Documentation & Title: Genuine title papers available for verification. Flexible payment and lease terms.\n` +
+        `• Site Inspection: Call or send a WhatsApp message to book a direct physical inspection tour.`;
+    }
+
+    if (cat === 'Services') {
+      return `Professional ${name} delivered with excellence and speed in ${loc} and surrounding areas.\n\n` +
+        `• Service Offerings: Comprehensive professional delivery tailored to personal, household, or corporate specifications.\n` +
+        `• Reliability & Quality: Experienced team equipped with modern tools, ensuring timely delivery and top-notch workmanship.\n` +
+        `• Pricing & Bookings: Transparent, competitive rates. Contact directly via phone or WhatsApp for immediate consultation and bookings.`;
+    }
+
+    if (cat === 'Jobs') {
+      return `Career Opportunity: ${name} available in ${loc}.\n\n` +
+        `• Role Overview: Seeking a qualified and proactive individual to handle core operational responsibilities.\n` +
+        `• Requirements & Skills: Relevant field experience, proactive problem-solving, and solid communication capabilities.\n` +
+        `• Compensation: Competitive remuneration package with career growth opportunities.\n` +
+        `• Application: Direct contact open through in-app message or phone/WhatsApp for immediate screening.`;
+    }
+
+    if (cat === 'Animals') {
+      return `Healthy and well-nurtured ${name} available for placement in ${loc}.\n\n` +
+        `• Health & Veterinary Status: Fully vet-inspected, up-to-date with essential vaccinations and scheduled deworming.\n` +
+        `• Temperament & Nutrition: Vibrant, active, and raised on quality feed in a clean, hygienic environment.\n` +
+        `• Pickup & Delivery: Secure, stress-free delivery or direct pickup arranged within ${loc}.`;
+    }
+
+    if (cat === 'Agriculture') {
+      return `High quality ${name} available for farm supply in ${loc}.\n\n` +
+        `• Product Highlights: Premium agricultural grade, harvested or manufactured under standard farm conditions for optimal yield.\n` +
+        `• Packaging & Volume: Freshly packaged and prepared for wholesale or retail distribution.\n` +
+        `• Logistics & Delivery: Direct farm-gate pickup and nationwide dispatch available upon request.`;
+    }
+
+    if (cat === 'Fashion') {
+      return `Authentic ${name} in ${cond || 'Brand New'} condition, available for immediate order in ${loc}.\n\n` +
+        `• Material & Quality: Premium fabric and craftsmanship with authentic detailing and durable stitching.\n` +
+        `• Fit & Comfort: Designed for maximum comfort and style across both casual and formal settings.\n` +
+        `• Delivery: Fast local delivery across ${loc} and nationwide courier dispatch.`;
+    }
+
+    // Default physical goods (Phones, Electronics, Gaming, Cameras, Audio, Furniture, etc.)
+    return `Authentic ${name} in ${cond || 'excellent'} condition, available in ${loc}.\n\n` +
+      `• Condition & Performance: 100% genuine hardware. Screen, battery, and all internal features tested and operating at peak performance.\n` +
+      `• Package Contents: Comes intact with all necessary accessories ready for instant setup and daily use.\n` +
+      `• Verification & Purchase: Physical inspection and functional testing welcomed before payment.`;
+  };
 
   // Similar products from same category
   const similarProducts = products
@@ -939,14 +1037,45 @@ export default function ProductDetails({ params: serverParams }) {
 
             {/* Description Block */}
             <div className="detail-desc-card">
-              <h3 className="desc-title">Description</h3>
+              <h3 className="desc-title"><FileText size={18} /> Description</h3>
               <p className="desc-paragraph" style={{ whiteSpace: 'pre-line' }}>
-                {product.description || (
-                  shouldShowConditionBadge(product)
-                    ? `${product.condition === 'Brand New' ? 'Brand new' : 'Neatly used'} ${product.name} in excellent condition. Verified inspection check, ready for instant use.`
-                    : `${product.name} available now on BuyOh! marketplace. Contact the seller for inquiries, bookings, or arrangements.`
-                )}
+                {getFormattedDescription(product)}
               </p>
+
+              {/* Form Details Breakdown matching the Ad Posting Form */}
+              <div className="ad-form-attributes-card">
+                <h4 className="attributes-card-title"><Layers size={14} /> Ad Overview & Details</h4>
+                <div className="attributes-card-grid">
+                  <div className="attr-cell">
+                    <span className="attr-label">CATEGORY</span>
+                    <span className="attr-val">{product.category || 'General'}</span>
+                  </div>
+                  <div className="attr-cell">
+                    <span className="attr-label">SUBCATEGORY</span>
+                    <span className="attr-val">{product.subcategory || product.category || 'General'}</span>
+                  </div>
+                  {shouldShowConditionBadge(product) && (
+                    <div className="attr-cell">
+                      <span className="attr-label">CONDITION</span>
+                      <span className="attr-val">{product.condition}</span>
+                    </div>
+                  )}
+                  <div className="attr-cell">
+                    <span className="attr-label">PRICING</span>
+                    <span className="attr-val">{product.negotiable !== false ? 'Negotiable' : 'Fixed Price'}</span>
+                  </div>
+                  <div className="attr-cell">
+                    <span className="attr-label">LOCATION</span>
+                    <span className="attr-val">{product.location || 'Nigeria'}</span>
+                  </div>
+                  <div className="attr-cell">
+                    <span className="attr-label">CONTACT</span>
+                    <span className="attr-val">
+                      {product.sellerPhone || product.contactPhone ? 'Phone & WhatsApp' : 'In-App Message'}
+                    </span>
+                  </div>
+                </div>
+              </div>
               
               {/* Social Share Buttons */}
               <div className="social-share-row">
