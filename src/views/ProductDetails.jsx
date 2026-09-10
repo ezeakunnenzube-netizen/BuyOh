@@ -803,6 +803,10 @@ export default function ProductDetails({ params: serverParams }) {
     return defaultSpecs;
   };
 
+  const thumbnails = (product?.images && Array.isArray(product.images) && product.images.length > 0)
+    ? product.images
+    : [product?.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80"];
+
   const getFormattedDescription = (p) => {
     if (!p) return '';
     if (p.description && p.description.trim()) {
@@ -974,7 +978,7 @@ export default function ProductDetails({ params: serverParams }) {
               )}
               <div className="carousel-main-image-wrap">
                 <img 
-                  src={thumbnails[activeImageIndex] || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80"} 
+                  src={thumbnails[activeImageIndex] || thumbnails[0] || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80"} 
                   alt={product.name} 
                   className="carousel-main-img" 
                   onError={(e) => {
@@ -983,7 +987,7 @@ export default function ProductDetails({ params: serverParams }) {
                   }}
                 />
                 <span className="carousel-counter-badge">
-                  📷 {activeImageIndex + 1}/{thumbnails.length}
+                  📷 {Math.min(activeImageIndex + 1, thumbnails.length)}/{thumbnails.length}
                 </span>
               </div>
               
