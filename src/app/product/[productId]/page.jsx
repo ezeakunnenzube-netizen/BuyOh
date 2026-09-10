@@ -1,10 +1,7 @@
-'use client';
-
-import { use } from 'react';
 import ProductDetails from '../../../views/ProductDetails';
 
-export default function ProductDetailPage({ params }) {
-  const resolvedParams = params && typeof params.then === 'function' ? use(params) : params;
-
+// Server Component: await params (Next.js 15 pattern for async params)
+export default async function ProductDetailPage({ params }) {
+  const resolvedParams = await params;
   return <ProductDetails params={resolvedParams} />;
 }
