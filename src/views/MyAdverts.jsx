@@ -163,7 +163,7 @@ export default function MyAdverts() {
       {/* Desktop Header */}
       <header className="home-nav-row adverts-desktop-nav">
         <NavLink to="/" replace className="home-nav-brand">
-          <span className="logo-buy">Buy</span><span className="logo-oh">Oh!</span>
+          <span className="logo-infi">Infi</span><span className="logo-buy">Buy</span>
         </NavLink>
         <div className="home-nav-links">
           <NavLink to="/messages" replace className="home-nav-item">
@@ -295,7 +295,7 @@ export default function MyAdverts() {
               <Store size={44} color="#1d4ed8" />
             </div>
             <h3>No Active Adverts Yet</h3>
-            <p>You haven't posted any listings on BuyOh! marketplace yet. Create your first listing today to start receiving buyer offers.</p>
+            <p>You haven't posted any listings on InfiBuy marketplace yet. Create your first listing today to start receiving buyer offers.</p>
             <button className="empty-post-btn" onClick={() => navigate('/sell')}>
               <Plus size={16} /> Post Your First Ad
             </button>
@@ -360,7 +360,7 @@ export default function MyAdverts() {
               <Trash2 size={24} color="#ef4444" />
             </div>
             <h3>Delete Listing?</h3>
-            <p>Are you sure you want to remove this listing from BuyOh! marketplace? This action cannot be undone.</p>
+            <p>Are you sure you want to remove this listing from InfiBuy marketplace? This action cannot be undone.</p>
             <div className="delete-modal-actions">
               <button className="btn-confirm-delete" onClick={() => handleDeleteAd(deleteId)}>
                 Delete Listing

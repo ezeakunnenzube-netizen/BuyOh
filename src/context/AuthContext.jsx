@@ -52,7 +52,7 @@ export function AuthProvider({ children }) {
     if (!sessionUser?.id) return;
     // Run cloud sync in the background (non-blocking)
     syncUserDataFromCloud(sessionUser).catch(err =>
-      console.warn('[BuyOh] Background cloud sync error:', err)
+      console.warn('[InfiBuy] Background cloud sync error:', err)
     );
     // Only set up realtime channel once per user
     if (!realtimeCleanupRef.current) {

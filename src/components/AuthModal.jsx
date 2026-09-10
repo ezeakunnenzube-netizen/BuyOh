@@ -93,7 +93,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialError }) 
         {/* Top Header */}
         <div className="auth-modal-header">
           <div className="auth-brand">
-            <span className="logo-buy">Buy</span><span className="logo-oh">Oh!</span>
+            <span className="logo-infi">Infi</span><span className="logo-buy">Buy</span>
           </div>
           <button className="auth-close-btn" onClick={onClose} title="Close">
             <X size={20} />
@@ -255,7 +255,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialError }) 
 
         {/* Policy footer disclaimer */}
         <div className="auth-footer-disclaimer">
-          <span>By continuing, you agree to BuyOh's Terms of Service and Safety Policy.</span>
+          <span>By continuing, you agree to InfiBuy's Terms of Service and Safety Policy.</span>
         </div>
       </div>
     </div>

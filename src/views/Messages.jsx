@@ -132,7 +132,7 @@ const EMOJI_DATA = [
   { char: '🤙', name: 'Call Me Hand', category: 'gestures', keywords: ['call', 'phone', 'ring', 'contact'] },
 
   // Commerce & Products
-  { char: '🛍️', name: 'Shopping Bags', category: 'commerce', popular: true, keywords: ['shop', 'store', 'buy', 'bag', 'purchase', 'buyoh'] },
+  { char: '🛍️', name: 'Shopping Bags', category: 'commerce', popular: true, keywords: ['shop', 'store', 'buy', 'bag', 'purchase', 'infibuy'] },
   { char: '💰', name: 'Money Bag', category: 'commerce', popular: true, keywords: ['money', 'cash', 'bag', 'naira', 'wealth', 'pay', 'cost', 'price'] },
   { char: '💵', name: 'Dollar Cash', category: 'commerce', keywords: ['money', 'cash', 'bill', 'currency', 'naira', 'pay'] },
   { char: '💳', name: 'Credit Card', category: 'commerce', keywords: ['card', 'payment', 'bank', 'visa', 'transfer', 'atm'] },
@@ -1054,7 +1054,7 @@ export default function Messages() {
       {/* ── Sticky Desktop Header Navbar ── */}
       <header className="home-nav-row">
         <NavLink to="/" replace className="home-nav-brand">
-          <span className="logo-buy">Buy</span><span className="logo-oh">Oh!</span>
+          <span className="logo-infi">Infi</span><span className="logo-buy">Buy</span>
         </NavLink>
         <div className="home-nav-links">
           <NavLink to="/messages" replace className={({ isActive }) => isActive ? "home-nav-item home-nav-item-active" : "home-nav-item"}>

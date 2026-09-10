@@ -338,7 +338,7 @@ export default function ProductDetails({ params: serverParams }) {
       <div className="detail-page-wrapper">
         <header className="home-nav-row detail-desktop-nav">
           <NavLink to="/" replace className="home-nav-brand">
-            <span className="logo-buy">Buy</span><span className="logo-oh">Oh!</span>
+            <span className="logo-infi">Infi</span><span className="logo-buy">Buy</span>
           </NavLink>
         </header>
         <div className="detail-page-container" style={{ padding: '3rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -357,7 +357,7 @@ export default function ProductDetails({ params: serverParams }) {
       <div className="detail-page-wrapper">
         <header className="home-nav-row detail-desktop-nav">
           <NavLink to="/" replace className="home-nav-brand">
-            <span className="logo-buy">Buy</span><span className="logo-oh">Oh!</span>
+            <span className="logo-infi">Infi</span><span className="logo-buy">Buy</span>
           </NavLink>
         </header>
         <div className="product-not-found" style={{ marginTop: '3rem' }}>
@@ -409,7 +409,7 @@ export default function ProductDetails({ params: serverParams }) {
     }
 
     const sellerName = product.sellerName || 'Seller';
-    const text = encodeURIComponent(`Hello ${sellerName}, I am interested in your item: "${product.name}" listed on BuyOh! for ${formatPrice(product.price)}. Is it still available?`);
+    const text = encodeURIComponent(`Hello ${sellerName}, I am interested in your item: "${product.name}" listed on InfiBuy! for ${formatPrice(product.price)}. Is it still available?`);
     const whatsappUrl = `https://wa.me/${cleanNumber}?text=${text}`;
 
     setTimeout(() => {
@@ -425,7 +425,7 @@ export default function ProductDetails({ params: serverParams }) {
 
   const handleWhatsAppShare = () => {
     showToast('Sharing on WhatsApp...');
-    const text = `Check out this ${product.name} for ${formatPrice(product.price)} on BuyOh!: ${window.location.href}`;
+    const text = `Check out this ${product.name} for ${formatPrice(product.price)} on InfiBuy!: ${window.location.href}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -509,7 +509,7 @@ export default function ProductDetails({ params: serverParams }) {
     }
     setShowReportModal(false);
     setReportDetails('');
-    showToast('Report submitted. Thank you for keeping BuyOh safe!');
+    showToast('Report submitted. Thank you for keeping InfiBuy safe!');
   };
 
   const handleMakeOffer = (e) => {
@@ -896,7 +896,7 @@ export default function ProductDetails({ params: serverParams }) {
       {/* ── Sticky Desktop Navigation (same as Home) ── */}
       <header className="home-nav-row detail-desktop-nav">
         <NavLink to="/" replace className="home-nav-brand">
-          <span className="logo-buy">Buy</span><span className="logo-oh">Oh!</span>
+          <span className="logo-infi">Infi</span><span className="logo-buy">Buy</span>
         </NavLink>
         <div className="home-nav-links">
           {user ? (
@@ -1159,7 +1159,7 @@ export default function ProductDetails({ params: serverParams }) {
                 <div className="seller-name-info">
                   <h4>{product.sellerName || 'PHONEMART'}</h4>
                   <div className="seller-badges">
-                    <span>👤 {product.sellerJoined || '5+ years on BuyOh'}</span>
+                    <span>👤 {product.sellerJoined || '5+ years on InfiBuy'}</span>
                     <span>🛡️ Verified Seller</span>
                   </div>
                   <span className="reply-rate-sub">⚡ Typically replies within a few minutes</span>
@@ -1530,7 +1530,7 @@ export default function ProductDetails({ params: serverParams }) {
                 <ShieldAlert size={26} color="#dc2626" />
               </div>
               <h3>Report Listing</h3>
-              <p>Help us keep BuyOh marketplace safe. Select a reason for reporting "{product.name}".</p>
+              <p>Help us keep InfiBuy marketplace safe. Select a reason for reporting "{product.name}".</p>
             </div>
 
             <form onSubmit={handleReportSubmit} className="callback-form">

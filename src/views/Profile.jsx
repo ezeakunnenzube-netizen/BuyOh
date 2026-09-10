@@ -293,7 +293,7 @@ export default function Profile() {
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
-          if (k && (k.includes('buyoh') || k.includes('sb-') || k.includes('supabase'))) {
+          if (k && (k.includes('buyoh') || k.includes('infibuy') || k.includes('sb-') || k.includes('supabase'))) {
             keysToRemove.push(k);
           }
         }
@@ -324,7 +324,7 @@ export default function Profile() {
       {/* Top Header bar – desktop only */}
       <header className="home-nav-row profile-desktop-nav">
         <NavLink to="/" replace className="home-nav-brand">
-          <span className="logo-buy">Buy</span><span className="logo-oh">Oh!</span>
+          <span className="logo-infi">Infi</span><span className="logo-buy">Buy</span>
         </NavLink>
         <div className="home-nav-links">
           <NavLink to="/messages" replace className="home-nav-item">

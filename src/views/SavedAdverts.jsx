@@ -129,7 +129,7 @@ export default function SavedAdverts() {
       {/* Desktop Header */}
       <header className="home-nav-row saved-desktop-nav">
         <NavLink to="/" replace className="home-nav-brand">
-          <span className="logo-buy">Buy</span><span className="logo-oh">Oh!</span>
+          <span className="logo-infi">Infi</span><span className="logo-buy">Buy</span>
         </NavLink>
         <div className="home-nav-links">
           <NavLink to="/messages" replace className="home-nav-item">
@@ -248,7 +248,7 @@ export default function SavedAdverts() {
               <Heart size={42} color="#ffa705" />
             </div>
             <h3>No Saved Items Yet</h3>
-            <p>Browse listings on BuyOh! and tap the bookmark icon on any item card to save it here.</p>
+            <p>Browse listings on InfiBuy and tap the bookmark icon on any item card to save it here.</p>
             <button className="saved-browse-btn" onClick={() => navigate('/')}>
               <ShoppingBag size={16} /> Explore Marketplace Now
             </button>

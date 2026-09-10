@@ -512,7 +512,7 @@ export default function SellItem() {
         id: `notif-${Date.now()}`,
         type: 'system',
         title: 'Ad Published Successfully!',
-        message: `Your listing "${title}" is now live and visible to buyers on BuyOh.`,
+        message: `Your listing "${title}" is now live and visible to buyers on InfiBuy.`,
         time: 'Just now',
         unread: true,
         actionLink: '/adverts'
@@ -551,7 +551,7 @@ export default function SellItem() {
         <div className="sell-auth-prompt">
           <Sparkles size={48} color="#e67600" />
           <h2>Post Your First Ad</h2>
-          <p>Sign in or create an account to start selling on BuyOh!</p>
+          <p>Sign in or create an account to start selling on InfiBuy!</p>
           <button className="sell-signin-btn" onClick={() => setIsAuthOpen(true)}>
             Sign In / Register
           </button>
@@ -568,7 +568,7 @@ export default function SellItem() {
       {/* Desktop Navigation */}
       <header className="home-nav-row detail-desktop-nav">
         <NavLink to="/" replace className="home-nav-brand">
-          <span className="logo-buy">Buy</span><span className="logo-oh">Oh!</span>
+          <span className="logo-infi">Infi</span><span className="logo-buy">Buy</span>
         </NavLink>
         <div className="home-nav-links">
           <NavLink to="/messages" replace className="home-nav-item">
@@ -610,7 +610,7 @@ export default function SellItem() {
           <h1 className="sell-main-title">
             <Sparkles size={24} className="sell-title-icon" /> Post Your Ad
           </h1>
-          <p className="sell-subtitle">Fill in the details below to list your item on BuyOh! marketplace</p>
+          <p className="sell-subtitle">Fill in the details below to list your item on InfiBuy marketplace</p>
         </div>
 
         {/* Progress Stepper */}
@@ -1495,7 +1495,7 @@ export default function SellItem() {
             </div>
             <h2 className="success-title">Your Ad is Live! 🎉</h2>
             <p className="success-subtitle">
-              "{title}" has been published on BuyOh! marketplace. 
+              "{title}" has been published on InfiBuy marketplace. 
               Buyers in {location} and beyond can now discover your listing.
             </p>
 

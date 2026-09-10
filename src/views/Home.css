@@ -26,14 +26,14 @@
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
 }
 .home-nav-brand:hover{ transform: translateY(-2px); filter: drop-shadow(0 4px 8px rgba(59,130,246,0.4)); }
-.logo-buy { 
+.logo-infi { 
   color: #fff;
-  background: linear-gradient(135deg, #fff 0%, #e0e7ff 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
-.logo-oh {
+.logo-buy, .logo-oh {
   background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;

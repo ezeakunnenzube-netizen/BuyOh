@@ -22,9 +22,9 @@ const poppins = Poppins({
 });
 
 export const metadata = {
-  title: 'BuyOh! - Buy & Sell Easily in Nigeria',
+  title: 'InfiBuy - Buy & Sell Easily in Nigeria',
   description: 'Nigeria’s premier online marketplace. Buy, sell, and discover amazing deals on phones, laptops, cars, fashion, property, and everyday goods with verified Nigerian buyers and sellers.',
-  keywords: ['marketplace', 'buy in nigeria', 'sell in nigeria', 'lagos classifieds', 'abuja deals', 'buyoh'],
+  keywords: ['marketplace', 'buy in nigeria', 'sell in nigeria', 'lagos classifieds', 'abuja deals', 'infibuy'],
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' }

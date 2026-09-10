@@ -661,7 +661,7 @@ export default function Home(){
     {/* ── Sticky Desktop Navbar ── */}
     <header className="home-nav-row">
       <a href="/" className="home-nav-brand">
-        <span className="logo-buy">Buy</span><span className="logo-oh">Oh!</span>
+        <span className="logo-infi">Infi</span><span className="logo-buy">Buy</span>
       </a>
       <div className="home-nav-links">
         {user ? (

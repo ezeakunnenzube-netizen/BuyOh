@@ -44,7 +44,7 @@ const INITIAL_NOTIFICATIONS = [
     id: 'notif-004',
     type: 'system',
     title: 'Listing Approved',
-    message: 'Your advert "Apple iPhone 15 Pro Max 256GB" is now live on BuyOh marketplace.',
+    message: 'Your advert "Apple iPhone 15 Pro Max 256GB" is now live on InfiBuy marketplace.',
     time: 'Yesterday',
     unread: false,
     actionLink: '/adverts'
@@ -155,7 +155,7 @@ export default function Notifications() {
       {/* Header bar */}
       <header className="home-nav-row notif-desktop-nav">
         <NavLink to="/" replace className="home-nav-brand">
-          <span className="logo-buy">Buy</span><span className="logo-oh">Oh!</span>
+          <span className="logo-infi">Infi</span><span className="logo-buy">Buy</span>
         </NavLink>
         <div className="home-nav-links">
           <NavLink to="/messages" replace className="home-nav-item">

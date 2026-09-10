@@ -493,7 +493,7 @@ export const saveMyListingsForUser = async (user, listings) => {
           } else if (!updatedRows || updatedRows.length === 0) {
             console.warn('Cloud listings: upsert matched 0 rows — check RLS in Supabase');
           } else {
-            console.log(`[BuyOh] Listings synced to cloud (${sanitizedListings.length} items)`);
+            console.log(`[InfiBuy] Listings synced to cloud (${sanitizedListings.length} items)`);
           }
         } else {
           console.warn('saveMyListingsForUser: no active session after refresh, cloud write skipped');
@@ -783,7 +783,7 @@ export const syncUserDataFromCloud = async (user) => {
           updated_at: new Date().toISOString()
         }, { onConflict: 'id' });
 
-      console.log('[BuyOh] Created missing profile row in Supabase for user', user.id);
+      console.log('[InfiBuy] Created missing profile row in Supabase for user', user.id);
       return;
     }
 
@@ -1062,7 +1062,7 @@ export const initUserRealtimeSync = (user) => {
     )
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') {
-        console.log(`[BuyOh Realtime] Cross-device sync active for user ${user.id}`);
+        console.log(`[InfiBuy Realtime] Cross-device sync active for user ${user.id}`);
       }
     });
 
@@ -1092,7 +1092,7 @@ export const cleanupUserRealtimeSync = (userId) => {
  * initWindowFocusSync(user)
  *
  * Registers window focus + Page Visibility API listeners so data syncs
- * automatically whenever the user switches back to the BuyOh tab or
+ * automatically whenever the user switches back to the InfiBuy tab or
  * unlocks their phone (which triggers a visibilitychange to 'visible').
  *
  * This is critical for mobile: phones suspend background tasks, so

@@ -128,7 +128,7 @@ export default function AvatarModal({ isOpen, onClose, currentAvatar, onAvatarCh
         <div className="avatar-modal-header">
           <div className="header-title-group">
             <h2 className="modal-main-title">Change Profile Picture</h2>
-            <p className="modal-sub-title">Upload a photo to represent your profile on BuyOh marketplace.</p>
+            <p className="modal-sub-title">Upload a photo to represent your profile on InfiBuy marketplace.</p>
           </div>
           <button className="modal-close-btn" onClick={onClose} aria-label="Close modal">
             <X size={18} />
