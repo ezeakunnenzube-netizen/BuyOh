@@ -24,12 +24,10 @@ function FooterContent() {
     return null;
   }
 
-  const handleTabClick = (e, path) => {
-    if (!loading && !user && path !== '/') {
-      e.preventDefault();
-      setIsAuthOpen(true);
-    }
-  };
+  // Hide tabs on mobile when not logged in (same as bigger screens)
+  if (loading || !user) {
+    return null;
+  }
 
   return (
     <nav className="mobile-tab-bar" aria-label="Main navigation">
@@ -42,7 +40,7 @@ function FooterContent() {
         )}
       </NavLink>
 
-      <NavLink to="/messages" className="tab-item" onClick={(e) => handleTabClick(e, '/messages')} replace>
+      <NavLink to="/messages" className="tab-item" replace>
         {({ isActive }) => (
           <>
             <MessageSquareMore size={22} className={`tab-icon ${isActive ? 'tab-icon-active' : ''}`} />
@@ -52,7 +50,7 @@ function FooterContent() {
       </NavLink>
 
       {/* Centre Sell CTA */}
-      <NavLink to="/sell" className="tab-item tab-item-sell" onClick={(e) => handleTabClick(e, '/sell')} replace>
+      <NavLink to="/sell" className="tab-item tab-item-sell" replace>
         {() => (
           <>
             <span className="tab-sell-circle">+</span>
@@ -61,7 +59,7 @@ function FooterContent() {
         )}
       </NavLink>
 
-      <NavLink to="/saved" className="tab-item" onClick={(e) => handleTabClick(e, '/saved')} replace>
+      <NavLink to="/saved" className="tab-item" replace>
         {({ isActive }) => (
           <>
             <Bookmark size={22} className={`tab-icon ${isActive ? 'tab-icon-active' : ''}`} />
@@ -70,7 +68,7 @@ function FooterContent() {
         )}
       </NavLink>
 
-      <NavLink to="/profile" className="tab-item" onClick={(e) => handleTabClick(e, '/profile')} replace>
+      <NavLink to="/profile" className="tab-item" replace>
         {({ isActive }) => (
           <>
             <UserRound size={22} className={`tab-icon ${isActive ? 'tab-icon-active' : ''}`} />

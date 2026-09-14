@@ -19,7 +19,7 @@ export default function MobileSwipeNavigator() {
 
   // 1. Mobile Horizontal Touch Swipe Gesture Handling between Control Panel Tabs
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !user) return;
 
     const handleTouchStart = (e) => {
       if (e.touches.length !== 1) return;
@@ -108,7 +108,7 @@ export default function MobileSwipeNavigator() {
 
   // 2. Control Panel History Trap: Back gestures stop on current control panel page (e.g. Sell stays at Sell)
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !user) return;
 
     // Only trap back gestures on main control panel tab routes
     const isControlPanelTab = CONTROL_PANEL_TABS.includes(pathname);
@@ -133,7 +133,7 @@ export default function MobileSwipeNavigator() {
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [pathname]);
+  }, [pathname, user]);
 
   return null;
 }
