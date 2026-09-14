@@ -849,11 +849,10 @@ export default function Messages() {
   useEffect(() => {
     const paramChatId = searchParams?.get('chatId');
     const prodId = searchParams?.get('productId');
-    const prodName = searchParams?.get('prodName');
-    const prodPrice = searchParams?.get('prodPrice');
-    const prodImg = searchParams?.get('prodImg');
     const sellerId = searchParams?.get('sellerId') || '';
     const sellerName = searchParams?.get('seller') || 'Marketplace Seller';
+    const prodNameParam = searchParams?.get('prodName');
+    const prodPriceParam = searchParams?.get('prodPrice');
 
     if (paramChatId) {
       setActiveChatId(paramChatId);
@@ -864,42 +863,56 @@ export default function Messages() {
       if (existing) {
         setActiveChatId(existing.id);
         setIsMobileDetailOpen(true);
+        router.replace(`/messages?chatId=${existing.id}`);
       } else {
         // Initialize or fetch cloud conversation
         const initChat = async () => {
           try {
+            // Lookup product from general pool to get full details cleanly
+            let poolItem = null;
+            try {
+              const { getGeneralProductPool } = await import('../utils/userSync');
+              const pool = getGeneralProductPool(user);
+              poolItem = pool.find(p => String(p.id) === String(prodId));
+            } catch (e) {}
+
+            const resolvedName = poolItem?.name || prodNameParam || 'Marketplace Item';
+            const resolvedPrice = Number(poolItem?.price || prodPriceParam || 0);
+            const resolvedImage = poolItem?.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400&q=80';
+
             const res = await getOrCreateConversation({
               user,
-              sellerId,
+              sellerId: sellerId || poolItem?.sellerId || poolItem?.userId || '',
               productId: prodId,
-              productDetails: { name: prodName, price: prodPrice, image: prodImg }
+              productDetails: { name: resolvedName, price: resolvedPrice, image: resolvedImage }
             });
 
             if (res.isSelf) {
               setToastMessage('You cannot chat with yourself on your own listing');
               setTimeout(() => setToastMessage(''), 3000);
+              router.replace('/messages');
               return;
             }
 
             const newChatObj = normalizeConversation({
               id: res.conversationId,
               buyer_id: user.id,
-              seller_id: sellerId,
+              seller_id: sellerId || poolItem?.sellerId || poolItem?.userId || '',
               product_id: prodId,
               contact: {
-                name: sellerName,
-                avatar: '',
+                name: sellerName !== 'Marketplace Seller' ? sellerName : (poolItem?.sellerName || 'Marketplace Seller'),
+                avatar: poolItem?.sellerAvatar || '',
                 isOnline: true,
                 verified: true,
-                phone: '+234 800 000 0000',
-                location: 'Nigeria'
+                phone: poolItem?.sellerPhone || poolItem?.phone || '+234 800 000 0000',
+                location: poolItem?.location || 'Nigeria'
               },
               product: {
                 id: prodId,
-                name: prodName || 'Marketplace Item',
-                price: Number(prodPrice) || 0,
-                image: prodImg || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400&q=80',
-                condition: 'Used'
+                name: resolvedName,
+                price: resolvedPrice,
+                image: resolvedImage,
+                condition: poolItem?.condition || 'Used'
               },
               unread_count: 0,
               messages: []
@@ -911,6 +924,7 @@ export default function Messages() {
             });
             setActiveChatId(newChatObj.id);
             setIsMobileDetailOpen(true);
+            router.replace(`/messages?chatId=${newChatObj.id}`);
           } catch (e) {
             console.error('Error creating chat:', e);
           }

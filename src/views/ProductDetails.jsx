@@ -1221,7 +1221,7 @@ export default function ProductDetails({ params: serverParams }) {
                 
                 {user ? (
                   <NavLink 
-                    to={`/messages?productId=${product.id}&sellerId=${product.sellerId || product.userId || ''}&seller=${encodeURIComponent(product.sellerName || '')}&prodName=${encodeURIComponent(product.name)}&prodPrice=${product.price}&prodImg=${encodeURIComponent(product.image)}`}
+                    to={`/messages?productId=${product.id}&sellerId=${product.sellerId || product.userId || ''}&seller=${encodeURIComponent(product.sellerName || '')}&prodName=${encodeURIComponent(product.name || '')}&prodPrice=${product.price || 0}`}
                     className="start-chat-link-btn"
                   >
                     <MessageSquareMore size={16} /> Start chat
