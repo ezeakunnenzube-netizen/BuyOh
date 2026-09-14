@@ -1476,7 +1476,7 @@ export default function Home(){
                   </span>
                   {user ? (
                     <NavLink 
-                      to={`/messages?productId=${product.id}&prodName=${encodeURIComponent(product.name)}&prodPrice=${product.price}&prodImg=${encodeURIComponent(product.image)}`}
+                      to={`/messages?productId=${product.id}&sellerId=${product.sellerId || product.userId || ''}&seller=${encodeURIComponent(product.sellerName || '')}&prodName=${encodeURIComponent(product.name)}&prodPrice=${product.price}&prodImg=${encodeURIComponent(product.image)}`}
                       className="product-chat-btn"
                       title="Chat with Seller"
                     >

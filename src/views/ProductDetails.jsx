@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { getSavedItemsForUser, saveItemsForUser, getAllPublicListings, getGeneralProductPool, getMyListingsForUser, saveMyListingsForUser } from '../utils/userSync';
 import { isConditionApplicable, shouldShowConditionBadge } from '../utils/productUtils';
+import { getOrCreateConversation, sendMessage as sendCloudMessage } from '../services/chatService';
 import './ProductDetails.css';
 
 export default function ProductDetails({ params: serverParams }) {
@@ -445,13 +446,32 @@ export default function ProductDetails({ params: serverParams }) {
     setTimeout(() => setIsCopied(false), 2500);
   };
 
-  const handleRequestCallbackSubmit = (e) => {
+  const handleRequestCallbackSubmit = async (e) => {
     e.preventDefault();
     if (!callbackPhone.trim()) {
       showToast('Please enter your phone number');
       return;
     }
+
     try {
+      const targetSellerId = product.sellerId || product.userId || 'platform-seller';
+      if (user && !isUserSeller) {
+        const convRes = await getOrCreateConversation({
+          user,
+          sellerId: targetSellerId,
+          productId: product.id,
+          productDetails: product
+        });
+
+        await sendCloudMessage({
+          conversationId: convRes.conversationId,
+          senderId: user.id,
+          recipientId: targetSellerId,
+          text: `📞 Callback Request: Please call me back at ${callbackPhone} (Preferred time: ${callbackTime}). ${callbackNote ? `Note: ${callbackNote}` : ''}`,
+          productInfo: product
+        });
+      }
+
       const notifications = JSON.parse(localStorage.getItem('buyoh_notifications_v1')) || [];
       const newNotif = {
         id: `notif-${Date.now()}`,
@@ -512,44 +532,52 @@ export default function ProductDetails({ params: serverParams }) {
     showToast('Report submitted. Thank you for keeping InfiBuy safe!');
   };
 
-  const handleMakeOffer = (e) => {
+  const handleMakeOffer = async (e) => {
     e.preventDefault();
     if (!user) { setIsAuthOpen(true); return; }
     if (!offerPrice) return;
-    try {
-      const messagesKey = 'buyoh_messages_v1';
-      let chats = JSON.parse(localStorage.getItem(messagesKey)) || [];
-      let chat = chats.find(c => c.productId === product.id);
-      const newMsg = {
-        id: `msg-${Date.now()}`,
-        sender: 'me',
-        text: `Hello! I would like to make an offer of ${formatPrice(offerPrice)} for your "${product.name}". Is it negotiable?`,
-        timestamp: Date.now(),
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        status: 'read'
-      };
-      if (chat) {
-        chat.messages.push(newMsg);
-      } else {
-        chat = {
-          id: `chat-${Date.now()}`,
-          sellerName: "PHONEMART",
-          sellerAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80",
-          productId: product.id,
-          productName: product.name,
-          productPrice: product.price,
-          productImage: product.image,
-          messages: [newMsg],
-          isMuted: false,
-          unreadCount: 0
-        };
-        chats.push(chat);
-      }
-      localStorage.setItem(messagesKey, JSON.stringify(chats));
+    if (isUserSeller) {
+      showToast('You cannot make an offer on your own listing');
       setShowOfferModal(false);
-      showToast('Offer sent! Redirecting to chat...');
-      setTimeout(() => navigate(`/messages?productId=${product.id}`), 1200);
-    } catch (err) { console.error(err); }
+      return;
+    }
+
+    try {
+      showToast('Sending your offer to seller...');
+      const targetSellerId = product.sellerId || product.userId || 'platform-seller';
+      const convRes = await getOrCreateConversation({
+        user,
+        sellerId: targetSellerId,
+        productId: product.id,
+        productDetails: product
+      });
+
+      if (convRes.isSelf) {
+        showToast('You cannot make an offer on your own listing');
+        setShowOfferModal(false);
+        return;
+      }
+
+      await sendCloudMessage({
+        conversationId: convRes.conversationId,
+        senderId: user.id,
+        recipientId: targetSellerId,
+        text: `🏷️ Make an Offer: ₦${Number(offerPrice).toLocaleString('en-NG')}`,
+        isOffer: true,
+        offerAmount: Number(offerPrice),
+        productInfo: product
+      });
+
+      setShowOfferModal(false);
+      showToast('Offer sent! Opening conversation...');
+      setTimeout(() => {
+        navigate(`/messages?chatId=${convRes.conversationId}&productId=${product.id}`);
+      }, 900);
+    } catch (err) {
+      console.error(err);
+      setShowOfferModal(false);
+      setTimeout(() => navigate(`/messages?productId=${product.id}`), 800);
+    }
   };
 
   const getSpecs = () => {
@@ -1193,7 +1221,7 @@ export default function ProductDetails({ params: serverParams }) {
                 
                 {user ? (
                   <NavLink 
-                    to={`/messages?productId=${product.id}&prodName=${encodeURIComponent(product.name)}&prodPrice=${product.price}&prodImg=${encodeURIComponent(product.image)}`}
+                    to={`/messages?productId=${product.id}&sellerId=${product.sellerId || product.userId || ''}&seller=${encodeURIComponent(product.sellerName || '')}&prodName=${encodeURIComponent(product.name)}&prodPrice=${product.price}&prodImg=${encodeURIComponent(product.image)}`}
                     className="start-chat-link-btn"
                   >
                     <MessageSquareMore size={16} /> Start chat
