@@ -2654,6 +2654,657 @@ body {
   text-decoration: none;
 }
 
+/* ── Live Message Delivery & Read Status Ticks ── */
+.msg-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.status-icon {
+  display: inline-block;
+  vertical-align: middle;
+  transition: color 0.2s ease;
+}
+
+.status-icon.status-sent {
+  color: #94a3b8; /* single subtle grey tick */
+}
+
+.status-icon.status-delivered {
+  color: #94a3b8; /* double subtle grey tick */
+}
+
+.status-icon.status-read {
+  color: #00b53f !important; /* double vibrant green tick */
+}
+
+/* ── JIJI SELLER PROFILE MODAL ── */
+.jiji-profile-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  animation: jijiFadeIn 0.2s ease-out;
+}
+
+@keyframes jijiFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.jiji-profile-container {
+  background: #f1f5f9;
+  width: 100%;
+  max-width: 520px;
+  height: 92vh;
+  max-height: 840px;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  position: relative;
+  animation: jijiSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes jijiSlideUp {
+  from { transform: translateY(20px); opacity: 0.8; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Jiji Green Top Nav Bar */
+.jiji-nav-header {
+  background: #00b53f;
+  height: 56px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.jiji-back-btn {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  transition: background 0.15s ease;
+}
+
+.jiji-back-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.jiji-nav-search-wrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.jiji-nav-search-input {
+  width: 100%;
+  height: 38px;
+  background: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 0 32px 0 14px;
+  font-size: 13px;
+  color: #0f172a;
+  outline: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.jiji-nav-search-input::placeholder {
+  color: #94a3b8;
+}
+
+.jiji-clear-search-btn {
+  position: absolute;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+}
+
+.jiji-advert-count-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+/* Scroll Area */
+.jiji-modal-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scrollbar-width: thin;
+}
+
+/* Seller Identity Card */
+.jiji-seller-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.jiji-seller-top-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.jiji-hex-avatar-wrap {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e2fbe8;
+  border: 2px solid #00b53f;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.jiji-hex-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.jiji-seller-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.jiji-seller-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  text-transform: uppercase;
+  margin: 0 0 4px 0;
+  letter-spacing: 0.2px;
+}
+
+.jiji-seller-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.jiji-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.jiji-badge-verified {
+  color: #0284c7;
+  background: #e0f2fe;
+}
+
+.jiji-last-seen-row {
+  margin-top: 2px;
+}
+
+.jiji-last-seen-pill {
+  display: inline-block;
+  font-size: 11px;
+  color: #64748b;
+  background: #f8fafc;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.jiji-last-seen-pill.is-online {
+  color: #00b53f;
+  background: #dcfce7;
+  font-weight: 700;
+}
+
+/* Feedback Row */
+.jiji-feedback-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  margin-top: 10px;
+  border-top: 1px solid #f1f5f9;
+  cursor: pointer;
+}
+
+.jiji-feedback-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.jiji-feedback-icon {
+  color: #64748b;
+}
+
+.jiji-feedback-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.jiji-rating-stars {
+  color: #f59e0b;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+.jiji-feedback-arrow {
+  color: #94a3b8;
+}
+
+/* Contact Button */
+.jiji-show-contact-btn {
+  width: 100%;
+  height: 44px;
+  background: #00b53f;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: background 0.15s ease;
+}
+
+.jiji-show-contact-btn:hover {
+  background: #009935;
+}
+
+.jiji-revealed-contact-box {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jiji-revealed-phone-number {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #15803d;
+}
+
+.jiji-revealed-phone-number a {
+  color: #15803d;
+  text-decoration: none;
+}
+
+.jiji-revealed-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.jiji-call-link {
+  flex: 1;
+  padding: 8px;
+  background: #00b53f;
+  color: #ffffff;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.jiji-whatsapp-link {
+  flex: 1;
+  padding: 8px;
+  background: #25d366;
+  color: #ffffff;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+/* Filters & Sorting Toolbar */
+.jiji-filters-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.jiji-filter-chips-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.jiji-filter-chips-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.jiji-filter-chip {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.jiji-filter-chip:hover {
+  border-color: #00b53f;
+}
+
+.jiji-filter-chip.active {
+  background: #00b53f;
+  border-color: #00b53f;
+  color: #ffffff;
+}
+
+.jiji-sort-and-view {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.jiji-sort-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.jiji-view-toggle-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: #334155;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Adverts Grid */
+.jiji-adverts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.jiji-adverts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jiji-empty-adverts {
+  background: #ffffff;
+  padding: 28px 16px;
+  border-radius: 10px;
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.jiji-ad-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.jiji-ad-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.jiji-ad-img-wrapper {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.jiji-ad-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.jiji-ad-card:hover .jiji-ad-img {
+  transform: scale(1.03);
+}
+
+.jiji-ad-vip-tag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: #f97316;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-bottom-right-radius: 6px;
+  text-transform: uppercase;
+}
+
+.jiji-ad-img-badges {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.jiji-ad-subbadge {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(2px);
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #0369a1;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.jiji-ad-content {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.jiji-ad-price {
+  font-size: 15px;
+  font-weight: 800;
+  color: #00b53f;
+  margin-bottom: 2px;
+}
+
+.jiji-ad-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.35;
+  margin: 0 0 4px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.jiji-ad-location {
+  font-size: 11px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+
+.jiji-ad-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+}
+
+.jiji-ad-condition-pill {
+  font-size: 10px;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.jiji-ad-crown-icon {
+  color: #f59e0b;
+}
+
+/* Follow Card CTA */
+.jiji-follow-cta-card {
+  background: #ffffff;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  padding: 14px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.jiji-follow-cta-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.jiji-follow-submit-btn {
+  background: #f97316;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 24px;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.jiji-follow-submit-btn:hover {
+  background: #ea580c;
+}
+
+.jiji-follow-submit-btn.following {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.jiji-follow-count-subtext {
+  font-size: 11px;
+  color: #64748b;
+}
+
+@media (max-width: 640px) {
+  .jiji-profile-backdrop {
+    padding: 0;
+  }
+  .jiji-profile-container {
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  .jiji-ad-img-wrapper {
+    height: 120px;
+  }
+}
+
+
 
 
 

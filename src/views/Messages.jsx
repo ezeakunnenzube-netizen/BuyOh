@@ -5,13 +5,15 @@ import NavLink from '../components/NavLink';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   Search, MessageSquareMore, BellRing, PanelTop, UserRound, Bookmark, 
-  Send, Phone, ShieldCheck, MoreVertical, ArrowLeft, CheckCheck, 
+  Send, Phone, ShieldCheck, MoreVertical, ArrowLeft, CheckCheck, Check,
   Tag, Image as ImageIcon, Sparkles, Filter, AlertCircle, Circle,
   ChevronRight, ExternalLink, ChevronUp, ChevronDown, X, User, Flag, Trash2,
   Smile, Paperclip, Mic, Square, Play, Pause, Volume2, FileText,
-  BellOff, Bell, Video, UserPlus, UserMinus
+  BellOff, Bell, Video, UserPlus, UserMinus, Star, SlidersHorizontal,
+  Grid, List, Crown, MessageCircle, MapPin
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabaseClient';
 import { getFollowedSellersForUser, saveFollowedSellersForUser } from '../utils/userSync';
 import { 
   fetchUserConversations, 
@@ -19,6 +21,10 @@ import {
   sendMessage as sendCloudMessage, 
   markConversationAsRead, 
   subscribeToRealtimeChat, 
+  broadcastMessageDelivered,
+  formatLastSeen,
+  generateUUID,
+  toValidUUID,
   normalizeConversation 
 } from '../services/chatService';
 import './Messages.css';
@@ -403,6 +409,7 @@ export default function Messages() {
   const [conversations, setConversations] = useState([]);
   const [isLoadingConvs, setIsLoadingConvs] = useState(true);
   const [activeChatId, setActiveChatId] = useState(null);
+  const [onlineUserIds, setOnlineUserIds] = useState(new Set());
 
   // Load authoritative real conversations for current user from Supabase
   useEffect(() => {
@@ -435,43 +442,110 @@ export default function Messages() {
 
     loadConversations();
 
-    // Subscribe to realtime incoming messages via Supabase
+    // Subscribe to realtime incoming messages, status updates & presence via Supabase
     let unsubscribe = () => {};
     if (user?.id) {
-      unsubscribe = subscribeToRealtimeChat(user.id, (newMsg) => {
-        setConversations(prev => {
-          return prev.map(c => {
-            if (c.id === newMsg.conversation_id) {
-              const formatted = {
-                id: newMsg.id,
-                sender: 'them',
-                sender_id: newMsg.sender_id,
-                text: newMsg.text || '',
-                isOffer: Boolean(newMsg.is_offer),
-                offerAmount: Number(newMsg.offer_amount || 0),
-                audioUrl: newMsg.audio_url || null,
-                duration: newMsg.duration || null,
-                time: newMsg.created_at ? new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
-                timestamp: newMsg.created_at ? new Date(newMsg.created_at).getTime() : Date.now(),
-                status: 'unread'
-              };
-
-              // Play notification chime
-              const pushPref = typeof window !== 'undefined' ? localStorage.getItem('buyoh_pref_push') : null;
-              const isPushActive = pushPref !== null ? JSON.parse(pushPref) : true;
-              if (!c.isMuted && isPushActive) {
-                playAudioTone(750, 600, 0.15);
+      unsubscribe = subscribeToRealtimeChat(user.id, {
+        onPresenceChange: (onlineIds) => {
+          setOnlineUserIds(new Set(onlineIds));
+          setConversations(prev => prev.map(c => {
+            const cId = c.contact?.id;
+            const isOnline = cId ? onlineIds.includes(cId) : false;
+            return {
+              ...c,
+              contact: {
+                ...c.contact,
+                isOnline,
+                lastSeen: formatLastSeen(c.contact?.updated_at, isOnline)
               }
+            };
+          }));
+        },
+        onNewMessage: (newMsg) => {
+          const formatted = {
+            id: newMsg.id || generateUUID(),
+            sender: 'them',
+            sender_id: newMsg.sender_id,
+            text: newMsg.text || '',
+            isOffer: Boolean(newMsg.is_offer),
+            offerAmount: Number(newMsg.offer_amount || 0),
+            audioUrl: newMsg.audio_url || null,
+            duration: newMsg.duration || null,
+            image: newMsg.image || null,
+            time: newMsg.created_at ? new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
+            timestamp: newMsg.created_at ? new Date(newMsg.created_at).getTime() : Date.now(),
+            status: activeChatId === newMsg.conversation_id ? 'read' : 'delivered'
+          };
 
-              return {
-                ...c,
-                messages: [...(c.messages || []), formatted],
-                unreadCount: c.id === activeChatId ? (c.unreadCount || 0) : (c.unreadCount || 0) + 1
-              };
+          // Acknowledge delivery back to sender
+          if (newMsg.conversation_id && newMsg.sender_id) {
+            broadcastMessageDelivered(newMsg.conversation_id, newMsg.id, newMsg.sender_id);
+          }
+
+          setConversations(prev => {
+            const convExists = prev.some(c => 
+              c.id === newMsg.conversation_id || 
+              (newMsg.conversation_id && toValidUUID(c.id) === toValidUUID(newMsg.conversation_id))
+            );
+
+            if (!convExists) {
+              // Reload conversations so newly created conversation appears immediately
+              fetchUserConversations(user).then(fresh => {
+                if (fresh && fresh.length > 0) setConversations(fresh);
+              });
+              return prev;
             }
-            return c;
+
+            return prev.map(c => {
+              if (c.id === newMsg.conversation_id || toValidUUID(c.id) === toValidUUID(newMsg.conversation_id)) {
+                if (c.messages?.some(m => m.id === formatted.id)) return c;
+
+                const pushPref = typeof window !== 'undefined' ? localStorage.getItem('buyoh_pref_push') : null;
+                const isPushActive = pushPref !== null ? JSON.parse(pushPref) : true;
+                if (!c.isMuted && isPushActive) {
+                  playAudioTone(750, 600, 0.15);
+                }
+
+                const isCurrentActive = c.id === activeChatId;
+                if (isCurrentActive) {
+                  markConversationAsRead(c.id, user.id);
+                }
+
+                return {
+                  ...c,
+                  messages: [...(c.messages || []), formatted],
+                  unreadCount: isCurrentActive ? 0 : (c.unreadCount || 0) + 1
+                };
+              }
+              return c;
+            });
           });
-        });
+        },
+        onStatusChange: ({ messageId, conversationId, originalConversationId, status }) => {
+          setConversations(prev => prev.map(c => {
+            const matchesConv = 
+              c.id === conversationId || 
+              c.id === originalConversationId ||
+              (conversationId && toValidUUID(c.id) === toValidUUID(conversationId));
+
+            if (!matchesConv) return c;
+
+            return {
+              ...c,
+              messages: (c.messages || []).map(m => {
+                if (status === 'read' && m.sender === 'me') {
+                  return { ...m, status: 'read' };
+                }
+                if (status === 'delivered' && m.sender === 'me' && m.status !== 'read') {
+                  if (!messageId || m.id === messageId) {
+                    return { ...m, status: 'delivered' };
+                  }
+                }
+                return m;
+              })
+            };
+          }));
+        }
       });
     }
 
@@ -479,7 +553,7 @@ export default function Messages() {
       isMounted = false;
       unsubscribe();
     };
-  }, [user?.id]);
+  }, [user?.id, activeChatId]);
 
   const [filterTab, setFilterTab] = useState('all'); // all, unread, buying, selling
   const [searchQuery, setSearchQuery] = useState('');
@@ -496,9 +570,15 @@ export default function Messages() {
   const [headerExpanded, setHeaderExpanded] = useState(false);
   const [showSafetyAlert, setShowSafetyAlert] = useState(true);
 
-  // Dropdown 3-dots menu & Profile modal state
+  // Dropdown 3-dots menu & Jiji Profile modal state
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [sellerAdverts, setSellerAdverts] = useState([]);
+  const [sellerSearchQuery, setSellerSearchQuery] = useState('');
+  const [showSellerContact, setShowSellerContact] = useState(false);
+  const [sellerFilterCondition, setSellerFilterCondition] = useState('all');
+  const [sellerSortOrder, setSellerSortOrder] = useState('newest');
+  const [isSellerGridView, setIsSellerGridView] = useState(true);
   const [toastMessage, setToastMessage] = useState('');
   const menuRef = useRef(null);
 
@@ -1047,6 +1127,75 @@ export default function Messages() {
     showToast('Deleted');
   };
 
+  // Fetch seller adverts for Jiji-style profile page
+  useEffect(() => {
+    if (!showProfileModal || !activeChat?.contact) return;
+    setShowSellerContact(false);
+    setSellerSearchQuery('');
+
+    const fetchSellerData = async () => {
+      const counterpartId = activeChat.contact.id;
+      let listings = [];
+      if (counterpartId) {
+        try {
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('my_listings, phone, whatsapp, location, verified, rating, created_at')
+            .eq('id', counterpartId)
+            .single();
+
+          if (prof?.my_listings && Array.isArray(prof.my_listings) && prof.my_listings.length > 0) {
+            listings = prof.my_listings;
+          }
+        } catch (e) {}
+      }
+
+      if (listings.length === 0) {
+        try {
+          const { getGeneralProductPool } = await import('../utils/userSync');
+          const pool = getGeneralProductPool(user);
+          const matched = pool.filter(p => 
+            (counterpartId && String(p.sellerId) === String(counterpartId)) ||
+            (activeChat.contact.name && String(p.sellerName).toLowerCase() === String(activeChat.contact.name).toLowerCase())
+          );
+          if (matched.length > 0) {
+            listings = matched;
+          }
+        } catch (e) {}
+      }
+
+      if (listings.length === 0 && activeChat.product?.name) {
+        listings = [activeChat.product];
+      }
+
+      setSellerAdverts(listings);
+    };
+
+    fetchSellerData();
+  }, [showProfileModal, activeChat]);
+
+  // Memoized filtered adverts for Jiji seller modal
+  const filteredSellerAdverts = React.useMemo(() => {
+    let list = [...sellerAdverts];
+    const q = sellerSearchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter(item => 
+        (item.name || item.title || '').toLowerCase().includes(q) ||
+        (item.description || '').toLowerCase().includes(q) ||
+        (item.condition || '').toLowerCase().includes(q)
+      );
+    }
+    if (sellerFilterCondition !== 'all') {
+      list = list.filter(item => (item.condition || '').toLowerCase().includes(sellerFilterCondition.toLowerCase()));
+    }
+    if (sellerSortOrder === 'price_low') {
+      list.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+    } else if (sellerSortOrder === 'price_high') {
+      list.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+    }
+    return list;
+  }, [sellerAdverts, sellerSearchQuery, sellerFilterCondition, sellerSortOrder]);
+
   // Filtering conversations with safe optional chaining
   const filteredConversations = (conversations || []).filter(c => {
     if (!c) return false;
@@ -1072,12 +1221,16 @@ export default function Messages() {
     if (!text && !isOffer && !selectedAttachment) return;
     if (!activeChat) return;
 
+    const counterpartId = activeChat.contact?.id || (activeChat.buyer_id === user?.id ? activeChat.seller_id : activeChat.buyer_id);
+    const isCounterpartOnline = counterpartId ? onlineUserIds.has(counterpartId) : false;
+
     const nowTs = Date.now();
     const timeNow = new Date(nowTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const messageText = isOffer ? `🏷️ Proposed Offer: ₦${Number(offerVal).toLocaleString('en-NG')}` : text;
+    const initialStatus = isCounterpartOnline ? 'delivered' : 'sent';
 
     const newMsg = {
-      id: `msg-${nowTs}`,
+      id: generateUUID(),
       sender: 'me',
       sender_id: user?.id,
       text: messageText,
@@ -1086,7 +1239,7 @@ export default function Messages() {
       image: selectedAttachment ? selectedAttachment.previewUrl : null,
       timestamp: nowTs,
       time: timeNow,
-      status: 'sent'
+      status: initialStatus
     };
 
     // Optimistic UI update
@@ -1106,9 +1259,8 @@ export default function Messages() {
     setSelectedAttachment(null);
     setShowEmojiPicker(false);
 
-    // Persist to Supabase
+    // Persist to Supabase and Realtime broadcast
     if (user?.id) {
-      const counterpartId = activeChat.contact?.id || (activeChat.buyer_id === user.id ? activeChat.seller_id : activeChat.buyer_id);
       try {
         await sendCloudMessage({
           conversationId: activeChat.id,
@@ -1117,7 +1269,8 @@ export default function Messages() {
           text: messageText,
           isOffer,
           offerAmount: offerVal,
-          productInfo: activeChat.product
+          productInfo: activeChat.product,
+          isRecipientOnline: isCounterpartOnline
         });
       } catch (err) {
         console.error('Error sending message to cloud:', err);
@@ -1733,7 +1886,15 @@ export default function Messages() {
                             <div className="message-meta">
                               <span className="msg-time">{msg.time}</span>
                               {isMe && (
-                                <CheckCheck size={14} className={`status-icon ${msg.status === 'read' ? 'status-read' : ''}`} />
+                                <span className="msg-status-indicator" title={msg.status === 'read' ? 'Read' : msg.status === 'delivered' ? 'Delivered' : 'Sent'}>
+                                  {msg.status === 'read' ? (
+                                    <CheckCheck size={14} className="status-icon status-read" />
+                                  ) : msg.status === 'delivered' ? (
+                                    <CheckCheck size={14} className="status-icon status-delivered" />
+                                  ) : (
+                                    <Check size={14} className="status-icon status-sent" />
+                                  )}
+                                </span>
                               )}
                             </div>
                           </div>
@@ -1980,58 +2141,266 @@ export default function Messages() {
 
 
 
-      {/* ── SELLER PROFILE MODAL ── */}
+      {/* ── JIJI SELLER PROFILE PAGE MODAL ── */}
       {showProfileModal && activeChat && (
-        <div className="modal-backdrop" onClick={() => setShowProfileModal(false)}>
-          <div className="profile-modal-card" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Seller Profile</h3>
-              <button className="close-modal-btn" onClick={() => setShowProfileModal(false)}>✕</button>
-            </div>
-            <div className="modal-body profile-modal-body">
-              <div className="profile-modal-avatar-container">
-                {renderContactAvatar(activeChat?.contact?.avatar, activeChat?.contact?.name, "profile-large-avatar")}
-                {activeChat?.contact?.isOnline && <span className="profile-online-badge" />}
-              </div>
-              <h3 className="profile-modal-name">{activeChat?.contact?.name || 'User'}</h3>
-              {activeChat?.contact?.verified && <span className="profile-verified-tag">✓ Verified Seller</span>}
-              <p className="profile-modal-location">📍 {activeChat?.contact?.location || 'Nigeria'}</p>
-              <p className="profile-modal-phone">📞 {activeChat?.contact?.phone || '+234 800 000 0000'}</p>
-
-              {/* Follower Stats */}
-              <div className="profile-follower-stats">
-                <div className="stat-box">
-                  <span className="stat-val">{isFollowingSeller(activeChat.contact.name) ? '12.4K' : '12.3K'}</span>
-                  <span className="stat-label">Followers</span>
-                </div>
-                <div className="stat-box">
-                  <span className="stat-val">4.9 ★</span>
-                  <span className="stat-label">Rating</span>
-                </div>
-                <div className="stat-box">
-                  <span className="stat-val">98%</span>
-                  <span className="stat-label">Reply Rate</span>
-                </div>
-              </div>
-
-              {/* Follow / Unfollow CTA */}
+        <div className="jiji-profile-backdrop" onClick={() => setShowProfileModal(false)}>
+          <div className="jiji-profile-container" onClick={e => e.stopPropagation()}>
+            
+            {/* Top Navigation Bar in Jiji Green (#00b53f) */}
+            <div className="jiji-nav-header">
               <button 
-                className={`profile-follow-btn ${isFollowingSeller(activeChat.contact.name) ? 'btn-following' : 'btn-follow'}`}
-                onClick={() => toggleFollowSeller(activeChat.contact.name)}
+                type="button"
+                className="jiji-back-btn" 
+                onClick={() => setShowProfileModal(false)}
+                title="Back to conversation"
               >
-                {isFollowingSeller(activeChat.contact.name) ? (
-                  <>
-                    <UserMinus size={16} /> Unfollow
-                  </>
-                ) : (
-                  <>
-                    <UserPlus size={16} /> Follow
-                  </>
-                )}
+                <ArrowLeft size={22} />
               </button>
+
+              <div className="jiji-nav-search-wrap">
+                <input 
+                  type="text"
+                  placeholder={`Search in adverts of ${activeChat.contact?.name || 'Seller'}`}
+                  value={sellerSearchQuery}
+                  onChange={e => setSellerSearchQuery(e.target.value)}
+                  className="jiji-nav-search-input"
+                />
+                {sellerSearchQuery && (
+                  <button 
+                    type="button" 
+                    className="jiji-clear-search-btn"
+                    onClick={() => setSellerSearchQuery('')}
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+
+              <div className="jiji-advert-count-badge" title="Total active adverts">
+                <span>{filteredSellerAdverts.length}</span>
+                <Tag size={15} />
+              </div>
             </div>
-            <div className="modal-footer">
-              <button className="submit-offer-btn" onClick={() => setShowProfileModal(false)}>Close</button>
+
+            {/* Scrollable Content */}
+            <div className="jiji-modal-scroll-area">
+              
+              {/* Seller Identity Card */}
+              <div className="jiji-seller-card">
+                <div className="jiji-seller-top-row">
+                  {/* Hexagonal green bordered avatar */}
+                  <div className="jiji-hex-avatar-wrap">
+                    {renderContactAvatar(activeChat.contact?.avatar, activeChat.contact?.name, "jiji-hex-avatar")}
+                  </div>
+
+                  <div className="jiji-seller-details">
+                    <h2 className="jiji-seller-name">{activeChat.contact?.name || 'Seller'}</h2>
+                    
+                    <div className="jiji-seller-badges-row">
+                      <span className="jiji-badge-pill">
+                        <User size={13} />
+                        {activeChat.contact?.memberSince || '5+ years on BuyOh'}
+                      </span>
+                      {activeChat.contact?.verified && (
+                        <span className="jiji-badge-pill jiji-badge-verified">
+                          <ShieldCheck size={13} />
+                          Verified ID
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="jiji-last-seen-row">
+                      <span className={`jiji-last-seen-pill ${(onlineUserIds.has(activeChat.contact?.id) || activeChat.contact?.isOnline) ? 'is-online' : ''}`}>
+                        {(onlineUserIds.has(activeChat.contact?.id) || activeChat.contact?.isOnline) ? '● Online now' : (activeChat.contact?.lastSeen || 'Last seen recently')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Feedback Row */}
+                <div className="jiji-feedback-row">
+                  <div className="jiji-feedback-left">
+                    <MessageCircle size={18} className="jiji-feedback-icon" />
+                    <span className="jiji-feedback-text">Feedback ({Math.max(5, (activeChat.contact?.rating ? Math.round(activeChat.contact.rating * 2) : 5))})</span>
+                    <span className="jiji-rating-stars">★★★★★</span>
+                  </div>
+                  <ChevronRight size={18} className="jiji-feedback-arrow" />
+                </div>
+
+                {/* Show Contact CTA Button */}
+                {!showSellerContact ? (
+                  <button 
+                    type="button" 
+                    className="jiji-show-contact-btn"
+                    onClick={() => setShowSellerContact(true)}
+                  >
+                    <Phone size={18} />
+                    <span>Show contact</span>
+                  </button>
+                ) : (
+                  <div className="jiji-revealed-contact-box">
+                    <div className="jiji-revealed-phone-number">
+                      <Phone size={18} />
+                      <a href={`tel:${activeChat.contact?.phone || '+234 800 000 0000'}`}>
+                        {activeChat.contact?.phone || '+234 800 000 0000'}
+                      </a>
+                    </div>
+                    <div className="jiji-revealed-actions">
+                      <a 
+                        href={`tel:${activeChat.contact?.phone || '+234 800 000 0000'}`} 
+                        className="jiji-call-link"
+                      >
+                        Call Now
+                      </a>
+                      {(activeChat.contact?.whatsapp || activeChat.contact?.phone) && (
+                        <a 
+                          href={`https://wa.me/${(activeChat.contact?.whatsapp || activeChat.contact?.phone).replace(/[^0-9]/g, '')}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="jiji-whatsapp-link"
+                        >
+                          WhatsApp
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Filters and Sorting Toolbar */}
+              <div className="jiji-filters-toolbar">
+                <div className="jiji-filter-chips-scroll">
+                  <button 
+                    type="button" 
+                    className={`jiji-filter-chip ${sellerFilterCondition === 'all' ? 'active' : ''}`}
+                    onClick={() => setSellerFilterCondition('all')}
+                  >
+                    All filters ▾
+                  </button>
+                  <button 
+                    type="button" 
+                    className={`jiji-filter-chip ${sellerSortOrder !== 'newest' ? 'active' : ''}`}
+                    onClick={() => setSellerSortOrder(prev => prev === 'price_low' ? 'price_high' : prev === 'price_high' ? 'newest' : 'price_low')}
+                  >
+                    Price, ₦ {sellerSortOrder === 'price_low' ? '↑' : sellerSortOrder === 'price_high' ? '↓' : '▾'}
+                  </button>
+                  <button 
+                    type="button" 
+                    className={`jiji-filter-chip ${sellerFilterCondition === 'brand new' ? 'active' : ''}`}
+                    onClick={() => setSellerFilterCondition(prev => prev === 'brand new' ? 'all' : 'brand new')}
+                  >
+                    Brand New
+                  </button>
+                  <button 
+                    type="button" 
+                    className={`jiji-filter-chip ${sellerFilterCondition === 'used' ? 'active' : ''}`}
+                    onClick={() => setSellerFilterCondition(prev => prev === 'used' ? 'all' : 'used')}
+                  >
+                    Condition ▾
+                  </button>
+                </div>
+
+                <div className="jiji-sort-and-view">
+                  <button 
+                    type="button" 
+                    className="jiji-sort-btn"
+                    onClick={() => setSellerSortOrder(prev => prev === 'newest' ? 'price_low' : 'newest')}
+                  >
+                    <SlidersHorizontal size={15} />
+                    <span>Sort ▾</span>
+                  </button>
+                  <button 
+                    type="button" 
+                    className="jiji-view-toggle-btn"
+                    onClick={() => setIsSellerGridView(prev => !prev)}
+                    title={isSellerGridView ? 'List view' : 'Grid view'}
+                  >
+                    {isSellerGridView ? <List size={16} /> : <Grid size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Adverts Grid / List */}
+              <div className={isSellerGridView ? "jiji-adverts-grid" : "jiji-adverts-list"}>
+                {filteredSellerAdverts.length === 0 ? (
+                  <div className="jiji-empty-adverts">
+                    <p>No adverts matching your search.</p>
+                  </div>
+                ) : (
+                  filteredSellerAdverts.map((ad, idx) => {
+                    const adImg = ad.image || (Array.isArray(ad.images) ? ad.images[0] : null) || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400&q=80';
+                    const adPrice = Number(ad.price || 0);
+                    const adTitle = ad.name || ad.title || 'Marketplace Item';
+                    const adLocation = ad.location || activeChat.contact?.location || 'Lagos, Nigeria';
+                    const adCondition = ad.condition || 'Used';
+
+                    return (
+                      <div 
+                        key={ad.id || idx} 
+                        className="jiji-ad-card"
+                        onClick={() => {
+                          if (ad.id) {
+                            setShowProfileModal(false);
+                            router.push(`/product/${ad.id}`);
+                          }
+                        }}
+                      >
+                        <div className="jiji-ad-img-wrapper">
+                          <img src={adImg} alt={adTitle} className="jiji-ad-img" loading="lazy" />
+                          <span className="jiji-ad-vip-tag">VIP</span>
+                          
+                          <div className="jiji-ad-img-badges">
+                            <span className="jiji-ad-subbadge">
+                              <ShieldCheck size={11} />
+                              Verified ID
+                            </span>
+                            <span className="jiji-ad-subbadge">
+                              <User size={11} />
+                              5+ YEARS ON BUYOH
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="jiji-ad-content">
+                          <span className="jiji-ad-price">
+                            ₦ {adPrice.toLocaleString('en-NG')}
+                          </span>
+                          <h4 className="jiji-ad-title" title={adTitle}>
+                            {adTitle}
+                          </h4>
+                          <span className="jiji-ad-location">
+                            <MapPin size={13} />
+                            {adLocation}
+                          </span>
+                          <div className="jiji-ad-footer-row">
+                            <span className="jiji-ad-condition-pill">{adCondition}</span>
+                            <span className="jiji-ad-crown-icon" title="Featured VIP advert">
+                              <Crown size={15} />
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Follow Card CTA */}
+              <div className="jiji-follow-cta-card">
+                <h4 className="jiji-follow-cta-title">Want to know when this seller posts new items?</h4>
+                <button 
+                  type="button" 
+                  className={`jiji-follow-submit-btn ${isFollowingSeller(activeChat.contact?.name) ? 'following' : ''}`}
+                  onClick={() => toggleFollowSeller(activeChat.contact?.name)}
+                >
+                  <UserPlus size={16} />
+                  <span>{isFollowingSeller(activeChat.contact?.name) ? 'Following' : 'Follow them'}</span>
+                </button>
+                <span className="jiji-follow-count-subtext">
+                  {isFollowingSeller(activeChat.contact?.name) ? '16 followers' : '15 followers'}
+                </span>
+              </div>
+
             </div>
           </div>
         </div>
