@@ -65,7 +65,19 @@ const formatSidebarDate = (msg) => {
 // Helper to render contact avatar with initials fallback
 const renderContactAvatar = (avatarUrl, name, className = 'chat-avatar') => {
   if (avatarUrl && typeof avatarUrl === 'string' && !avatarUrl.includes('photo-1535713875002-d1d0cf377fde')) {
-    return <img src={avatarUrl} alt={name || 'Avatar'} className={className} />;
+    return <img
+      src={avatarUrl}
+      alt={name || 'Avatar'}
+      className={className}
+      onError={(e) => {
+        // Replace broken image with initials fallback
+        const initials = (name || 'U').trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase();
+        const div = document.createElement('div');
+        div.className = `${className} initials-avatar-badge`;
+        div.textContent = initials;
+        e.target.replaceWith(div);
+      }}
+    />;
   }
   const initials = (name || 'U').trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase();
   return <div className={`${className} initials-avatar-badge`}>{initials}</div>;
@@ -411,6 +423,12 @@ export default function Messages() {
   const [activeChatId, setActiveChatId] = useState(null);
   const [onlineUserIds, setOnlineUserIds] = useState(new Set());
 
+  // Ref to track activeChatId inside realtime callbacks without causing re-subscriptions
+  const activeChatIdRef = useRef(null);
+  useEffect(() => {
+    activeChatIdRef.current = activeChatId;
+  }, [activeChatId]);
+
   // Load authoritative real conversations for current user from Supabase
   useEffect(() => {
     let isMounted = true;
@@ -474,7 +492,7 @@ export default function Messages() {
             image: newMsg.image || null,
             time: newMsg.created_at ? new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
             timestamp: newMsg.created_at ? new Date(newMsg.created_at).getTime() : Date.now(),
-            status: activeChatId === newMsg.conversation_id ? 'read' : 'delivered'
+            status: activeChatIdRef.current === newMsg.conversation_id ? 'read' : 'delivered'
           };
 
           // Acknowledge delivery back to sender
@@ -506,7 +524,7 @@ export default function Messages() {
                   playAudioTone(750, 600, 0.15);
                 }
 
-                const isCurrentActive = c.id === activeChatId;
+                const isCurrentActive = c.id === activeChatIdRef.current;
                 if (isCurrentActive) {
                   markConversationAsRead(c.id, user.id);
                 }
@@ -553,7 +571,7 @@ export default function Messages() {
       isMounted = false;
       unsubscribe();
     };
-  }, [user?.id, activeChatId]);
+  }, [user?.id]);
 
   const [filterTab, setFilterTab] = useState('all'); // all, unread, buying, selling
   const [searchQuery, setSearchQuery] = useState('');

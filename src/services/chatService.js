@@ -2,6 +2,51 @@ import { supabase } from '../lib/supabaseClient';
 import { getGeneralProductPool } from '../utils/userSync';
 
 /**
+ * Shared realtime channel singleton.
+ * Supabase requires a channel to be subscribed before broadcasts can be sent.
+ * All broadcast functions must use this shared channel.
+ */
+let _sharedChannel = null;
+let _sharedChannelReady = false;
+
+const getSharedChannel = () => {
+  if (!_sharedChannel) {
+    _sharedChannel = supabase.channel('buyoh-marketplace-realtime');
+    _sharedChannel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        _sharedChannelReady = true;
+      }
+    });
+  }
+  return _sharedChannel;
+};
+
+export const setSharedChannel = (channel) => {
+  _sharedChannel = channel;
+  _sharedChannelReady = true;
+};
+
+const safeBroadcast = (event, payload) => {
+  try {
+    const channel = getSharedChannel();
+    if (_sharedChannelReady) {
+      channel.send({ type: 'broadcast', event, payload });
+    } else {
+      // Retry after a short delay to allow subscription to complete
+      setTimeout(() => {
+        try {
+          channel.send({ type: 'broadcast', event, payload });
+        } catch (e) {
+          console.warn('[chatService] Delayed broadcast failed:', e);
+        }
+      }, 1000);
+    }
+  } catch (e) {
+    console.warn('[chatService] Broadcast error:', e);
+  }
+};
+
+/**
  * UUID verification and generation helpers
  */
 export const isUUID = (str) => {
@@ -404,23 +449,14 @@ export const sendMessage = async ({
       console.warn('[chatService] Send message warning:', error.message);
     }
 
-    // 2. Broadcast via Realtime Channel for instant cross-tab & cross-device delivery
-    try {
-      const channel = supabase.channel('buyoh-marketplace-realtime');
-      channel.send({
-        type: 'broadcast',
-        event: 'new_message',
-        payload: {
-          ...msgPayload,
-          conversation_id: validConvId,
-          original_conversation_id: conversationId,
-          recipient_id: recipientId,
-          product_info: productInfo
-        }
-      });
-    } catch (realtimeErr) {
-      console.warn('[chatService] Realtime broadcast error:', realtimeErr);
-    }
+    // 2. Broadcast via shared Realtime Channel for instant cross-tab & cross-device delivery
+    safeBroadcast('new_message', {
+      ...msgPayload,
+      conversation_id: validConvId,
+      original_conversation_id: conversationId,
+      recipient_id: recipientId,
+      product_info: productInfo
+    });
 
     // 3. Dispatch in-app notification to counterpart profile
     if (recipientId && recipientId !== senderId) {
@@ -484,15 +520,10 @@ export const markConversationAsRead = async (conversationId, currentUserId) => {
       .eq('id', validConvId);
 
     // Broadcast message_read event so sender's double tick turns read
-    const channel = supabase.channel('buyoh-marketplace-realtime');
-    channel.send({
-      type: 'broadcast',
-      event: 'message_read',
-      payload: {
-        conversation_id: validConvId,
-        original_conversation_id: conversationId,
-        read_by: currentUserId
-      }
+    safeBroadcast('message_read', {
+      conversation_id: validConvId,
+      original_conversation_id: conversationId,
+      read_by: currentUserId
     });
   } catch (e) {
     console.warn('[chatService] Mark as read notice:', e);
@@ -503,19 +534,12 @@ export const markConversationAsRead = async (conversationId, currentUserId) => {
  * Broadcast message delivered acknowledgment
  */
 export const broadcastMessageDelivered = (conversationId, messageId, senderId) => {
-  try {
-    const channel = supabase.channel('buyoh-marketplace-realtime');
-    channel.send({
-      type: 'broadcast',
-      event: 'message_delivered',
-      payload: {
-        conversation_id: toValidUUID(conversationId),
-        original_conversation_id: conversationId,
-        message_id: messageId,
-        sender_id: senderId
-      }
-    });
-  } catch (e) {}
+  safeBroadcast('message_delivered', {
+    conversation_id: toValidUUID(conversationId),
+    original_conversation_id: conversationId,
+    message_id: messageId,
+    sender_id: senderId
+  });
 };
 
 /**
@@ -523,6 +547,13 @@ export const broadcastMessageDelivered = (conversationId, messageId, senderId) =
  */
 export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, onPresenceChange }) => {
   if (!userId || typeof window === 'undefined') return () => {};
+
+  // Remove any previously shared channel so we get a fresh one with presence config
+  if (_sharedChannel) {
+    try { supabase.removeChannel(_sharedChannel); } catch (e) {}
+    _sharedChannel = null;
+    _sharedChannelReady = false;
+  }
 
   const channel = supabase.channel('buyoh-marketplace-realtime', {
     config: {
@@ -622,10 +653,15 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
     }
   });
 
+  // Store as the shared channel so broadcast functions reuse this subscribed instance
+  setSharedChannel(channel);
+
   return () => {
     try {
       channel.untrack();
     } catch (e) {}
     supabase.removeChannel(channel);
+    _sharedChannel = null;
+    _sharedChannelReady = false;
   };
 };
