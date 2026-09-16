@@ -349,6 +349,14 @@ export const getOrCreateConversation = async ({ user, sellerId, productId, produ
   const validProductId = toValidUUID(productId || 'general-product');
 
   try {
+    // Ensure fresh session token
+    try {
+      const { data: sData } = await supabase.auth.getSession();
+      if (!sData?.session?.access_token) {
+        await supabase.auth.refreshSession();
+      }
+    } catch (e) {}
+
     // 1. Check if conversation already exists in Supabase
     const { data: existingRows } = await supabase
       .from('conversations')
@@ -447,6 +455,21 @@ export const sendMessage = async ({
 
     if (error) {
       console.warn('[chatService] Send message warning:', error.message);
+      // Auto-heal: If missing parent conversation row, upsert conversation and re-insert message
+      if (error.message && (error.message.includes('foreign key') || error.message.includes('violates'))) {
+        try {
+          await supabase.from('conversations').upsert({
+            id: validConvId,
+            buyer_id: validSenderId,
+            seller_id: toValidUUID(recipientId),
+            unread_count: 1
+          }, { onConflict: 'id' });
+
+          await supabase.from('messages').insert(msgPayload);
+        } catch (healErr) {
+          console.warn('[chatService] Auto-heal message insert failed:', healErr);
+        }
+      }
     }
 
     // 2. Broadcast via shared Realtime Channel for instant cross-tab & cross-device delivery
@@ -461,19 +484,12 @@ export const sendMessage = async ({
     // 3. Dispatch in-app notification to counterpart profile
     if (recipientId && recipientId !== senderId) {
       try {
-        const { data: recipientProfile } = await supabase
-          .from('profiles')
-          .select('notifications')
-          .eq('id', recipientId)
-          .single();
-
-        const existingNotifs = Array.isArray(recipientProfile?.notifications) ? recipientProfile.notifications : [];
         const notifTitle = isOffer ? 'New Offer Received' : 'New Message';
         const notifMsg = isOffer 
           ? `Someone made an offer of ₦${Number(offerAmount).toLocaleString('en-NG')} on "${productInfo?.name || 'your listing'}".`
           : (text || 'Sent you an attachment').substring(0, 80);
 
-        existingNotifs.unshift({
+        const newNotifItem = {
           id: `notif-${Date.now()}`,
           type: isOffer ? 'offer' : 'message',
           title: notifTitle,
@@ -481,12 +497,36 @@ export const sendMessage = async ({
           time: 'Just now',
           unread: true,
           actionLink: `/messages?chatId=${conversationId}`
+        };
+
+        // Broadcast notification event in realtime
+        safeBroadcast('new_notification', {
+          recipient_id: recipientId,
+          notification: newNotifItem
         });
 
-        await supabase
-          .from('profiles')
-          .update({ notifications: existingNotifs, updated_at: now.toISOString() })
-          .eq('id', recipientId);
+        // Use SECURITY DEFINER RPC function to update counterpart's profile notifications reliably
+        const { error: rpcErr } = await supabase.rpc('send_user_notification', {
+          target_user_id: toValidUUID(recipientId),
+          notif: newNotifItem
+        });
+
+        if (rpcErr) {
+          // Direct fallback update
+          const { data: recipientProfile } = await supabase
+            .from('profiles')
+            .select('notifications')
+            .eq('id', recipientId)
+            .maybeSingle();
+
+          const existingNotifs = Array.isArray(recipientProfile?.notifications) ? recipientProfile.notifications : [];
+          existingNotifs.unshift(newNotifItem);
+
+          await supabase
+            .from('profiles')
+            .update({ notifications: existingNotifs, updated_at: now.toISOString() })
+            .eq('id', recipientId);
+        }
       } catch (notifErr) {
         console.warn('[chatService] Notification dispatch notice:', notifErr);
       }
@@ -573,16 +613,46 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
   // Listen to Realtime Broadcasts for instant cross-tab / cross-device messaging
   channel.on('broadcast', { event: 'new_message' }, (event) => {
     const payload = event.payload;
-    if (payload && payload.recipient_id === userId) {
+    const isTarget = payload && (
+      String(payload.recipient_id || '').toLowerCase() === String(userId || '').toLowerCase() ||
+      (payload.recipient_id && toValidUUID(payload.recipient_id) === toValidUUID(userId))
+    );
+    if (isTarget) {
       if (typeof onNewMessage === 'function') {
         onNewMessage(payload);
       }
     }
   });
 
+  // Listen to Realtime Broadcasts for instant notification delivery
+  channel.on('broadcast', { event: 'new_notification' }, (event) => {
+    const payload = event.payload;
+    const isTarget = payload && (
+      String(payload.recipient_id || '').toLowerCase() === String(userId || '').toLowerCase() ||
+      (payload.recipient_id && toValidUUID(payload.recipient_id) === toValidUUID(userId))
+    );
+    if (isTarget && payload.notification) {
+      try {
+        const localKey = `buyoh_notifications_${userId}`;
+        const raw = localStorage.getItem(localKey);
+        const list = raw ? JSON.parse(raw) : [];
+        if (!list.some(n => n.id === payload.notification.id)) {
+          list.unshift(payload.notification);
+          localStorage.setItem(localKey, JSON.stringify(list));
+          localStorage.setItem('buyoh_notifications_v1', JSON.stringify(list));
+          window.dispatchEvent(new CustomEvent('buyoh_notifications_updated'));
+        }
+      } catch (e) {}
+    }
+  });
+
   channel.on('broadcast', { event: 'message_delivered' }, (event) => {
     const payload = event.payload;
-    if (payload && payload.sender_id === userId) {
+    const isSender = payload && (
+      String(payload.sender_id || '').toLowerCase() === String(userId || '').toLowerCase() ||
+      (payload.sender_id && toValidUUID(payload.sender_id) === toValidUUID(userId))
+    );
+    if (isSender) {
       if (typeof onStatusChange === 'function') {
         onStatusChange({
           messageId: payload.message_id,
@@ -596,7 +666,7 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
 
   channel.on('broadcast', { event: 'message_read' }, (event) => {
     const payload = event.payload;
-    if (payload && payload.read_by !== userId) {
+    if (payload && String(payload.read_by || '').toLowerCase() !== String(userId || '').toLowerCase()) {
       if (typeof onStatusChange === 'function') {
         onStatusChange({
           conversationId: payload.conversation_id,
@@ -606,6 +676,7 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
       }
     }
   });
+
 
   // Also listen to Postgres changes on messages table as a persistent sync
   channel.on(

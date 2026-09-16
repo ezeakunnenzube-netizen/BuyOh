@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
-import { getFollowedSellersForUser, saveFollowedSellersForUser } from '../utils/userSync';
+import { getFollowedSellersForUser, saveFollowedSellersForUser, getNotificationsForUser, saveNotificationsForUser } from '../utils/userSync';
 import { 
   fetchUserConversations, 
   getOrCreateConversation, 
@@ -81,6 +81,24 @@ const renderContactAvatar = (avatarUrl, name, className = 'chat-avatar') => {
   }
   const initials = (name || 'U').trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase();
   return <div className={`${className} initials-avatar-badge`}>{initials}</div>;
+};
+
+// Helpers to persist muted chat IDs across reloads and device visits
+const getMutedChatIds = (userId) => {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = localStorage.getItem(`buyoh_muted_chats_${userId || 'guest'}`);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set();
+  }
+};
+
+const saveMutedChatIds = (userId, set) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`buyoh_muted_chats_${userId || 'guest'}`, JSON.stringify([...set]));
+  } catch {}
 };
 
 // Helper to format date divider headers inside message thread
@@ -443,12 +461,17 @@ export default function Messages() {
       try {
         const cloudConvs = await fetchUserConversations(user);
         if (isMounted) {
-          setConversations(cloudConvs);
+          const mutedSet = getMutedChatIds(user?.id);
+          const syncedConvs = cloudConvs.map(c => ({
+            ...c,
+            isMuted: mutedSet.has(c.id) || Boolean(c.isMuted)
+          }));
+          setConversations(syncedConvs);
           const paramChatId = searchParams?.get('chatId');
-          if (paramChatId && cloudConvs.some(c => c.id === paramChatId)) {
+          if (paramChatId && syncedConvs.some(c => c.id === paramChatId)) {
             setActiveChatId(paramChatId);
-          } else if (cloudConvs.length > 0 && !activeChatId) {
-            setActiveChatId(cloudConvs[0].id);
+          } else if (syncedConvs.length > 0 && !activeChatId) {
+            setActiveChatId(syncedConvs[0].id);
           }
         }
       } catch (err) {
@@ -500,29 +523,96 @@ export default function Messages() {
             broadcastMessageDelivered(newMsg.conversation_id, newMsg.id, newMsg.sender_id);
           }
 
+          // Generate in-app notification so Notifications view and bell update immediately
+          try {
+            const senderDisplayName = newMsg.sender_name || 'Buyer / Seller';
+            const notifTitle = formatted.isOffer ? 'New Offer Received' : `New Message from ${senderDisplayName}`;
+            const notifSnippet = formatted.isOffer 
+              ? `Offer of ₦${formatted.offerAmount.toLocaleString('en-NG')} on "${newMsg.product_info?.name || 'your listing'}"`
+              : (formatted.text || 'Sent you an attachment');
+
+            const currentNotifs = getNotificationsForUser(user);
+            const notifKey = `notif-chat-${formatted.id}`;
+            if (!currentNotifs.some(n => n.id === notifKey)) {
+              currentNotifs.unshift({
+                id: notifKey,
+                type: formatted.isOffer ? 'offer' : 'message',
+                title: notifTitle,
+                message: notifSnippet,
+                time: 'Just now',
+                unread: true,
+                actionLink: `/messages?chatId=${newMsg.conversation_id}`
+              });
+              saveNotificationsForUser(user, currentNotifs);
+              window.dispatchEvent(new CustomEvent('buyoh_notifications_updated'));
+            }
+          } catch (notifErr) {
+            console.warn('Error recording chat notification:', notifErr);
+          }
+
           setConversations(prev => {
             const convExists = prev.some(c => 
               c.id === newMsg.conversation_id || 
               (newMsg.conversation_id && toValidUUID(c.id) === toValidUUID(newMsg.conversation_id))
             );
 
+            const mutedSet = getMutedChatIds(user?.id);
+            const isChatMuted = mutedSet.has(newMsg.conversation_id);
+
+            // Play sound tone ONLY if chat is not muted and push setting is on
+            if (!isChatMuted) {
+              const pushPref = typeof window !== 'undefined' ? localStorage.getItem('buyoh_pref_push') : null;
+              const isPushActive = pushPref !== null ? JSON.parse(pushPref) : true;
+              if (isPushActive) {
+                playAudioTone(750, 600, 0.15);
+              }
+            }
+
+            // AUTO-HEAL: If conversation does NOT exist yet in recipient's local state, create it now!
             if (!convExists) {
-              // Reload conversations so newly created conversation appears immediately
+              const pInfo = newMsg.product_info || {};
+              const autoCreatedConv = normalizeConversation({
+                id: newMsg.conversation_id,
+                buyer_id: newMsg.sender_id,
+                seller_id: user?.id,
+                product_id: pInfo.id || newMsg.product_id,
+                contact: {
+                  id: newMsg.sender_id,
+                  name: newMsg.sender_name || 'Interested Buyer',
+                  avatar: newMsg.sender_avatar || '',
+                  isOnline: true,
+                  verified: true,
+                  phone: '+234 800 000 0000',
+                  location: 'Nigeria'
+                },
+                product: {
+                  id: pInfo.id,
+                  name: pInfo.name || 'Listing Item',
+                  price: pInfo.price || 0,
+                  image: pInfo.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400&q=80',
+                  condition: pInfo.condition || 'Used'
+                },
+                unread_count: 1,
+                messages: [formatted],
+                isMuted: isChatMuted
+              }, user?.id);
+
+              // Also fetch fresh from database in background to hydrate full counterpart details
               fetchUserConversations(user).then(fresh => {
-                if (fresh && fresh.length > 0) setConversations(fresh);
+                if (fresh && fresh.length > 0) {
+                  setConversations(fresh.map(c => ({
+                    ...c,
+                    isMuted: mutedSet.has(c.id) || Boolean(c.isMuted)
+                  })));
+                }
               });
-              return prev;
+
+              return [autoCreatedConv, ...prev];
             }
 
             return prev.map(c => {
               if (c.id === newMsg.conversation_id || toValidUUID(c.id) === toValidUUID(newMsg.conversation_id)) {
                 if (c.messages?.some(m => m.id === formatted.id)) return c;
-
-                const pushPref = typeof window !== 'undefined' ? localStorage.getItem('buyoh_pref_push') : null;
-                const isPushActive = pushPref !== null ? JSON.parse(pushPref) : true;
-                if (!c.isMuted && isPushActive) {
-                  playAudioTone(750, 600, 0.15);
-                }
 
                 const isCurrentActive = c.id === activeChatIdRef.current;
                 if (isCurrentActive) {
@@ -1233,6 +1323,26 @@ export default function Messages() {
     return true;
   });
 
+  // Toggle mute notifications for a chat conversation
+  const handleToggleMute = (chatId) => {
+    if (!chatId) return;
+    const mutedSet = getMutedChatIds(user?.id);
+    const willMute = !mutedSet.has(chatId);
+    if (willMute) {
+      mutedSet.add(chatId);
+    } else {
+      mutedSet.delete(chatId);
+    }
+    saveMutedChatIds(user?.id, mutedSet);
+
+    setConversations(prev =>
+      prev.map(c => (c.id === chatId ? { ...c, isMuted: willMute } : c))
+    );
+
+    setToastMessage(willMute ? 'Notifications muted for this chat' : 'Notifications unmuted');
+    setTimeout(() => setToastMessage(''), 2500);
+  };
+
   // Function to send a message (text or offer) with real two-way cloud persistence
   const handleSendMessage = async (textToSend = inputMessage, isOffer = false, offerVal = 0) => {
     const text = typeof textToSend === 'string' ? textToSend.trim() : '';
@@ -1580,31 +1690,10 @@ export default function Messages() {
 
                 {/* Right: Action Buttons */}
                 <div className="chat-header-actions">
-                  {/* Search in chat */}
-                  <button
-                    className={`header-icon-btn ${isChatSearchOpen ? 'header-icon-btn-active' : ''}`}
-                    onClick={() => setIsChatSearchOpen(prev => !prev)}
-                    title="Search in conversation"
-                  >
-                    <Search size={19} />
-                  </button>
-
-                  {/* Mute toggle */}
+                  {/* Mute toggle button */}
                   <button
                     className={`header-icon-btn ${activeChat?.isMuted ? 'header-icon-btn-muted' : ''}`}
-                    onClick={() => {
-                      setConversations(prev =>
-                        prev.map(c => {
-                          if (c.id === activeChat.id) {
-                            const nextMuted = !c.isMuted;
-                            setToastMessage(nextMuted ? 'Notifications muted' : 'Notifications unmuted');
-                            setTimeout(() => setToastMessage(''), 2500);
-                            return { ...c, isMuted: nextMuted };
-                          }
-                          return c;
-                        })
-                      );
-                    }}
+                    onClick={() => handleToggleMute(activeChat?.id)}
                     title={activeChat?.isMuted ? 'Unmute notifications' : 'Mute notifications'}
                   >
                     {activeChat?.isMuted ? <BellOff size={19} /> : <Bell size={19} />}
@@ -1645,6 +1734,26 @@ export default function Messages() {
                           <span>View profile</span>
                         </button>
 
+                        <button
+                          className="dropdown-item"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            handleToggleMute(activeChat?.id);
+                          }}
+                        >
+                          {activeChat?.isMuted ? (
+                            <>
+                              <Bell size={17} className="dropdown-icon" />
+                              <span>Unmute notifications</span>
+                            </>
+                          ) : (
+                            <>
+                              <BellOff size={17} className="dropdown-icon" />
+                              <span>Mute notifications</span>
+                            </>
+                          )}
+                        </button>
+
                         {activeChat?.contact?.name && (
                           <button
                             className="dropdown-item"
@@ -1666,17 +1775,6 @@ export default function Messages() {
                             )}
                           </button>
                         )}
-
-                        <button
-                          className="dropdown-item"
-                          onClick={() => {
-                            setIsMenuOpen(false);
-                            setIsChatSearchOpen(true);
-                          }}
-                        >
-                          <Search size={17} className="dropdown-icon" />
-                          <span>Search in conversation</span>
-                        </button>
 
                         <button
                           className="dropdown-item"
