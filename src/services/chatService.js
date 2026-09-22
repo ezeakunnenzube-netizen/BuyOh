@@ -47,6 +47,48 @@ const safeBroadcast = (event, payload) => {
 };
 
 /**
+ * Upload a file (voice note or image) to Supabase Storage chat-attachments bucket.
+ * Returns the public URL or null on failure.
+ */
+export const uploadChatAttachment = async (file, conversationId, senderId, type = 'image') => {
+  if (!file || !conversationId || !senderId) return null;
+  try {
+    const ext = type === 'voice' ? 'webm' : (file.name?.split('.').pop() || 'jpg');
+    const path = `${conversationId}/${senderId}/${Date.now()}.${ext}`;
+    const { data, error } = await supabase.storage
+      .from('chat-attachments')
+      .upload(path, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: type === 'voice' ? 'audio/webm' : file.type || 'image/jpeg'
+      });
+    if (error) {
+      console.warn('[chatService] Upload attachment error:', error.message);
+      return null;
+    }
+    const { data: urlData } = supabase.storage
+      .from('chat-attachments')
+      .getPublicUrl(data.path);
+    return urlData?.publicUrl || null;
+  } catch (e) {
+    console.warn('[chatService] Upload attachment exception:', e);
+    return null;
+  }
+};
+
+/**
+ * Broadcast a typing indicator to the counterpart via Realtime.
+ * Debounced on the caller side.
+ */
+export const broadcastTyping = (conversationId, userId) => {
+  safeBroadcast('user_typing', {
+    conversation_id: conversationId,
+    user_id: userId,
+    timestamp: Date.now()
+  });
+};
+
+/**
  * UUID verification and generation helpers
  */
 export const isUUID = (str) => {
@@ -208,7 +250,7 @@ export const fetchUserConversations = async (user) => {
       .from('conversations')
       .select('*')
       .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
-      .order('created_at', { ascending: false });
+      .order('updated_at', { ascending: false });
 
     if (convErr) {
       console.warn('[chatService] Fetch conversations warning:', convErr.message);
@@ -421,6 +463,7 @@ export const sendMessage = async ({
   isOffer = false,
   offerAmount = 0,
   audioUrl = null,
+  image = null,
   duration = null,
   productInfo = null,
   isRecipientOnline = false
@@ -440,6 +483,7 @@ export const sendMessage = async ({
     is_offer: Boolean(isOffer),
     offer_amount: Number(offerAmount) || 0,
     audio_url: audioUrl || null,
+    image: image || null,
     duration: duration || null,
     status: isRecipientOnline ? 'delivered' : 'sent',
     created_at: now.toISOString()
@@ -469,6 +513,15 @@ export const sendMessage = async ({
         } catch (healErr) {
           console.warn('[chatService] Auto-heal message insert failed:', healErr);
         }
+      }
+    }
+
+    // 1b. Increment unread count on the conversation via RPC
+    if (recipientId) {
+      try {
+        await supabase.rpc('increment_unread_count', { conv_id: validConvId });
+      } catch (rpcErr) {
+        console.warn('[chatService] increment_unread_count RPC notice:', rpcErr);
       }
     }
 
@@ -585,7 +638,7 @@ export const broadcastMessageDelivered = (conversationId, messageId, senderId) =
 /**
  * Subscribe to real-time incoming messages, status changes & online presence
  */
-export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, onPresenceChange }) => {
+export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, onPresenceChange, onTyping }) => {
   if (!userId || typeof window === 'undefined') return () => {};
 
   // Remove any previously shared channel so we get a fresh one with presence config
@@ -677,6 +730,19 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
     }
   });
 
+  // Listen to typing indicator broadcasts
+  channel.on('broadcast', { event: 'user_typing' }, (event) => {
+    const payload = event.payload;
+    if (payload && String(payload.user_id || '').toLowerCase() !== String(userId || '').toLowerCase()) {
+      if (typeof onTyping === 'function') {
+        onTyping({
+          conversationId: payload.conversation_id,
+          userId: payload.user_id,
+          timestamp: payload.timestamp
+        });
+      }
+    }
+  });
 
   // Also listen to Postgres changes on messages table as a persistent sync
   channel.on(

@@ -22,6 +22,8 @@ import {
   markConversationAsRead, 
   subscribeToRealtimeChat, 
   broadcastMessageDelivered,
+  broadcastTyping,
+  uploadChatAttachment,
   formatLastSeen,
   generateUUID,
   toValidUUID,
@@ -29,8 +31,6 @@ import {
 } from '../services/chatService';
 import './Messages.css';
 
-const BASE_MOCK_TS = 1756660000000;
-const ONE_HOUR = 3600000;
 const ONE_DAY = 86400000;
 
 // Helper to format date display for the sidebar chat item card
@@ -232,204 +232,7 @@ const EMOJI_CATEGORIES = [
   { id: 'hearts', label: '❤️ Hearts' }
 ];
 
-// Initial sample seed conversations with realistic Nigerian marketplace data
-const INITIAL_CONVERSATIONS = [
-  {
-    id: 'chat-001',
-    type: 'buying',
-    contact: {
-      name: 'Babatunde Ogunlesi',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-      isOnline: true,
-      verified: true,
-      phone: '+234 803 123 4567',
-      location: 'Ikeja, Lagos'
-    },
-    product: {
-      id: 'prod-001',
-      name: 'Apple iPhone 13 Pro (128GB) - Graphite',
-      price: 650000,
-      image: 'https://images.unsplash.com/photo-1632661674596-df8be070a5c5?auto=format&fit=crop&w=400&q=80',
-      condition: 'Used'
-    },
-    unreadCount: 1,
-    messages: [
-      {
-        id: 'm1',
-        sender: 'them',
-        text: 'Hello! Thanks for showing interest in my iPhone 13 Pro. Check the original photos below! 📱',
-        image: 'https://images.unsplash.com/photo-1632661674596-df8be070a5c5?auto=format&fit=crop&w=600&q=80',
-        timestamp: BASE_MOCK_TS - ONE_HOUR * 2,
-        time: '10:15 AM',
-        status: 'read'
-      },
-      {
-        id: 'm2',
-        sender: 'me',
-        text: 'Hi Babatunde, is the battery health still at 88% as stated?',
-        timestamp: BASE_MOCK_TS - ONE_HOUR * 1.5,
-        time: '10:18 AM',
-        status: 'read'
-      },
-      {
-        id: 'm3',
-        sender: 'them',
-        text: 'Listen to my short voice note about the inspection details below 👇',
-        isVoiceNote: true,
-        duration: 8,
-        timestamp: BASE_MOCK_TS - ONE_HOUR * 1,
-        time: '10:20 AM',
-        status: 'unread'
-      }
-    ]
-  },
-  {
-    id: 'chat-002',
-    type: 'buying',
-    contact: {
-      name: 'Chidimma Okeke',
-      avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=200&q=80',
-      isOnline: false,
-      verified: true,
-      phone: '+234 812 987 6543',
-      location: 'Lekki Phase 1, Lagos'
-    },
-    product: {
-      id: 'prod-003',
-      name: 'Apple MacBook Pro 14" M1 Pro (16GB RAM, 512GB SSD)',
-      price: 1250000,
-      image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=400&q=80',
-      condition: 'Used'
-    },
-    unreadCount: 0,
-    messages: [
-      {
-        id: 'm1',
-        sender: 'me',
-        text: 'Good afternoon, is this MacBook Pro still available?',
-        timestamp: BASE_MOCK_TS - ONE_DAY * 1 - ONE_HOUR * 4,
-        time: '2:15 PM',
-        status: 'read'
-      },
-      {
-        id: 'm2',
-        sender: 'them',
-        text: 'Yes it is available! Original charger and box included.',
-        timestamp: BASE_MOCK_TS - ONE_DAY * 1 - ONE_HOUR * 3.5,
-        time: '2:30 PM',
-        status: 'read'
-      },
-      {
-        id: 'm3',
-        sender: 'me',
-        text: 'Can I come inspect it tomorrow around 2pm?',
-        timestamp: BASE_MOCK_TS - ONE_DAY * 1 - ONE_HOUR * 3,
-        time: '2:40 PM',
-        status: 'read'
-      },
-      {
-        id: 'm4',
-        sender: 'them',
-        text: 'That works perfectly! My shop is at Lekki Phase 1.',
-        timestamp: BASE_MOCK_TS - ONE_DAY * 1 - ONE_HOUR * 2,
-        time: '2:45 PM',
-        status: 'read'
-      }
-    ]
-  },
-  {
-    id: 'chat-003',
-    type: 'buying',
-    contact: {
-      name: 'Emeka Autos Nig Ltd',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-      isOnline: true,
-      verified: true,
-      phone: '+234 706 555 0192',
-      location: 'Maitama, Abuja'
-    },
-    product: {
-      id: 'prod-010',
-      name: 'Toyota Camry 2018 XLE Full Option - Direct Foreign Used',
-      price: 14500000,
-      image: 'https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?auto=format&fit=crop&w=400&q=80',
-      condition: 'Used'
-    },
-    unreadCount: 0,
-    messages: [
-      {
-        id: 'm1',
-        sender: 'them',
-        text: 'Welcome to Emeka Autos! Clean custom duty documents intact.',
-        timestamp: BASE_MOCK_TS - ONE_DAY * 2 - ONE_HOUR * 5,
-        time: '11:00 AM',
-        status: 'read'
-      },
-      {
-        id: 'm2',
-        sender: 'me',
-        text: 'What is your last price for cash payment?',
-        timestamp: BASE_MOCK_TS - ONE_DAY * 2 - ONE_HOUR * 4.5,
-        time: '11:05 AM',
-        status: 'read'
-      },
-      {
-        id: 'm3',
-        sender: 'them',
-        text: 'Final price is ₦14,000,000. Feel free to bring your mechanic for full scan inspection.',
-        timestamp: BASE_MOCK_TS - ONE_DAY * 2 - ONE_HOUR * 4,
-        time: '11:20 AM',
-        status: 'read'
-      }
-    ]
-  },
-  {
-    id: 'chat-004',
-    type: 'selling',
-    contact: {
-      name: 'Blessing Adebayo',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80',
-      isOnline: false,
-      verified: false,
-      phone: '+234 814 333 2211',
-      location: 'Yaba, Lagos'
-    },
-    product: {
-      id: 'prod-007',
-      name: 'Sony PlayStation 5 Disc Edition + 2 Controllers',
-      price: 580000,
-      image: 'https://images.unsplash.com/photo-1606813907291-d86efa9b94db?auto=format&fit=crop&w=400&q=80',
-      condition: 'Brand New'
-    },
-    unreadCount: 0,
-    messages: [
-      {
-        id: 'm1',
-        sender: 'them',
-        text: 'Hello, I saw your PS5 listing. Would you accept ₦540,000?',
-        timestamp: BASE_MOCK_TS - ONE_DAY * 3 - ONE_HOUR * 3,
-        time: '4:10 PM',
-        status: 'read'
-      },
-      {
-        id: 'm2',
-        sender: 'me',
-        text: 'Hi Blessing, last price is ₦560,000. It comes with 2 dualsense pads.',
-        timestamp: BASE_MOCK_TS - ONE_DAY * 3 - ONE_HOUR * 2.5,
-        time: '4:25 PM',
-        status: 'read'
-      }
-    ]
-  }
-];
 
-const AUTO_REPLIES = [
-  "Thanks for your message! Yes, this item is still available for sale.",
-  "I am available for inspection anytime today or tomorrow. Where are you located?",
-  "The price is slightly negotiable if you are paying cash immediately.",
-  "Everything is in perfect working condition. No hidden faults at all!",
-  "Let me know if you would like me to reserve it for you."
-];
 
 export default function Messages() {
   const searchParams = useSearchParams();
@@ -440,6 +243,17 @@ export default function Messages() {
   const [isLoadingConvs, setIsLoadingConvs] = useState(true);
   const [activeChatId, setActiveChatId] = useState(null);
   const [onlineUserIds, setOnlineUserIds] = useState(new Set());
+
+  // Typing indicator state — maps conversation IDs to typing user info
+  const [typingUsers, setTypingUsers] = useState({});
+  const typingTimeoutRefs = useRef({});
+  const typingBroadcastRef = useRef(null);
+
+  // Toast helper (used throughout Messages)
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 2500);
+  };
 
   // Ref to track activeChatId inside realtime callbacks without causing re-subscriptions
   const activeChatIdRef = useRef(null);
@@ -653,6 +467,20 @@ export default function Messages() {
               })
             };
           }));
+        },
+        onTyping: ({ conversationId, userId, timestamp }) => {
+          // Show typing for the conversation, auto-clear after 3 seconds
+          setTypingUsers(prev => ({ ...prev, [conversationId]: { userId, timestamp } }));
+          if (typingTimeoutRefs.current[conversationId]) {
+            clearTimeout(typingTimeoutRefs.current[conversationId]);
+          }
+          typingTimeoutRefs.current[conversationId] = setTimeout(() => {
+            setTypingUsers(prev => {
+              const next = { ...prev };
+              delete next[conversationId];
+              return next;
+            });
+          }, 3000);
         }
       });
     }
@@ -795,7 +623,8 @@ export default function Messages() {
       setSelectedAttachment({
         name: file.name,
         type: file.type.startsWith('image/') ? 'image' : 'document',
-        previewUrl: event.target.result
+        previewUrl: event.target.result,
+        file: file
       });
     };
     reader.readAsDataURL(file);
@@ -863,6 +692,60 @@ export default function Messages() {
     playAudioTone(600, 900, 0.2);
     const duration = recordingTimer || 1;
 
+    const persistVoiceNote = async (audioBlob, localAudioUrl) => {
+      if (!activeChat || !user?.id) return;
+
+      const counterpartId = activeChat.contact?.id || (activeChat.buyer_id === user?.id ? activeChat.seller_id : activeChat.buyer_id);
+      const isCounterpartOnline = counterpartId ? onlineUserIds.has(counterpartId) : false;
+      const nowTs = Date.now();
+      const timeNow = new Date(nowTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const msgId = generateUUID();
+
+      const newMsg = {
+        id: msgId,
+        sender: 'me',
+        sender_id: user.id,
+        text: '🎙️ Voice Note',
+        isVoiceNote: true,
+        audioUrl: localAudioUrl,
+        duration: duration,
+        timestamp: nowTs,
+        time: timeNow,
+        status: isCounterpartOnline ? 'delivered' : 'sent'
+      };
+
+      // Optimistic UI update
+      setConversations(prev =>
+        prev.map(c => {
+          if (c.id === activeChatId) {
+            return { ...c, messages: [...c.messages, newMsg] };
+          }
+          return c;
+        })
+      );
+
+      // Upload audio to Supabase Storage and persist message
+      try {
+        let cloudAudioUrl = null;
+        if (audioBlob) {
+          cloudAudioUrl = await uploadChatAttachment(audioBlob, activeChat.id, user.id, 'voice');
+        }
+
+        await sendCloudMessage({
+          conversationId: activeChat.id,
+          senderId: user.id,
+          recipientId: counterpartId,
+          text: '🎙️ Voice Note',
+          audioUrl: cloudAudioUrl || localAudioUrl,
+          duration: duration,
+          productInfo: activeChat.product,
+          isRecipientOnline: isCounterpartOnline
+        });
+      } catch (err) {
+        console.error('Error persisting voice note to cloud:', err);
+      }
+    };
+
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       const recorder = mediaRecorderRef.current;
       recorder.onstop = () => {
@@ -873,96 +756,17 @@ export default function Messages() {
           recorder.stream.getTracks().forEach(track => track.stop());
         }
 
-        const nowTs = Date.now();
-        const timeNow = new Date(nowTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const newMsg = {
-          id: `msg-${nowTs}`,
-          sender: 'me',
-          text: '🎙️ Voice Note',
-          isVoiceNote: true,
-          audioUrl: realAudioUrl,
-          duration: duration,
-          timestamp: nowTs,
-          time: timeNow,
-          status: 'sent'
-        };
-
-        setConversations(prev =>
-          prev.map(c => {
-            if (c.id === activeChatId) {
-              return {
-                ...c,
-                messages: [...c.messages, newMsg]
-              };
-            }
-            return c;
-          })
-        );
+        persistVoiceNote(audioBlob, realAudioUrl);
       };
 
       recorder.stop();
     } else {
-      const nowTs = Date.now();
-      const timeNow = new Date(nowTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const newMsg = {
-        id: `msg-${nowTs}`,
-        sender: 'me',
-        text: '🎙️ Voice Note',
-        isVoiceNote: true,
-        duration: duration,
-        timestamp: nowTs,
-        time: timeNow,
-        status: 'sent'
-      };
-
-      setConversations(prev =>
-        prev.map(c => {
-          if (c.id === activeChatId) {
-            return {
-              ...c,
-              messages: [...c.messages, newMsg]
-            };
-          }
-          return c;
-        })
-      );
+      // Fallback when MediaRecorder is not available
+      persistVoiceNote(null, null);
     }
 
     setIsRecordingAudio(false);
     setRecordingTimer(0);
-
-    // Simulated reply to voice note
-    setTimeout(() => {
-      const replyTs = Date.now();
-      const replyMsg = {
-        id: `msg-${replyTs}`,
-        sender: 'them',
-        text: 'Got your voice note! Loud and clear. 👍',
-        timestamp: replyTs,
-        time: new Date(replyTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        status: 'unread'
-      };
-
-      setConversations(prev => {
-        const next = prev.map(c => {
-          if (c.id === activeChatId) {
-            // Play notification tone only if conversation is not muted and push notifications are active
-            const pushPref = localStorage.getItem('buyoh_pref_push');
-            const isPushActive = pushPref !== null ? JSON.parse(pushPref) : true;
-            if (!c.isMuted && isPushActive) {
-              playAudioTone(750, 600, 0.15);
-            }
-            return {
-              ...c,
-              messages: [...c.messages, replyMsg],
-              unreadCount: c.id === activeChatId ? c.unreadCount : c.unreadCount + 1
-            };
-          }
-          return c;
-        });
-        return next;
-      });
-    }, 1500);
   };
 
   const handleTogglePlayAudio = (id, audioUrl) => {
@@ -1020,13 +824,15 @@ export default function Messages() {
     setIsMobileDetailOpen(false);
   };
 
-  // Simulate typing indicator
+  // Real typing indicator — derived from typingUsers state set by realtime
   useEffect(() => {
-    if (!activeChatId) return;
-    const delay = setTimeout(() => setIsTyping(true), 2500);
-    const clear = setTimeout(() => setIsTyping(false), 6000);
-    return () => { clearTimeout(delay); clearTimeout(clear); };
-  }, [activeChatId]);
+    if (!activeChatId) {
+      setIsTyping(false);
+      return;
+    }
+    const typingInfo = typingUsers[activeChatId];
+    setIsTyping(Boolean(typingInfo));
+  }, [activeChatId, typingUsers]);
 
   const handleReportSeller = (name) => {
     setToastMessage(`Report submitted for ${name}`);
@@ -1124,10 +930,7 @@ export default function Messages() {
     }
   }, [searchParams, user]);
 
-  // Persist state changes
-  useEffect(() => {
-    localStorage.setItem('buyoh_messages_v1', JSON.stringify(conversations));
-  }, [conversations]);
+  // (Cloud persistence handled by Supabase — no local storage needed)
 
   // Scroll to bottom on new messages inside internal thread container ONLY (prevents header/page from scrolling out of view)
   const scrollToBottom = () => {
@@ -1232,7 +1035,7 @@ export default function Messages() {
       })
     );
     setDeleteMessageModal(null);
-    showToast('Deleted');
+    showToast('Message deleted');
   };
 
   // Fetch seller adverts for Jiji-style profile page
@@ -1357,6 +1160,12 @@ export default function Messages() {
     const messageText = isOffer ? `🏷️ Proposed Offer: ₦${Number(offerVal).toLocaleString('en-NG')}` : text;
     const initialStatus = isCounterpartOnline ? 'delivered' : 'sent';
 
+    // Upload image attachment to Supabase Storage if present
+    let imageUrl = null;
+    if (selectedAttachment && selectedAttachment.previewUrl) {
+      imageUrl = selectedAttachment.previewUrl; // Show local preview immediately
+    }
+
     const newMsg = {
       id: generateUUID(),
       sender: 'me',
@@ -1364,7 +1173,7 @@ export default function Messages() {
       text: messageText,
       isOffer: Boolean(isOffer),
       offerAmount: Number(offerVal) || 0,
-      image: selectedAttachment ? selectedAttachment.previewUrl : null,
+      image: imageUrl,
       timestamp: nowTs,
       time: timeNow,
       status: initialStatus
@@ -1383,6 +1192,7 @@ export default function Messages() {
       })
     );
 
+    const attachmentToUpload = selectedAttachment;
     if (!isOffer) setInputMessage('');
     setSelectedAttachment(null);
     setShowEmojiPicker(false);
@@ -1390,6 +1200,12 @@ export default function Messages() {
     // Persist to Supabase and Realtime broadcast
     if (user?.id) {
       try {
+        // Upload image to Supabase Storage if we have a file attachment
+        let cloudImageUrl = null;
+        if (attachmentToUpload && attachmentToUpload.file) {
+          cloudImageUrl = await uploadChatAttachment(attachmentToUpload.file, activeChat.id, user.id, 'image');
+        }
+
         await sendCloudMessage({
           conversationId: activeChat.id,
           senderId: user.id,
@@ -1397,6 +1213,7 @@ export default function Messages() {
           text: messageText,
           isOffer,
           offerAmount: offerVal,
+          image: cloudImageUrl || imageUrl,
           productInfo: activeChat.product,
           isRecipientOnline: isCounterpartOnline
         });
@@ -2220,7 +2037,16 @@ export default function Messages() {
                     type="text"
                     placeholder="Type a message to seller..."
                     value={inputMessage}
-                    onChange={e => setInputMessage(e.target.value)}
+                    onChange={e => {
+                      setInputMessage(e.target.value);
+                      // Broadcast typing indicator (debounced)
+                      if (activeChat?.id && user?.id && e.target.value.trim()) {
+                        if (typingBroadcastRef.current) clearTimeout(typingBroadcastRef.current);
+                        typingBroadcastRef.current = setTimeout(() => {
+                          broadcastTyping(activeChat.id, user.id);
+                        }, 300);
+                      }
+                    }}
                     className="chat-text-input"
                   />
 
