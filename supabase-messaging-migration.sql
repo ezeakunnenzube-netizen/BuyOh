@@ -42,11 +42,11 @@ USING (
   auth.uid() = buyer_id OR auth.uid() = seller_id
 );
 
--- INSERT: authenticated users can create conversations where they are the buyer
-CREATE POLICY "Users can create conversations as buyer"
+-- INSERT: authenticated users can create conversations where they are buyer or seller
+CREATE POLICY "Users can create conversations"
 ON public.conversations FOR INSERT
 WITH CHECK (
-  auth.uid() = buyer_id
+  auth.uid() = buyer_id OR auth.uid() = seller_id
 );
 
 -- UPDATE: users can update conversations they participate in

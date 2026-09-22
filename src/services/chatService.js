@@ -4,14 +4,18 @@ import { getGeneralProductPool } from '../utils/userSync';
 /**
  * Shared realtime channel singleton.
  * Supabase requires a channel to be subscribed before broadcasts can be sent.
- * All broadcast functions must use this shared channel.
+ * All broadcast functions reuse this channel.
  */
 let _sharedChannel = null;
 let _sharedChannelReady = false;
 
 const getSharedChannel = () => {
   if (!_sharedChannel) {
-    _sharedChannel = supabase.channel('buyoh-marketplace-realtime');
+    _sharedChannel = supabase.channel('buyoh-marketplace-realtime', {
+      config: {
+        broadcast: { ack: true, self: false }
+      }
+    });
     _sharedChannel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         _sharedChannelReady = true;
@@ -23,23 +27,27 @@ const getSharedChannel = () => {
 
 export const setSharedChannel = (channel) => {
   _sharedChannel = channel;
-  _sharedChannelReady = true;
 };
 
-const safeBroadcast = (event, payload) => {
+const safeBroadcast = async (event, payload) => {
   try {
     const channel = getSharedChannel();
     if (_sharedChannelReady) {
-      channel.send({ type: 'broadcast', event, payload });
+      await channel.send({ type: 'broadcast', event, payload });
     } else {
-      // Retry after a short delay to allow subscription to complete
-      setTimeout(() => {
-        try {
-          channel.send({ type: 'broadcast', event, payload });
-        } catch (e) {
-          console.warn('[chatService] Delayed broadcast failed:', e);
+      // Channel may be connecting; retry every 200ms up to 15 times (~3s)
+      let attempts = 0;
+      const timer = setInterval(async () => {
+        attempts++;
+        if (_sharedChannelReady || attempts > 15) {
+          clearInterval(timer);
+          try {
+            await channel.send({ type: 'broadcast', event, payload });
+          } catch (e) {
+            console.warn('[chatService] Delayed broadcast warning:', e);
+          }
         }
-      }, 1000);
+      }, 200);
     }
   } catch (e) {
     console.warn('[chatService] Broadcast error:', e);
@@ -47,14 +55,34 @@ const safeBroadcast = (event, payload) => {
 };
 
 /**
+ * Helper to convert Blob or File to Base64 data URL as zero-dependency fallback
+ */
+const blobToDataUrl = (blob) => {
+  return new Promise((resolve) => {
+    try {
+      if (!blob || typeof FileReader === 'undefined') {
+        resolve(null);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    } catch (e) {
+      resolve(null);
+    }
+  });
+};
+
+/**
  * Upload a file (voice note or image) to Supabase Storage chat-attachments bucket.
- * Returns the public URL or null on failure.
+ * Returns the public URL, or falls back to a base64 Data URL if bucket does not exist.
  */
 export const uploadChatAttachment = async (file, conversationId, senderId, type = 'image') => {
   if (!file || !conversationId || !senderId) return null;
   try {
     const ext = type === 'voice' ? 'webm' : (file.name?.split('.').pop() || 'jpg');
-    const path = `${conversationId}/${senderId}/${Date.now()}.${ext}`;
+    const path = `${toValidUUID(conversationId)}/${toValidUUID(senderId)}/${Date.now()}.${ext}`;
     const { data, error } = await supabase.storage
       .from('chat-attachments')
       .upload(path, file, {
@@ -62,17 +90,25 @@ export const uploadChatAttachment = async (file, conversationId, senderId, type 
         upsert: false,
         contentType: type === 'voice' ? 'audio/webm' : file.type || 'image/jpeg'
       });
+
     if (error) {
-      console.warn('[chatService] Upload attachment error:', error.message);
+      console.warn('[chatService] Supabase storage upload notice:', error.message, '-> falling back to data URL');
+      // Fallback: serialize small audio blob or image to Data URL so recipient can still play/view it
+      if (file.size && file.size < 3000000) {
+        return await blobToDataUrl(file);
+      }
       return null;
     }
+
     const { data: urlData } = supabase.storage
       .from('chat-attachments')
       .getPublicUrl(data.path);
+
     return urlData?.publicUrl || null;
   } catch (e) {
     console.warn('[chatService] Upload attachment exception:', e);
-    return null;
+    // Fallback on exception
+    return await blobToDataUrl(file);
   }
 };
 
@@ -167,13 +203,16 @@ export const normalizeConversation = (raw, currentUserId = null) => {
   const id = raw.id || generateUUID();
   const buyerId = raw.buyer_id || raw.buyerId || '';
   const sellerId = raw.seller_id || raw.sellerId || '';
-  const isSelling = currentUserId && sellerId === currentUserId;
-  const isBuying = currentUserId && buyerId === currentUserId;
+  const currentUid = currentUserId ? String(currentUserId).toLowerCase() : '';
+  const isSelling = currentUid && String(sellerId).toLowerCase() === currentUid;
+  const isBuying = currentUid && String(buyerId).toLowerCase() === currentUid;
   const type = raw.type || (isSelling ? 'selling' : 'buying');
 
-  // Contact resolution
+  // Contact resolution - counterpart is the other person
+  const counterpartId = isSelling ? buyerId : (isBuying ? sellerId : (raw.contact?.id || sellerId || buyerId));
+
   let contact = {
-    id: isSelling ? buyerId : sellerId,
+    id: counterpartId,
     name: raw.contact?.name || raw.sellerName || raw.buyerName || (isSelling ? 'Buyer' : 'Seller'),
     avatar: raw.contact?.avatar || raw.sellerAvatar || raw.buyerAvatar || '',
     phone: raw.contact?.phone || raw.sellerPhone || raw.buyerPhone || '+234 800 000 0000',
@@ -199,21 +238,31 @@ export const normalizeConversation = (raw, currentUserId = null) => {
   // Messages resolution
   const rawMsgs = Array.isArray(raw.messages) ? raw.messages : [];
   const messages = rawMsgs.map(m => {
-    const isMe = currentUserId 
-      ? (m.sender_id ? m.sender_id === currentUserId : m.sender === 'me')
+    const senderIdStr = String(m.sender_id || '').toLowerCase();
+    const isMe = currentUid 
+      ? (senderIdStr ? senderIdStr === currentUid : m.sender === 'me')
       : m.sender === 'me';
 
     const timestamp = m.timestamp ? Number(m.timestamp) : (m.created_at ? new Date(m.created_at).getTime() : Date.now());
     const time = m.time || (m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now');
 
+    // Extract image if embedded in text as [image] URL
+    let resolvedImage = m.image || null;
+    let resolvedText = m.text || '';
+    if (!resolvedImage && resolvedText.includes('[image]')) {
+      const parts = resolvedText.split('[image]');
+      resolvedText = parts[0].trim();
+      resolvedImage = parts[1].trim();
+    }
+
     return {
       id: m.id || generateUUID(),
       sender: isMe ? 'me' : 'them',
       sender_id: m.sender_id || (isMe ? currentUserId : contact.id),
-      text: m.text || '',
+      text: resolvedText,
       isOffer: Boolean(m.is_offer || m.isOffer),
       offerAmount: Number(m.offer_amount || m.offerAmount || 0),
-      image: m.image || null,
+      image: resolvedImage,
       audioUrl: m.audio_url || m.audioUrl || null,
       duration: m.duration || null,
       timestamp,
@@ -237,7 +286,8 @@ export const normalizeConversation = (raw, currentUserId = null) => {
 };
 
 /**
- * Fetch all conversations for a user from Supabase (with fallback to local storage)
+ * Fetch all conversations for a user from Supabase (with fallback to local storage).
+ * Backward-compatible with databases that do not have updated_at column yet.
  */
 export const fetchUserConversations = async (user) => {
   if (!user?.id) {
@@ -246,19 +296,38 @@ export const fetchUserConversations = async (user) => {
 
   try {
     // 1. Fetch conversations from Supabase
-    const { data: convRows, error: convErr } = await supabase
+    // Try ordering by updated_at, fallback to created_at if updated_at does not exist yet
+    let convRows = null;
+    let { data: rowsWithUpdated, error: errUpdated } = await supabase
       .from('conversations')
       .select('*')
       .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
       .order('updated_at', { ascending: false });
 
-    if (convErr) {
-      console.warn('[chatService] Fetch conversations warning:', convErr.message);
+    if (!errUpdated && Array.isArray(rowsWithUpdated)) {
+      convRows = rowsWithUpdated;
+    } else {
+      const { data: rowsWithCreated, error: errCreated } = await supabase
+        .from('conversations')
+        .select('*')
+        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+        .order('created_at', { ascending: false });
+
+      if (errCreated) {
+        console.warn('[chatService] Fetch conversations notice:', errCreated.message);
+      }
+      convRows = rowsWithCreated || [];
     }
 
     if (Array.isArray(convRows) && convRows.length > 0) {
-      // 2. Fetch profiles for all counterparts to display real names, avatars, phone numbers, listings
-      const counterpartIds = [...new Set(convRows.map(c => c.buyer_id === user.id ? c.seller_id : c.buyer_id).filter(Boolean))];
+      // 2. Fetch profiles for all counterparts to display real names, avatars, phone numbers
+      const userUidLower = String(user.id).toLowerCase();
+      const counterpartIds = [...new Set(
+        convRows.map(c => {
+          const bLower = String(c.buyer_id || '').toLowerCase();
+          return bLower === userUidLower ? c.seller_id : c.buyer_id;
+        }).filter(Boolean)
+      )];
       
       let profileMap = {};
       if (counterpartIds.length > 0) {
@@ -269,6 +338,7 @@ export const fetchUserConversations = async (user) => {
 
         if (profiles) {
           profiles.forEach(p => {
+            profileMap[String(p.id).toLowerCase()] = p;
             profileMap[p.id] = p;
           });
         }
@@ -304,11 +374,11 @@ export const fetchUserConversations = async (user) => {
 
       // 5. Build normalized list
       const normalized = convRows.map(row => {
-        const counterpartId = row.buyer_id === user.id ? row.seller_id : row.buyer_id;
-        const profile = profileMap[counterpartId] || {};
+        const isBuyer = String(row.buyer_id || '').toLowerCase() === userUidLower;
+        const counterpartId = isBuyer ? row.seller_id : row.buyer_id;
+        const profile = profileMap[String(counterpartId).toLowerCase()] || profileMap[counterpartId] || {};
         const prod = productMap[String(row.product_id)] || {};
 
-        // Calculate member duration
         let memberDuration = '5+ years on BuyOh';
         if (profile.created_at) {
           const yrs = Math.max(1, Math.floor((Date.now() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24 * 365)));
@@ -382,7 +452,7 @@ export const getOrCreateConversation = async ({ user, sellerId, productId, produ
   }
 
   // Prevent user from chatting with themselves
-  if (sellerId && sellerId === user.id) {
+  if (sellerId && String(sellerId).toLowerCase() === String(user.id).toLowerCase()) {
     return { isSelf: true };
   }
 
@@ -391,28 +461,19 @@ export const getOrCreateConversation = async ({ user, sellerId, productId, produ
   const validProductId = toValidUUID(productId || 'general-product');
 
   try {
-    // Ensure fresh session token
-    try {
-      const { data: sData } = await supabase.auth.getSession();
-      if (!sData?.session?.access_token) {
-        await supabase.auth.refreshSession();
-      }
-    } catch (e) {}
-
     // 1. Check if conversation already exists in Supabase
     const { data: existingRows } = await supabase
       .from('conversations')
       .select('*')
-      .eq('product_id', validProductId)
       .or(`and(buyer_id.eq.${validBuyerId},seller_id.eq.${validSellerId}),and(buyer_id.eq.${validSellerId},seller_id.eq.${validBuyerId})`)
-      .limit(1);
+      .limit(10);
 
     if (existingRows && existingRows.length > 0) {
-      const conv = existingRows[0];
-      return { conversationId: conv.id, isNew: false };
+      const match = existingRows.find(r => String(r.product_id).toLowerCase() === String(validProductId).toLowerCase()) || existingRows[0];
+      return { conversationId: match.id, isNew: false };
     }
 
-    // Also check if existing conversation exists for buyer & product
+    // Also check if conversation exists by buyer & product
     const { data: fallbackRows } = await supabase
       .from('conversations')
       .select('*')
@@ -424,27 +485,29 @@ export const getOrCreateConversation = async ({ user, sellerId, productId, produ
       return { conversationId: fallbackRows[0].id, isNew: false };
     }
 
-    // 2. Create new conversation in Supabase with valid UUIDs
+    // 2. Create new conversation in Supabase with ONLY columns guaranteed to exist
     const newConvId = generateUUID();
+
+    const insertPayload = {
+      id: newConvId,
+      buyer_id: validBuyerId,
+      seller_id: validSellerId,
+      product_id: validProductId,
+      unread_count: 0
+    };
 
     const { data: inserted, error: insErr } = await supabase
       .from('conversations')
-      .insert({
-        id: newConvId,
-        buyer_id: validBuyerId,
-        seller_id: validSellerId,
-        product_id: validProductId,
-        unread_count: 0
-      })
+      .insert(insertPayload)
       .select('*')
-      .single();
+      .maybeSingle();
 
     if (insErr) {
-      console.warn('[chatService] Insert conversation warning:', insErr.message);
+      console.warn('[chatService] Insert conversation notice:', insErr.message);
       return { conversationId: newConvId, isNew: true, fallback: true };
     }
 
-    return { conversationId: inserted.id, isNew: true };
+    return { conversationId: inserted?.id || newConvId, isNew: true };
   } catch (err) {
     console.error('[chatService] getOrCreateConversation error:', err);
     const fallbackId = generateUUID();
@@ -453,7 +516,8 @@ export const getOrCreateConversation = async ({ user, sellerId, productId, produ
 };
 
 /**
- * Send a message to a conversation in Supabase + Broadcast in Realtime
+ * Send a message to a conversation in Supabase + Broadcast in Realtime.
+ * 100% resilient against schema differences (whether image/updated_at columns exist or not).
  */
 export const sendMessage = async ({
   conversationId,
@@ -475,7 +539,32 @@ export const sendMessage = async ({
   const validMsgId = generateUUID();
   const now = new Date();
 
-  const msgPayload = {
+  // Pre-flight check: ensure parent conversation exists in Supabase to satisfy foreign key constraint
+  try {
+    const { data: convCheck } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('id', validConvId)
+      .maybeSingle();
+
+    if (!convCheck) {
+      const validRecipientId = toValidUUID(recipientId || 'platform-seller');
+      await supabase
+        .from('conversations')
+        .insert({
+          id: validConvId,
+          buyer_id: validSenderId,
+          seller_id: validRecipientId,
+          product_id: productInfo?.id ? toValidUUID(productInfo.id) : null,
+          unread_count: 1
+        });
+    }
+  } catch (preErr) {
+    console.warn('[chatService] Pre-flight conversation check warning:', preErr);
+  }
+
+  // Base payload that strictly matches standard public.messages schema
+  const basePayload = {
     id: validMsgId,
     conversation_id: validConvId,
     sender_id: validSenderId,
@@ -483,96 +572,120 @@ export const sendMessage = async ({
     is_offer: Boolean(isOffer),
     offer_amount: Number(offerAmount) || 0,
     audio_url: audioUrl || null,
-    image: image || null,
     duration: duration || null,
     status: isRecipientOnline ? 'delivered' : 'sent',
     created_at: now.toISOString()
   };
 
+  let savedMessage = null;
+
   try {
-    // 1. Save to Supabase messages table
-    const { data, error } = await supabase
+    // 1. Try insert. Only attach image if it is a valid non-empty string
+    let insertPayload = { ...basePayload };
+    if (image && typeof image === 'string') {
+      insertPayload.image = image;
+    }
+
+    let { data, error } = await supabase
       .from('messages')
-      .insert(msgPayload)
+      .insert(insertPayload)
       .select('*')
-      .single();
+      .maybeSingle();
+
+    // If schema cache says image column does not exist, retry without image and embed in text
+    if (error && error.message && error.message.includes('image')) {
+      console.warn('[chatService] Database missing image column; embedding in text payload');
+      const fallbackPayload = { ...basePayload };
+      if (image) {
+        fallbackPayload.text = fallbackPayload.text ? `${fallbackPayload.text}\n[image] ${image}` : `[image] ${image}`;
+      }
+      const retryImg = await supabase
+        .from('messages')
+        .insert(fallbackPayload)
+        .select('*')
+        .maybeSingle();
+
+      data = retryImg.data;
+      error = retryImg.error;
+    }
+
+    // Auto-heal if foreign key violated
+    if (error && error.message && (error.message.includes('foreign key') || error.message.includes('violates'))) {
+      try {
+        await supabase.from('conversations').upsert({
+          id: validConvId,
+          buyer_id: validSenderId,
+          seller_id: toValidUUID(recipientId),
+          unread_count: 1
+        }, { onConflict: 'id' });
+
+        const retryFk = await supabase
+          .from('messages')
+          .insert(basePayload)
+          .select('*')
+          .maybeSingle();
+
+        data = retryFk.data;
+        error = retryFk.error;
+      } catch (healErr) {
+        console.warn('[chatService] Auto-heal message insert failed:', healErr);
+      }
+    }
 
     if (error) {
       console.warn('[chatService] Send message warning:', error.message);
-      // Auto-heal: If missing parent conversation row, upsert conversation and re-insert message
-      if (error.message && (error.message.includes('foreign key') || error.message.includes('violates'))) {
-        try {
-          await supabase.from('conversations').upsert({
-            id: validConvId,
-            buyer_id: validSenderId,
-            seller_id: toValidUUID(recipientId),
-            unread_count: 1
-          }, { onConflict: 'id' });
-
-          await supabase.from('messages').insert(msgPayload);
-        } catch (healErr) {
-          console.warn('[chatService] Auto-heal message insert failed:', healErr);
-        }
-      }
     }
 
-    // 1b. Increment unread count on the conversation via RPC
-    if (recipientId) {
+    savedMessage = data || basePayload;
+  } catch (err) {
+    console.error('[chatService] sendMessage error:', err);
+    savedMessage = basePayload;
+  }
+
+  // 2. Broadcast via shared Realtime Channel for instant cross-tab & cross-device delivery
+  safeBroadcast('new_message', {
+    ...savedMessage,
+    conversation_id: validConvId,
+    original_conversation_id: conversationId,
+    recipient_id: recipientId,
+    sender_id: senderId,
+    image: image || savedMessage.image,
+    product_info: productInfo
+  });
+
+  // 3. Dispatch in-app notification to counterpart profile
+  if (recipientId && String(recipientId).toLowerCase() !== String(senderId).toLowerCase()) {
+    try {
+      const notifTitle = isOffer ? 'New Offer Received' : 'New Message';
+      const notifMsg = isOffer 
+        ? `Someone made an offer of ₦${Number(offerAmount).toLocaleString('en-NG')} on "${productInfo?.name || 'your listing'}".`
+        : (text || 'Sent you an attachment').substring(0, 80);
+
+      const newNotifItem = {
+        id: `notif-${Date.now()}`,
+        type: isOffer ? 'offer' : 'message',
+        title: notifTitle,
+        message: notifMsg,
+        time: 'Just now',
+        unread: true,
+        actionLink: `/messages?chatId=${conversationId}`
+      };
+
+      safeBroadcast('new_notification', {
+        recipient_id: recipientId,
+        notification: newNotifItem
+      });
+
+      // Update counterpart's profile notifications directly
       try {
-        await supabase.rpc('increment_unread_count', { conv_id: validConvId });
-      } catch (rpcErr) {
-        console.warn('[chatService] increment_unread_count RPC notice:', rpcErr);
-      }
-    }
+        const { data: recipientProfile } = await supabase
+          .from('profiles')
+          .select('notifications')
+          .eq('id', recipientId)
+          .maybeSingle();
 
-    // 2. Broadcast via shared Realtime Channel for instant cross-tab & cross-device delivery
-    safeBroadcast('new_message', {
-      ...msgPayload,
-      conversation_id: validConvId,
-      original_conversation_id: conversationId,
-      recipient_id: recipientId,
-      product_info: productInfo
-    });
-
-    // 3. Dispatch in-app notification to counterpart profile
-    if (recipientId && recipientId !== senderId) {
-      try {
-        const notifTitle = isOffer ? 'New Offer Received' : 'New Message';
-        const notifMsg = isOffer 
-          ? `Someone made an offer of ₦${Number(offerAmount).toLocaleString('en-NG')} on "${productInfo?.name || 'your listing'}".`
-          : (text || 'Sent you an attachment').substring(0, 80);
-
-        const newNotifItem = {
-          id: `notif-${Date.now()}`,
-          type: isOffer ? 'offer' : 'message',
-          title: notifTitle,
-          message: notifMsg,
-          time: 'Just now',
-          unread: true,
-          actionLink: `/messages?chatId=${conversationId}`
-        };
-
-        // Broadcast notification event in realtime
-        safeBroadcast('new_notification', {
-          recipient_id: recipientId,
-          notification: newNotifItem
-        });
-
-        // Use SECURITY DEFINER RPC function to update counterpart's profile notifications reliably
-        const { error: rpcErr } = await supabase.rpc('send_user_notification', {
-          target_user_id: toValidUUID(recipientId),
-          notif: newNotifItem
-        });
-
-        if (rpcErr) {
-          // Direct fallback update
-          const { data: recipientProfile } = await supabase
-            .from('profiles')
-            .select('notifications')
-            .eq('id', recipientId)
-            .maybeSingle();
-
-          const existingNotifs = Array.isArray(recipientProfile?.notifications) ? recipientProfile.notifications : [];
+        if (recipientProfile) {
+          const existingNotifs = Array.isArray(recipientProfile.notifications) ? recipientProfile.notifications : [];
           existingNotifs.unshift(newNotifItem);
 
           await supabase
@@ -580,16 +693,13 @@ export const sendMessage = async ({
             .update({ notifications: existingNotifs, updated_at: now.toISOString() })
             .eq('id', recipientId);
         }
-      } catch (notifErr) {
-        console.warn('[chatService] Notification dispatch notice:', notifErr);
-      }
+      } catch (e) {}
+    } catch (notifErr) {
+      console.warn('[chatService] Notification dispatch notice:', notifErr);
     }
-
-    return data || msgPayload;
-  } catch (err) {
-    console.error('[chatService] sendMessage error:', err);
-    return msgPayload;
   }
+
+  return savedMessage;
 };
 
 /**
@@ -648,8 +758,11 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
     _sharedChannelReady = false;
   }
 
+  const currentUid = String(userId || '').toLowerCase();
+
   const channel = supabase.channel('buyoh-marketplace-realtime', {
     config: {
+      broadcast: { ack: true, self: false },
       presence: { key: userId }
     }
   });
@@ -666,24 +779,28 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
   // Listen to Realtime Broadcasts for instant cross-tab / cross-device messaging
   channel.on('broadcast', { event: 'new_message' }, (event) => {
     const payload = event.payload;
-    const isTarget = payload && (
-      String(payload.recipient_id || '').toLowerCase() === String(userId || '').toLowerCase() ||
-      (payload.recipient_id && toValidUUID(payload.recipient_id) === toValidUUID(userId))
-    );
-    if (isTarget) {
-      if (typeof onNewMessage === 'function') {
-        onNewMessage(payload);
-      }
+    if (!payload) return;
+    const targetRecipient = String(payload.recipient_id || '').toLowerCase();
+    const sender = String(payload.sender_id || '').toLowerCase();
+    
+    // Accept if recipient is this user, or if sender is NOT this user and belongs to active chat
+    const isTarget = targetRecipient === currentUid ||
+      (payload.recipient_id && toValidUUID(payload.recipient_id) === toValidUUID(userId)) ||
+      (!payload.recipient_id && sender !== currentUid);
+
+    if (isTarget && typeof onNewMessage === 'function') {
+      onNewMessage(payload);
     }
   });
 
   // Listen to Realtime Broadcasts for instant notification delivery
   channel.on('broadcast', { event: 'new_notification' }, (event) => {
     const payload = event.payload;
-    const isTarget = payload && (
-      String(payload.recipient_id || '').toLowerCase() === String(userId || '').toLowerCase() ||
-      (payload.recipient_id && toValidUUID(payload.recipient_id) === toValidUUID(userId))
-    );
+    if (!payload) return;
+    const targetRecipient = String(payload.recipient_id || '').toLowerCase();
+    const isTarget = targetRecipient === currentUid ||
+      (payload.recipient_id && toValidUUID(payload.recipient_id) === toValidUUID(userId));
+
     if (isTarget && payload.notification) {
       try {
         const localKey = `buyoh_notifications_${userId}`;
@@ -701,11 +818,9 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
 
   channel.on('broadcast', { event: 'message_delivered' }, (event) => {
     const payload = event.payload;
-    const isSender = payload && (
-      String(payload.sender_id || '').toLowerCase() === String(userId || '').toLowerCase() ||
-      (payload.sender_id && toValidUUID(payload.sender_id) === toValidUUID(userId))
-    );
-    if (isSender) {
+    if (!payload) return;
+    const sender = String(payload.sender_id || '').toLowerCase();
+    if (sender === currentUid || (payload.sender_id && toValidUUID(payload.sender_id) === toValidUUID(userId))) {
       if (typeof onStatusChange === 'function') {
         onStatusChange({
           messageId: payload.message_id,
@@ -719,7 +834,7 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
 
   channel.on('broadcast', { event: 'message_read' }, (event) => {
     const payload = event.payload;
-    if (payload && String(payload.read_by || '').toLowerCase() !== String(userId || '').toLowerCase()) {
+    if (payload && String(payload.read_by || '').toLowerCase() !== currentUid) {
       if (typeof onStatusChange === 'function') {
         onStatusChange({
           conversationId: payload.conversation_id,
@@ -733,7 +848,7 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
   // Listen to typing indicator broadcasts
   channel.on('broadcast', { event: 'user_typing' }, (event) => {
     const payload = event.payload;
-    if (payload && String(payload.user_id || '').toLowerCase() !== String(userId || '').toLowerCase()) {
+    if (payload && String(payload.user_id || '').toLowerCase() !== currentUid) {
       if (typeof onTyping === 'function') {
         onTyping({
           conversationId: payload.conversation_id,
@@ -744,7 +859,7 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
     }
   });
 
-  // Also listen to Postgres changes on messages table as a persistent sync
+  // Also listen to Postgres changes on messages table as persistent sync
   channel.on(
     'postgres_changes',
     {
@@ -753,7 +868,7 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
       table: 'messages'
     },
     (payload) => {
-      if (payload.new && payload.new.sender_id !== userId) {
+      if (payload.new && String(payload.new.sender_id || '').toLowerCase() !== currentUid) {
         if (typeof onNewMessage === 'function') {
           onNewMessage(payload.new);
         }
@@ -781,6 +896,7 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
 
   channel.subscribe(async (status) => {
     if (status === 'SUBSCRIBED') {
+      _sharedChannelReady = true;
       try {
         await channel.track({
           user_id: userId,
@@ -790,8 +906,8 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
     }
   });
 
-  // Store as the shared channel so broadcast functions reuse this subscribed instance
-  setSharedChannel(channel);
+  // Store as shared channel
+  _sharedChannel = channel;
 
   return () => {
     try {

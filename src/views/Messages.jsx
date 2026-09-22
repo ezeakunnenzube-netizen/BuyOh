@@ -317,16 +317,24 @@ export default function Messages() {
           }));
         },
         onNewMessage: (newMsg) => {
+          let resolvedImage = newMsg.image || null;
+          let resolvedText = newMsg.text || '';
+          if (!resolvedImage && resolvedText.includes('[image]')) {
+            const parts = resolvedText.split('[image]');
+            resolvedText = parts[0].trim();
+            resolvedImage = parts[1].trim();
+          }
+
           const formatted = {
             id: newMsg.id || generateUUID(),
             sender: 'them',
             sender_id: newMsg.sender_id,
-            text: newMsg.text || '',
+            text: resolvedText,
             isOffer: Boolean(newMsg.is_offer),
             offerAmount: Number(newMsg.offer_amount || 0),
             audioUrl: newMsg.audio_url || null,
             duration: newMsg.duration || null,
-            image: newMsg.image || null,
+            image: resolvedImage,
             time: newMsg.created_at ? new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
             timestamp: newMsg.created_at ? new Date(newMsg.created_at).getTime() : Date.now(),
             status: activeChatIdRef.current === newMsg.conversation_id ? 'read' : 'delivered'
@@ -411,13 +419,26 @@ export default function Messages() {
                 isMuted: isChatMuted
               }, user?.id);
 
+              if (!activeChatIdRef.current) {
+                setActiveChatId(autoCreatedConv.id);
+                setIsMobileDetailOpen(true);
+              }
+
               // Also fetch fresh from database in background to hydrate full counterpart details
               fetchUserConversations(user).then(fresh => {
                 if (fresh && fresh.length > 0) {
-                  setConversations(fresh.map(c => ({
-                    ...c,
-                    isMuted: mutedSet.has(c.id) || Boolean(c.isMuted)
-                  })));
+                  setConversations(prevConvs => {
+                    return fresh.map(c => {
+                      const localExisting = prevConvs.find(p => p.id === c.id);
+                      if (localExisting && localExisting.messages?.length > (c.messages?.length || 0)) {
+                        return { ...c, messages: localExisting.messages, isMuted: mutedSet.has(c.id) || Boolean(c.isMuted) };
+                      }
+                      return {
+                        ...c,
+                        isMuted: mutedSet.has(c.id) || Boolean(c.isMuted)
+                      };
+                    });
+                  });
                 }
               });
 
@@ -1152,7 +1173,7 @@ export default function Messages() {
     if (!text && !isOffer && !selectedAttachment) return;
     if (!activeChat) return;
 
-    const counterpartId = activeChat.contact?.id || (activeChat.buyer_id === user?.id ? activeChat.seller_id : activeChat.buyer_id);
+    const counterpartId = activeChat.contact?.id || (String(activeChat.buyer_id || '').toLowerCase() === String(user?.id || '').toLowerCase() ? activeChat.seller_id : activeChat.buyer_id);
     const isCounterpartOnline = counterpartId ? onlineUserIds.has(counterpartId) : false;
 
     const nowTs = Date.now();
@@ -1206,7 +1227,7 @@ export default function Messages() {
           cloudImageUrl = await uploadChatAttachment(attachmentToUpload.file, activeChat.id, user.id, 'image');
         }
 
-        await sendCloudMessage({
+        const savedResult = await sendCloudMessage({
           conversationId: activeChat.id,
           senderId: user.id,
           recipientId: counterpartId,
@@ -1217,6 +1238,20 @@ export default function Messages() {
           productInfo: activeChat.product,
           isRecipientOnline: isCounterpartOnline
         });
+
+        if (savedResult && savedResult.id) {
+          setConversations(prev =>
+            prev.map(c => {
+              if (c.id === activeChat.id) {
+                return {
+                  ...c,
+                  messages: c.messages.map(m => m.id === newMsg.id ? { ...m, id: savedResult.id, status: savedResult.status || m.status } : m)
+                };
+              }
+              return c;
+            })
+          );
+        }
       } catch (err) {
         console.error('Error sending message to cloud:', err);
       }
