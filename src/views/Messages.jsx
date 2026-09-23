@@ -10,7 +10,7 @@ import {
   ChevronRight, ExternalLink, ChevronUp, ChevronDown, X, User, Flag, Trash2,
   Smile, Paperclip, Mic, Square, Play, Pause, Volume2, FileText,
   BellOff, Bell, Video, UserPlus, UserMinus, Star, SlidersHorizontal,
-  Grid, List, Crown, MessageCircle, MapPin
+  Grid, List, Crown, MessageCircle, MapPin, CornerUpLeft, Copy, Download
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
@@ -242,7 +242,7 @@ export default function Messages() {
   const router = useRouter();
   const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
   const { user, loading: authLoading } = useAuth();
-  const { unreadCount } = useChat();
+  const { unreadCount, unreadNotifsCount, playSentSound } = useChat();
   const [conversations, setConversations] = useState([]);
   const [isLoadingConvs, setIsLoadingConvs] = useState(true);
   const [activeChatId, setActiveChatId] = useState(null);
@@ -552,6 +552,12 @@ export default function Messages() {
   const [isSellerGridView, setIsSellerGridView] = useState(true);
   const [toastMessage, setToastMessage] = useState('');
   const menuRef = useRef(null);
+
+  // In-Chat Make an Offer & Quoted Reply & Lightbox states
+  const [showInChatOfferModal, setShowInChatOfferModal] = useState(false);
+  const [chatOfferAmount, setChatOfferAmount] = useState('');
+  const [replyingToMessage, setReplyingToMessage] = useState(null);
+  const [lightboxImage, setLightboxImage] = useState(null);
 
   // Followed sellers state (Authoritative Cloud Source of Truth)
   const [followedSellers, setFollowedSellers] = useState(() => getFollowedSellersForUser(user));
@@ -1207,6 +1213,16 @@ export default function Messages() {
     if (!text && !isOffer && !selectedAttachment) return;
     if (!activeChat) return;
 
+    const currentReply = replyingToMessage;
+    setReplyingToMessage(null);
+
+    // Play outgoing message sound
+    if (playSentSound) {
+      try { playSentSound(); } catch (e) {}
+    } else {
+      playAudioTone(440, 880, 0.15);
+    }
+
     const counterpartId = activeChat.contact?.id || (String(activeChat.buyer_id || '').toLowerCase() === String(user?.id || '').toLowerCase() ? activeChat.seller_id : activeChat.buyer_id);
     const isCounterpartOnline = counterpartId ? onlineUserIds.has(counterpartId) : false;
 
@@ -1233,6 +1249,7 @@ export default function Messages() {
       isOffer: Boolean(isOffer),
       offerAmount: Number(offerVal) || 0,
       image: imageUrl,
+      replyTo: currentReply ? { id: currentReply.id, sender: currentReply.sender, text: currentReply.text } : null,
       timestamp: nowTs,
       time: timeNow,
       status: initialStatus
@@ -1282,6 +1299,7 @@ export default function Messages() {
           isOffer,
           offerAmount: offerVal,
           image: cloudImageUrl || imageUrl,
+          replyTo: currentReply ? { id: currentReply.id, sender: currentReply.sender, text: currentReply.text } : null,
           productInfo: activeChat.product,
           isRecipientOnline: isCounterpartOnline
         });
@@ -1386,7 +1404,12 @@ export default function Messages() {
           <NavLink to="/notifications" replace className={({ isActive }) => isActive ? "home-nav-item home-nav-item-active" : "home-nav-item"}>
             {({ isActive }) => (
               <span className="home-nav-icon-btn">
-                <BellRing className="home-nav-icon" color={isActive ? "#1d4ed8" : "white"} />
+                <div className="home-nav-icon-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <BellRing className="home-nav-icon" color={isActive ? "#1d4ed8" : "white"} />
+                  {unreadNotifsCount > 0 && (
+                    <span className="home-nav-unread-badge">{unreadNotifsCount > 99 ? '99+' : unreadNotifsCount}</span>
+                  )}
+                </div>
                 <div className="home-header-tooltip">Notifications</div>
               </span>
             )}
@@ -1614,6 +1637,20 @@ export default function Messages() {
                     >
                       <Phone size={18} />
                       <span className="call-btn-text">Call</span>
+                    </a>
+                  )}
+
+                  {/* WhatsApp button */}
+                  {(activeChat?.contact?.phone || activeChat?.contact?.whatsapp) && (
+                    <a
+                      href={`https://wa.me/${(activeChat.contact.whatsapp || activeChat.contact.phone).replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello! I'm reaching out from BuyOh regarding "${activeChat?.product?.name || 'your listing'}"`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="header-whatsapp-btn"
+                      title="Chat on WhatsApp"
+                    >
+                      <MessageCircle size={17} />
+                      <span className="whatsapp-btn-text">WhatsApp</span>
                     </a>
                   )}
 
@@ -1849,6 +1886,14 @@ export default function Messages() {
                         {!isMe && renderContactAvatar(activeChat?.contact?.avatar, activeChat?.contact?.name, "msg-avatar-mini")}
                         <div className="msg-bubble-wrapper">
                           <div className={`message-bubble ${isMe ? 'bubble-me' : 'bubble-them'} ${msg.isOffer ? 'bubble-offer' : ''} ${isMatch ? 'bubble-search-active' : ''}`}>
+                            {/* Quoted Reply snippet */}
+                            {msg.replyTo && (
+                              <div className="quoted-reply-preview">
+                                <div className="quoted-reply-sender">{msg.replyTo.sender === 'me' ? 'You' : (activeChat?.contact?.name || 'Seller')}</div>
+                                <div className="quoted-reply-text">{msg.replyTo.text}</div>
+                              </div>
+                            )}
+
                             {msg.isVoiceNote ? (
                               <div className="voice-note-bubble-card">
                                 <button
@@ -1874,7 +1919,13 @@ export default function Messages() {
                               </div>
                             ) : msg.image ? (
                               <div className="image-attachment-bubble">
-                                <img src={msg.image} alt="Attachment" className="msg-attachment-img" />
+                                <img 
+                                  src={msg.image} 
+                                  alt="Attachment" 
+                                  className="msg-attachment-img clickable-img" 
+                                  onClick={() => setLightboxImage(msg.image)}
+                                  title="Click to view full image"
+                                />
                                 {msg.text && (
                                   <p className="message-text margin-top-xs">
                                     {renderHighlightedText(msg.text, isChatSearchOpen ? chatSearchQuery : searchQuery)}
@@ -1920,31 +1971,112 @@ export default function Messages() {
                               )}
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            className="delete-msg-btn"
-                            title={msg.isVoiceNote ? "Delete voice note" : "Delete message"}
-                            onClick={() => setDeleteMessageModal({ chatId: activeChat.id, messageId: msg.id, isVoiceNote: msg.isVoiceNote })}
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                          
+                          {/* Hover Quick Actions */}
+                          <div className="msg-hover-actions">
+                            <button
+                              type="button"
+                              className="msg-action-btn"
+                              title="Reply to message"
+                              onClick={() => setReplyingToMessage({
+                                id: msg.id,
+                                sender: msg.sender,
+                                text: msg.text || (msg.isVoiceNote ? '🎙️ Voice Note' : msg.image ? '📷 Photo' : 'Message')
+                              })}
+                            >
+                              <CornerUpLeft size={13} />
+                            </button>
+                            {msg.text && (
+                              <button
+                                type="button"
+                                className="msg-action-btn"
+                                title="Copy text"
+                                onClick={() => {
+                                  if (navigator?.clipboard?.writeText) {
+                                    navigator.clipboard.writeText(msg.text);
+                                  }
+                                  showToast('Text copied to clipboard');
+                                }}
+                              >
+                                <Copy size={13} />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="msg-action-btn msg-action-delete"
+                              title={msg.isVoiceNote ? "Delete voice note" : "Delete message"}
+                              onClick={() => setDeleteMessageModal({ chatId: activeChat.id, messageId: msg.id, isVoiceNote: msg.isVoiceNote })}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </React.Fragment>
                   );
                 })}
+
+                {/* In-stream Typing Indicator */}
+                {isTyping && (
+                  <div className="stream-typing-row">
+                    {renderContactAvatar(activeChat?.contact?.avatar, activeChat?.contact?.name, "msg-avatar-mini")}
+                    <div className="stream-typing-bubble">
+                      <span className="typing-bounce-dot" />
+                      <span className="typing-bounce-dot" />
+                      <span className="typing-bounce-dot" />
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {/* Replying Preview Bar */}
+              {replyingToMessage && (
+                <div className="chat-reply-preview-bar">
+                  <div className="reply-preview-info">
+                    <span className="reply-preview-label">
+                      Replying to {replyingToMessage.sender === 'me' ? 'yourself' : (activeChat?.contact?.name || 'Seller')}
+                    </span>
+                    <span className="reply-preview-snippet">{replyingToMessage.text}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="reply-preview-close"
+                    onClick={() => setReplyingToMessage(null)}
+                    title="Cancel reply"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+              )}
+
               {/* Quick Reply Chips */}
               <div className="quick-reply-bar">
-                <span className="quick-label">Quick replies:</span>
-                <button className="quick-chip" onClick={() => handleSendMessage("Is this still available?")}>
+                {activeChat?.product?.price && (
+                  <button 
+                    type="button"
+                    className="quick-chip quick-chip-offer" 
+                    onClick={() => {
+                      setChatOfferAmount(activeChat.product.price ? String(Math.round(activeChat.product.price * 0.9)) : '');
+                      setShowInChatOfferModal(true);
+                    }}
+                  >
+                    🏷️ Make an Offer
+                  </button>
+                )}
+                <button type="button" className="quick-chip" onClick={() => handleSendMessage("Is this still available?")}>
                   Is this available?
                 </button>
-                <button className="quick-chip" onClick={() => handleSendMessage("What's your last price?")}>
+                <button type="button" className="quick-chip" onClick={() => handleSendMessage("What's your last price?")}>
                   What's last price?
                 </button>
-                <button className="quick-chip" onClick={() => handleSendMessage("Can I inspect it today?")}>
+                <button type="button" className="quick-chip" onClick={() => handleSendMessage("Can I inspect it today?")}>
                   Can I inspect today?
+                </button>
+                <button type="button" className="quick-chip" onClick={() => handleSendMessage("Can you deliver to my location?")}>
+                  Delivery options?
+                </button>
+                <button type="button" className="quick-chip" onClick={() => handleSendMessage("Where is the best meeting spot?")}>
+                  Suggest meeting spot
                 </button>
               </div>
 
@@ -2443,7 +2575,8 @@ export default function Messages() {
           <span>{toastMessage}</span>
         </div>
       )}
-      {/* Delete Single Message / Voice Note Modal */}
+
+      {/* ── DELETE MESSAGE MODAL ── */}
       {deleteMessageModal && (
         <div className="modal-backdrop" onClick={() => setDeleteMessageModal(null)}>
           <div className="delete-dialog-card" onClick={e => e.stopPropagation()}>
@@ -2458,7 +2591,7 @@ export default function Messages() {
                 Delete
               </button>
               <button 
-                type="button"
+                type="button" 
                 className="btn-cancel-delete" 
                 onClick={() => setDeleteMessageModal(null)}
               >
@@ -2466,6 +2599,128 @@ export default function Messages() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── IN-CHAT MAKE AN OFFER MODAL ── */}
+      {showInChatOfferModal && activeChat && (
+        <div className="chat-modal-backdrop" onClick={() => setShowInChatOfferModal(false)}>
+          <div className="chat-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="chat-modal-header">
+              <h3 className="chat-modal-title">Make an Offer</h3>
+              <button 
+                type="button" 
+                className="chat-modal-close" 
+                onClick={() => setShowInChatOfferModal(false)}
+                title="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="chat-modal-product-summary">
+              {activeChat.product?.image && (
+                <img src={activeChat.product.image} alt={activeChat.product.name} className="chat-modal-prod-img" />
+              )}
+              <div className="chat-modal-prod-info">
+                <div className="chat-modal-prod-name">{activeChat.product?.name || 'Listing'}</div>
+                <div className="chat-modal-prod-price">
+                  Listed Price: <strong>₦{Number(activeChat.product?.price || 0).toLocaleString('en-NG')}</strong>
+                </div>
+              </div>
+            </div>
+
+            {Boolean(activeChat.product?.price) && (
+              <div className="chat-preset-discounts">
+                <span className="preset-label">Quick discount offers:</span>
+                <div className="preset-chips-row">
+                  {[-5, -10, -15, -20].map(pct => {
+                    const discounted = Math.round(activeChat.product.price * (1 + pct / 100));
+                    return (
+                      <button
+                        key={pct}
+                        type="button"
+                        className={`preset-chip ${chatOfferAmount === String(discounted) ? 'active' : ''}`}
+                        onClick={() => setChatOfferAmount(String(discounted))}
+                      >
+                        {pct}% (₦{discounted.toLocaleString('en-NG')})
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="chat-modal-input-wrap">
+              <label className="chat-modal-label">Your Offer Amount (₦)</label>
+              <input
+                type="number"
+                className="chat-modal-input"
+                placeholder="Enter offer in ₦ e.g. 45000"
+                value={chatOfferAmount}
+                onChange={e => setChatOfferAmount(e.target.value)}
+                autoFocus
+              />
+            </div>
+
+            <div className="chat-modal-actions">
+              <button
+                type="button"
+                className="btn-modal-cancel"
+                onClick={() => setShowInChatOfferModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-modal-submit"
+                disabled={!chatOfferAmount || Number(chatOfferAmount) <= 0}
+                onClick={() => {
+                  const val = Number(chatOfferAmount);
+                  if (val > 0) {
+                    handleSendMessage(`🏷️ Proposed Offer: ₦${val.toLocaleString('en-NG')}`, true, val);
+                    setShowInChatOfferModal(false);
+                    setChatOfferAmount('');
+                    showToast(`Offer of ₦${val.toLocaleString('en-NG')} sent!`);
+                  }
+                }}
+              >
+                Send Offer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── IMAGE LIGHTBOX FULLSCREEN MODAL ── */}
+      {lightboxImage && (
+        <div className="chat-lightbox-backdrop" onClick={() => setLightboxImage(null)}>
+          <button 
+            type="button" 
+            className="chat-lightbox-close" 
+            onClick={() => setLightboxImage(null)}
+            title="Close image preview"
+          >
+            <X size={24} />
+          </button>
+          <a 
+            href={lightboxImage} 
+            download="buyoh-attachment.jpg" 
+            target="_blank" 
+            rel="noreferrer" 
+            className="chat-lightbox-download"
+            onClick={e => e.stopPropagation()}
+            title="Download image"
+          >
+            <Download size={18} />
+            <span>Download</span>
+          </a>
+          <img 
+            src={lightboxImage} 
+            alt="Full Preview" 
+            className="chat-lightbox-img" 
+            onClick={e => e.stopPropagation()} 
+          />
         </div>
       )}
     </div>

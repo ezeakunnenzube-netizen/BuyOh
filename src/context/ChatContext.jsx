@@ -7,17 +7,22 @@ import {
   getCachedConversations, 
   markConversationAsRead 
 } from '../services/chatService';
+import { getNotificationsForUser } from '../utils/userSync';
 
 const ChatContext = createContext({
   unreadCount: 0,
+  unreadNotifsCount: 0,
   latestMessageToast: null,
   clearToast: () => {},
-  markAsRead: () => {}
+  markAsRead: () => {},
+  playSentSound: () => {},
+  playChime: () => {}
 });
 
 export function ChatProvider({ children }) {
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
   const [latestMessageToast, setLatestMessageToast] = useState(null);
   const toastTimeoutRef = useRef(null);
 
@@ -42,6 +47,27 @@ export function ChatProvider({ children }) {
     } catch (e) {}
   };
 
+  // Play subtle outgoing message whoosh/pop
+  const playSentSound = () => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.06, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.12);
+      }
+    } catch (e) {}
+  };
+
   // Recalculate unread messages count from cached conversations
   const recalculateUnread = () => {
     if (!user?.id) {
@@ -53,18 +79,33 @@ export function ChatProvider({ children }) {
     setUnreadCount(total);
   };
 
+  // Recalculate unread notifications count
+  const recalculateUnreadNotifs = () => {
+    if (!user) {
+      setUnreadNotifsCount(0);
+      return;
+    }
+    const notifs = getNotificationsForUser(user);
+    const count = Array.isArray(notifs) ? notifs.filter(n => n.unread).length : 0;
+    setUnreadNotifsCount(count);
+  };
+
   useEffect(() => {
     recalculateUnread();
+    recalculateUnreadNotifs();
 
     const handleUpdate = () => {
       recalculateUnread();
+      recalculateUnreadNotifs();
     };
 
     window.addEventListener('buyoh_conversations_updated', handleUpdate);
+    window.addEventListener('buyoh_notifications_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
 
     return () => {
       window.removeEventListener('buyoh_conversations_updated', handleUpdate);
+      window.removeEventListener('buyoh_notifications_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
     };
   }, [user?.id]);
@@ -128,7 +169,7 @@ export function ChatProvider({ children }) {
   };
 
   return (
-    <ChatContext.Provider value={{ unreadCount, latestMessageToast, clearToast, markAsRead }}>
+    <ChatContext.Provider value={{ unreadCount, unreadNotifsCount, latestMessageToast, clearToast, markAsRead, playSentSound, playChime }}>
       {children}
       {/* Global In-App Message Alert Banner */}
       {latestMessageToast && (

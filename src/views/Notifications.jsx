@@ -65,7 +65,7 @@ export default function Notifications() {
   const router = useRouter();
   const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
   const { user } = useAuth();
-  const { unreadCount } = useChat();
+  const { unreadCount, unreadNotifsCount } = useChat();
 
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const [activeTab, setActiveTab] = useState('all'); // all, unread, offers, alerts
@@ -173,7 +173,12 @@ export default function Notifications() {
           </NavLink>
           <NavLink to="/notifications" replace className="home-nav-item home-nav-item-active">
             <span className="home-nav-icon-btn">
-              <BellRing className="home-nav-icon" color="#1d4ed8" />
+              <div className="home-nav-icon-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <BellRing className="home-nav-icon" color="#1d4ed8" />
+                {unreadNotifsCount > 0 && (
+                  <span className="home-nav-unread-badge">{unreadNotifsCount > 99 ? '99+' : unreadNotifsCount}</span>
+                )}
+              </div>
               <div className="home-header-tooltip">Notifications</div>
             </span>
           </NavLink>
@@ -244,7 +249,7 @@ export default function Notifications() {
               className={`notif-tab ${activeTab === 'unread' ? 'active' : ''}`}
               onClick={() => setActiveTab('unread')}
             >
-              Unread
+              Unread {notifications.filter(n => n.unread).length > 0 ? `(${notifications.filter(n => n.unread).length})` : ''}
             </button>
             <button 
               className={`notif-tab ${activeTab === 'offers' ? 'active' : ''}`}
@@ -277,7 +282,17 @@ export default function Notifications() {
             ) : (
               <div className="notif-list-grid">
                 {filteredNotifications.map(n => (
-                  <div key={n.id} className={`notif-item-row ${n.unread ? 'notif-unread' : ''}`}>
+                  <div 
+                    key={n.id} 
+                    className={`notif-item-row ${n.unread ? 'notif-unread' : ''}`}
+                    onClick={() => {
+                      if (n.unread) handleMarkAsRead(n.id);
+                      if (n.actionLink && n.actionLink !== '#') {
+                        navigate(n.actionLink);
+                      }
+                    }}
+                    style={{ cursor: n.actionLink && n.actionLink !== '#' ? 'pointer' : 'default' }}
+                  >
                     {/* Left Icon */}
                     <div className="notif-icon-container">
                       {getIcon(n.type)}
@@ -294,24 +309,25 @@ export default function Notifications() {
                       
                       {/* Action buttons inside notification card */}
                       <div className="notif-btn-row">
-                        {n.actionLabel && (
+                        {n.actionLink && n.actionLink !== '#' && (
                           <button 
                             className="notif-action-pill"
-                            onClick={() => {
-                              if (n.actionLink && n.actionLink !== '#') {
-                                navigate(n.actionLink);
-                              } else {
-                                handleMarkAsRead(n.id);
-                              }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMarkAsRead(n.id);
+                              navigate(n.actionLink);
                             }}
                           >
-                            <Eye size={12} /> {n.actionLabel}
+                            <Eye size={12} /> {n.actionLabel || (n.type === 'offer' ? 'View Offer' : n.type === 'message' ? 'Reply in Chat' : 'View Details')}
                           </button>
                         )}
                         {n.unread && (
                           <button 
                             className="notif-secondary-pill"
-                            onClick={() => handleMarkAsRead(n.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMarkAsRead(n.id);
+                            }}
                             title="Mark as read"
                           >
                             <Check size={12} /> Mark read
@@ -330,7 +346,10 @@ export default function Notifications() {
                     {/* Delete action */}
                     <button 
                       className="notif-delete-btn" 
-                      onClick={() => handleDelete(n.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(n.id);
+                      }}
                       title="Delete notification"
                     >
                       <Trash2 size={16} />

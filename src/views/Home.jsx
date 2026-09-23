@@ -191,7 +191,7 @@ const JOBS_SUBCATEGORIES = [
 
 export default function Home(){
   const { user, loading, setIsAuthOpen } = useAuth();
-  const { unreadCount } = useChat();
+  const { unreadCount, unreadNotifsCount } = useChat();
   const [selectedCountry, setSelectedCountry]   = useState('all') // 'all' | 'nigeria' | 'ghana'
   const [selectedRegion, setSelectedRegion]     = useState('All Locations')
   const [isCountryOpen, setIsCountryOpen]       = useState(false)
@@ -682,6 +682,11 @@ export default function Home(){
             <NavLink to="/notifications" replace className={({isActive})=>isActive?"home-nav-item home-nav-item-active":"home-nav-item"}>
               {({isActive})=>(<span className="home-nav-icon-btn">
                 <BellRing className="home-nav-icon" color={isActive?"#1d4ed8":"white"}/>
+                {unreadNotifsCount > 0 && (
+                  <span className="home-nav-unread-badge">
+                    {unreadNotifsCount > 99 ? '99+' : unreadNotifsCount}
+                  </span>
+                )}
                 <div className="home-header-tooltip">Notifications</div>
               </span>)}
             </NavLink>
