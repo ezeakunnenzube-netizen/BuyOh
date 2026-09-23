@@ -2677,76 +2677,83 @@ body {
 }
 
 .status-icon.status-read {
-  color: #00b53f !important; /* double vibrant green tick */
+  color: #2563eb !important; /* double BuyOh brand blue tick */
 }
 
-/* ── JIJI SELLER PROFILE MODAL ── */
+/* ── BUYOH SELLER PROFILE MODAL ── */
 .jiji-profile-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px;
-  animation: jijiFadeIn 0.2s ease-out;
+  padding: 16px;
+  animation: buyohProfileFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes jijiFadeIn {
+@keyframes buyohProfileFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
 .jiji-profile-container {
-  background: #f1f5f9;
+  background: #f8fafc;
   width: 100%;
-  max-width: 520px;
-  height: 92vh;
+  max-width: 530px;
+  height: 90vh;
   max-height: 840px;
-  border-radius: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.35), 0 0 1px 1px rgba(255, 255, 255, 0.1);
   position: relative;
-  animation: jijiSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  animation: buyohProfileSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes jijiSlideUp {
-  from { transform: translateY(20px); opacity: 0.8; }
-  to { transform: translateY(0); opacity: 1; }
+@keyframes buyohProfileSlideUp {
+  from { transform: translateY(22px) scale(0.98); opacity: 0.7; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
-/* Jiji Green Top Nav Bar */
+/* BuyOh Deep Brand Blue Top Nav Bar */
 .jiji-nav-header {
-  background: #00b53f;
-  height: 56px;
-  padding: 0 12px;
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  height: 62px;
+  padding: 0 16px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   color: #ffffff;
   flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(29, 78, 216, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .jiji-back-btn {
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   color: #ffffff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  transition: background 0.15s ease;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
 }
 
 .jiji-back-btn:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateX(-2px);
 }
 
 .jiji-nav-search-wrap {
@@ -2758,24 +2765,34 @@ body {
 
 .jiji-nav-search-input {
   width: 100%;
-  height: 38px;
-  background: #ffffff;
-  border: none;
-  border-radius: 6px;
-  padding: 0 32px 0 14px;
-  font-size: 13px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  padding: 0 34px 0 14px;
+  font-size: 13.5px;
+  font-family: inherit;
+  font-weight: 500;
   color: #0f172a;
   outline: none;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+}
+
+.jiji-nav-search-input:focus {
+  background: #ffffff;
+  border-color: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35), 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .jiji-nav-search-input::placeholder {
   color: #94a3b8;
+  font-weight: 400;
 }
 
 .jiji-clear-search-btn {
   position: absolute;
-  right: 8px;
+  right: 10px;
   background: transparent;
   border: none;
   color: #94a3b8;
@@ -2783,59 +2800,80 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2px;
+  padding: 4px;
+  border-radius: 50%;
+  transition: all 0.15s ease;
+}
+
+.jiji-clear-search-btn:hover {
+  color: #0f172a;
+  background: #f1f5f9;
 }
 
 .jiji-advert-count-badge {
   display: flex;
   align-items: center;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: 6px;
-  padding: 4px 8px;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  padding: 6px 11px;
   font-size: 13px;
   font-weight: 700;
   color: #ffffff;
   white-space: nowrap;
+  backdrop-filter: blur(4px);
 }
 
 /* Scroll Area */
 .jiji-modal-scroll-area {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.jiji-modal-scroll-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.jiji-modal-scroll-area::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 4px;
 }
 
 /* Seller Identity Card */
 .jiji-seller-card {
   background: #ffffff;
-  border-radius: 10px;
-  padding: 14px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04);
 }
 
 .jiji-seller-top-row {
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
+  gap: 14px;
+  align-items: center;
 }
 
 .jiji-hex-avatar-wrap {
-  width: 56px;
-  height: 56px;
+  width: 62px;
+  height: 62px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #e2fbe8;
-  border: 2px solid #00b53f;
-  border-radius: 12px;
+  background: #eff6ff;
+  border: 2px solid #bfdbfe;
+  border-radius: 18px;
   overflow: hidden;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+  position: relative;
 }
 
 .jiji-hex-avatar {
@@ -2850,12 +2888,14 @@ body {
 }
 
 .jiji-seller-name {
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 17px;
+  font-weight: 700;
   color: #0f172a;
-  text-transform: uppercase;
-  margin: 0 0 4px 0;
-  letter-spacing: 0.2px;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .jiji-seller-badges-row {
@@ -2873,31 +2913,36 @@ body {
   font-weight: 600;
   color: #475569;
   background: #f1f5f9;
-  padding: 2px 8px;
+  border: 1px solid #e2e8f0;
+  padding: 3px 9px;
   border-radius: 999px;
 }
 
 .jiji-badge-verified {
-  color: #0284c7;
-  background: #e0f2fe;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #bfdbfe;
 }
 
 .jiji-last-seen-row {
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .jiji-last-seen-pill {
   display: inline-block;
   font-size: 11px;
+  font-weight: 500;
   color: #64748b;
   background: #f8fafc;
-  padding: 2px 8px;
+  padding: 2px 9px;
   border-radius: 999px;
+  border: 1px solid #e2e8f0;
 }
 
 .jiji-last-seen-pill.is-online {
-  color: #00b53f;
+  color: #059669;
   background: #dcfce7;
+  border-color: #bbf7d0;
   font-weight: 700;
 }
 
@@ -2906,10 +2951,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 10px;
-  margin-top: 10px;
+  padding-top: 12px;
+  margin-top: 14px;
   border-top: 1px solid #f1f5f9;
   cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.jiji-feedback-row:hover {
+  opacity: 0.85;
 }
 
 .jiji-feedback-left {
@@ -2923,53 +2973,67 @@ body {
 }
 
 .jiji-feedback-text {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   color: #1e293b;
 }
 
 .jiji-rating-stars {
   color: #f59e0b;
-  font-size: 12px;
+  font-size: 13px;
   margin-left: 4px;
 }
 
 .jiji-feedback-arrow {
   color: #94a3b8;
+  transition: transform 0.15s ease;
+}
+
+.jiji-feedback-row:hover .jiji-feedback-arrow {
+  transform: translateX(2px);
+  color: #1d4ed8;
 }
 
 /* Contact Button */
 .jiji-show-contact-btn {
   width: 100%;
-  height: 44px;
-  background: #00b53f;
+  height: 46px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: #ffffff;
   border: none;
-  border-radius: 6px;
-  font-size: 15px;
+  border-radius: 12px;
+  font-size: 14.5px;
   font-weight: 700;
+  font-family: inherit;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  margin-top: 12px;
-  transition: background 0.15s ease;
+  margin-top: 14px;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .jiji-show-contact-btn:hover {
-  background: #009935;
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
+}
+
+.jiji-show-contact-btn:active {
+  transform: translateY(0);
 }
 
 .jiji-revealed-contact-box {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-top: 10px;
+  background: #eff6ff;
+  border: 1.5px solid #bfdbfe;
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-top: 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .jiji-revealed-phone-number {
@@ -2978,11 +3042,11 @@ body {
   gap: 8px;
   font-size: 16px;
   font-weight: 800;
-  color: #15803d;
+  color: #1d4ed8;
 }
 
 .jiji-revealed-phone-number a {
-  color: #15803d;
+  color: #1d4ed8;
   text-decoration: none;
 }
 
@@ -2993,26 +3057,22 @@ body {
 
 .jiji-call-link {
   flex: 1;
-  padding: 8px;
-  background: #00b53f;
+  padding: 10px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: #ffffff;
-  border-radius: 6px;
+  border-radius: 10px;
   text-align: center;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 13.5px;
   text-decoration: none;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.25);
+  transition: all 0.15s ease;
 }
 
-.jiji-whatsapp-link {
-  flex: 1;
-  padding: 8px;
-  background: #25d366;
-  color: #ffffff;
-  border-radius: 6px;
-  text-align: center;
-  font-weight: 700;
-  font-size: 13px;
-  text-decoration: none;
+.jiji-call-link:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.35);
 }
 
 /* Filters & Sorting Toolbar */
@@ -3020,7 +3080,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: 8px;
 }
 
 .jiji-filter-chips-scroll {
@@ -3028,7 +3088,7 @@ body {
   gap: 6px;
   overflow-x: auto;
   scrollbar-width: none;
-  padding-bottom: 2px;
+  padding: 2px 0;
 }
 
 .jiji-filter-chips-scroll::-webkit-scrollbar {
@@ -3037,102 +3097,127 @@ body {
 
 .jiji-filter-chip {
   background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  padding: 6px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 7px 13px;
   font-size: 12px;
   font-weight: 600;
+  font-family: inherit;
   color: #334155;
   white-space: nowrap;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .jiji-filter-chip:hover {
-  border-color: #00b53f;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+  background: #f8fafc;
 }
 
 .jiji-filter-chip.active {
-  background: #00b53f;
-  border-color: #00b53f;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-color: #1d4ed8;
   color: #ffffff;
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3);
 }
 
 .jiji-sort-and-view {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .jiji-sort-btn {
   background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  padding: 6px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 7px 11px;
   font-size: 12px;
   font-weight: 600;
+  font-family: inherit;
   color: #334155;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.jiji-sort-btn:hover {
+  border-color: #3b82f6;
+  color: #1d4ed8;
 }
 
 .jiji-view-toggle-btn {
   background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  padding: 6px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 7px 9px;
   color: #334155;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
-/* Adverts Grid */
+.jiji-view-toggle-btn:hover {
+  border-color: #3b82f6;
+  color: #1d4ed8;
+  background: #f8fafc;
+}
+
+/* Adverts Grid & List */
 .jiji-adverts-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 12px;
 }
 
 .jiji-adverts-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .jiji-empty-adverts {
   background: #ffffff;
-  padding: 28px 16px;
-  border-radius: 10px;
+  padding: 36px 20px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
   text-align: center;
   color: #64748b;
   font-size: 14px;
 }
 
+/* BuyOh Product Card in Profile Modal */
 .jiji-ad-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: 14px;
   overflow: hidden;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
 }
 
 .jiji-ad-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.12);
+  border-color: #cbd5e1;
 }
 
 .jiji-ad-img-wrapper {
   position: relative;
   width: 100%;
-  height: 140px;
-  background: #e2e8f0;
+  height: 145px;
+  background: #f1f5f9;
   overflow: hidden;
 }
 
@@ -3140,24 +3225,27 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s ease;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .jiji-ad-card:hover .jiji-ad-img {
-  transform: scale(1.03);
+  transform: scale(1.06);
 }
 
 .jiji-ad-vip-tag {
   position: absolute;
   top: 0;
   left: 0;
-  background: #f97316;
+  background: linear-gradient(135deg, #ffa705 0%, #ea580c 100%);
   color: #ffffff;
-  font-size: 9px;
+  font-size: 9.5px;
   font-weight: 800;
-  padding: 2px 7px;
-  border-bottom-right-radius: 6px;
+  padding: 3px 8px;
+  border-bottom-right-radius: 8px;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.35);
+  z-index: 2;
 }
 
 .jiji-ad-img-badges {
@@ -3167,43 +3255,47 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 3px;
+  gap: 4px;
+  z-index: 2;
 }
 
 .jiji-ad-subbadge {
   background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   border-radius: 999px;
-  padding: 2px 6px;
-  font-size: 9px;
+  padding: 2.5px 8px;
+  font-size: 9.5px;
   font-weight: 700;
-  color: #0369a1;
+  color: #1d4ed8;
   display: flex;
   align-items: center;
-  gap: 3px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  gap: 3.5px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(226, 232, 240, 0.8);
 }
 
 .jiji-ad-content {
-  padding: 8px 10px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
   flex: 1;
 }
 
 .jiji-ad-price {
-  font-size: 15px;
+  font-size: 15.5px;
   font-weight: 800;
-  color: #00b53f;
-  margin-bottom: 2px;
+  color: #ea580c;
+  margin-bottom: 3px;
+  letter-spacing: -0.01em;
 }
 
 .jiji-ad-title {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   color: #0f172a;
-  line-height: 1.35;
-  margin: 0 0 4px 0;
+  line-height: 1.4;
+  margin: 0 0 6px 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -3215,8 +3307,8 @@ body {
   color: #64748b;
   display: flex;
   align-items: center;
-  gap: 3px;
-  margin-bottom: 6px;
+  gap: 4px;
+  margin-bottom: 8px;
 }
 
 .jiji-ad-footer-row {
@@ -3224,70 +3316,87 @@ body {
   align-items: center;
   justify-content: space-between;
   margin-top: auto;
+  padding-top: 4px;
 }
 
 .jiji-ad-condition-pill {
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 600;
-  color: #475569;
-  background: #f1f5f9;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  color: #16a34a;
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+}
+
+.jiji-ad-condition-pill.condition-used {
+  color: #a16207;
+  background: #fef9c3;
+  border: 1px solid #fde047;
 }
 
 .jiji-ad-crown-icon {
   color: #f59e0b;
+  display: flex;
+  align-items: center;
 }
 
 /* Follow Card CTA */
 .jiji-follow-cta-card {
   background: #ffffff;
-  border: 1px solid #fed7aa;
-  border-radius: 8px;
-  padding: 14px;
+  border: 1.5px solid #bfdbfe;
+  border-radius: 16px;
+  padding: 16px 18px;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  gap: 10px;
+  margin-top: 6px;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.05);
 }
 
 .jiji-follow-cta-title {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 700;
   color: #1e293b;
   margin: 0;
 }
 
 .jiji-follow-submit-btn {
-  background: #f97316;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: #ffffff;
   border: none;
-  border-radius: 6px;
-  padding: 9px 24px;
+  border-radius: 12px;
+  padding: 10px 24px;
   font-size: 14px;
   font-weight: 700;
+  font-family: inherit;
   display: flex;
   align-items: center;
   gap: 6px;
   cursor: pointer;
-  transition: background 0.15s ease;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .jiji-follow-submit-btn:hover {
-  background: #ea580c;
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
 }
 
 .jiji-follow-submit-btn.following {
-  background: #e2e8f0;
+  background: #f1f5f9;
   color: #475569;
+  border: 1px solid #cbd5e1;
+  box-shadow: none;
 }
 
 .jiji-follow-count-subtext {
-  font-size: 11px;
+  font-size: 11.5px;
   color: #64748b;
+  font-weight: 500;
 }
 
 @media (max-width: 640px) {
@@ -3298,6 +3407,7 @@ body {
     height: 100vh;
     max-height: 100vh;
     border-radius: 0;
+    border: none;
   }
 }
 

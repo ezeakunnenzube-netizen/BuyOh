@@ -2297,12 +2297,12 @@ export default function Messages() {
 
 
 
-      {/* ── JIJI SELLER PROFILE PAGE MODAL ── */}
+      {/* ── BUYOH SELLER PROFILE PAGE MODAL ── */}
       {showProfileModal && activeChat && (
         <div className="jiji-profile-backdrop" onClick={() => setShowProfileModal(false)}>
           <div className="jiji-profile-container" onClick={e => e.stopPropagation()}>
             
-            {/* Top Navigation Bar in Jiji Green (#00b53f) */}
+            {/* Top Navigation Bar in BuyOh Brand Blue */}
             <div className="jiji-nav-header">
               <button 
                 type="button"
@@ -2316,7 +2316,7 @@ export default function Messages() {
               <div className="jiji-nav-search-wrap">
                 <input 
                   type="text"
-                  placeholder={`Search in adverts of ${activeChat.contact?.name || 'Seller'}`}
+                  placeholder={`Search listings from ${activeChat.contact?.name || 'Seller'}...`}
                   value={sellerSearchQuery}
                   onChange={e => setSellerSearchQuery(e.target.value)}
                   className="jiji-nav-search-input"
@@ -2332,7 +2332,7 @@ export default function Messages() {
                 )}
               </div>
 
-              <div className="jiji-advert-count-badge" title="Total active adverts">
+              <div className="jiji-advert-count-badge" title="Total active listings">
                 <span>{filteredSellerAdverts.length}</span>
                 <Tag size={15} />
               </div>
@@ -2344,7 +2344,7 @@ export default function Messages() {
               {/* Seller Identity Card */}
               <div className="jiji-seller-card">
                 <div className="jiji-seller-top-row">
-                  {/* Hexagonal green bordered avatar */}
+                  {/* Rounded avatar */}
                   <div className="jiji-hex-avatar-wrap">
                     {renderContactAvatar(activeChat.contact?.avatar, activeChat.contact?.name, "jiji-hex-avatar")}
                   </div>
@@ -2360,7 +2360,7 @@ export default function Messages() {
                       {activeChat.contact?.verified && (
                         <span className="jiji-badge-pill jiji-badge-verified">
                           <ShieldCheck size={13} />
-                          Verified ID
+                          Verified Seller
                         </span>
                       )}
                     </div>
@@ -2470,7 +2470,7 @@ export default function Messages() {
               <div className={isSellerGridView ? "jiji-adverts-grid" : "jiji-adverts-list"}>
                 {filteredSellerAdverts.length === 0 ? (
                   <div className="jiji-empty-adverts">
-                    <p>No adverts matching your search.</p>
+                    <p>No listings matching your search.</p>
                   </div>
                 ) : (
                   filteredSellerAdverts.map((ad, idx) => {
@@ -2479,6 +2479,7 @@ export default function Messages() {
                     const adTitle = ad.name || ad.title || 'Marketplace Item';
                     const adLocation = ad.location || activeChat.contact?.location || 'Lagos, Nigeria';
                     const adCondition = ad.condition || 'Used';
+                    const isConditionNew = adCondition.toLowerCase().includes('new');
 
                     return (
                       <div 
@@ -2498,7 +2499,7 @@ export default function Messages() {
                           <div className="jiji-ad-img-badges">
                             <span className="jiji-ad-subbadge">
                               <ShieldCheck size={11} />
-                              Verified ID
+                              Verified Seller
                             </span>
                             <span className="jiji-ad-subbadge">
                               <User size={11} />
@@ -2519,8 +2520,8 @@ export default function Messages() {
                             {adLocation}
                           </span>
                           <div className="jiji-ad-footer-row">
-                            <span className="jiji-ad-condition-pill">{adCondition}</span>
-                            <span className="jiji-ad-crown-icon" title="Featured VIP advert">
+                            <span className={`jiji-ad-condition-pill ${isConditionNew ? 'condition-new' : 'condition-used'}`}>{adCondition}</span>
+                            <span className="jiji-ad-crown-icon" title="Featured VIP listing">
                               <Crown size={15} />
                             </span>
                           </div>
@@ -2540,7 +2541,7 @@ export default function Messages() {
                   onClick={() => toggleFollowSeller(activeChat.contact?.name)}
                 >
                   <UserPlus size={16} />
-                  <span>{isFollowingSeller(activeChat.contact?.name) ? 'Following' : 'Follow them'}</span>
+                  <span>{isFollowingSeller(activeChat.contact?.name) ? 'Following' : 'Follow Seller'}</span>
                 </button>
                 <span className="jiji-follow-count-subtext">
                   {isFollowingSeller(activeChat.contact?.name) ? '16 followers' : '15 followers'}
