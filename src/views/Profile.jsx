@@ -10,6 +10,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useChat } from '../context/ChatContext';
 import { supabase } from '../lib/supabaseClient';
 import AvatarModal from '../components/AvatarModal';
 import { getSavedItemsForUser, getMyListingsForUser, getUserProfileData, saveUserProfileData, getFollowedSellersForUser, getNotificationsForUser, syncUserDataFromCloud } from '../utils/userSync';
@@ -20,6 +21,7 @@ export default function Profile() {
   const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
 
   const { user, loading, logout } = useAuth();
+  const { unreadCount } = useChat();
   
   // Load followed sellers count & unread notifications count
   const [followingCount, setFollowingCount] = useState(0);
@@ -329,7 +331,12 @@ export default function Profile() {
         <div className="home-nav-links">
           <NavLink to="/messages" replace className="home-nav-item">
             <span className="home-nav-icon-btn">
-              <MessageSquareMore className="home-nav-icon" color="white" />
+              <div className="home-nav-icon-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <MessageSquareMore className="home-nav-icon" color="white" />
+                {unreadCount > 0 && (
+                  <span className="home-nav-unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+                )}
+              </div>
               <div className="home-header-tooltip">My Messages</div>
             </span>
           </NavLink>

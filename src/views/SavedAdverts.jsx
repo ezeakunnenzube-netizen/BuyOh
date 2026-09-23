@@ -9,6 +9,7 @@ import {
   Search, X, ShoppingBag, TrendingUp, ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useChat } from '../context/ChatContext';
 import { getSavedItemsForUser, saveItemsForUser, syncUserDataFromCloud } from '../utils/userSync';
 import { shouldShowConditionBadge } from '../utils/productUtils';
 import './SavedAdverts.css';
@@ -17,6 +18,7 @@ export default function SavedAdverts() {
   const router = useRouter();
   const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
   const { user, loading, setIsAuthOpen } = useAuth();
+  const { unreadCount } = useChat();
 
   const [savedItems, setSavedItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -134,7 +136,12 @@ export default function SavedAdverts() {
         <div className="home-nav-links">
           <NavLink to="/messages" replace className="home-nav-item">
             <span className="home-nav-icon-btn">
-              <MessageSquareMore className="home-nav-icon" color="white" />
+              <div className="home-nav-icon-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <MessageSquareMore className="home-nav-icon" color="white" />
+                {unreadCount > 0 && (
+                  <span className="home-nav-unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+                )}
+              </div>
             </span>
           </NavLink>
           <NavLink to="/notifications" replace className="home-nav-item">

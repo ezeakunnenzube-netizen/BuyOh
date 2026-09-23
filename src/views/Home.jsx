@@ -7,6 +7,7 @@ import NavLink from "../components/NavLink";
 import {locations, COUNTRIES, NIGERIA_STATES, GHANA_REGIONS} from "../data/statesData.js"
 import {products} from "../data/productData.js"
 import {useAuth} from "../context/AuthContext"
+import {useChat} from "../context/ChatContext"
 import {getSavedItemsForUser, saveItemsForUser, getAllPublicListings, getGeneralProductPool} from "../utils/userSync"
 import {shouldShowConditionBadge} from "../utils/productUtils"
 
@@ -190,6 +191,7 @@ const JOBS_SUBCATEGORIES = [
 
 export default function Home(){
   const { user, loading, setIsAuthOpen } = useAuth();
+  const { unreadCount } = useChat();
   const [selectedCountry, setSelectedCountry]   = useState('all') // 'all' | 'nigeria' | 'ghana'
   const [selectedRegion, setSelectedRegion]     = useState('All Locations')
   const [isCountryOpen, setIsCountryOpen]       = useState(false)
@@ -669,6 +671,11 @@ export default function Home(){
             <NavLink to="/messages" replace className={({isActive})=>isActive?"home-nav-item home-nav-item-active":"home-nav-item"}>
               {({isActive})=>(<span className="home-nav-icon-btn">
                 <MessageSquareMore className="home-nav-icon" color={isActive?"#1d4ed8":"white"}/>
+                {unreadCount > 0 && (
+                  <span className="home-nav-unread-badge">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
                 <div className="home-header-tooltip">My Messages</div>
               </span>)}
             </NavLink>

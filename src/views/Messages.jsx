@@ -13,8 +13,9 @@ import {
   Grid, List, Crown, MessageCircle, MapPin
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useChat } from '../context/ChatContext';
 import { supabase } from '../lib/supabaseClient';
-import { getFollowedSellersForUser, saveFollowedSellersForUser, getNotificationsForUser, saveNotificationsForUser } from '../utils/userSync';
+import { getFollowedSellersForUser, saveFollowedSellersForUser, getNotificationsForUser, saveNotificationsForUser, getUserProfileData } from '../utils/userSync';
 import { 
   fetchUserConversations, 
   getOrCreateConversation, 
@@ -27,7 +28,9 @@ import {
   formatLastSeen,
   generateUUID,
   toValidUUID,
-  normalizeConversation 
+  normalizeConversation,
+  saveCachedConversations,
+  getCachedConversations 
 } from '../services/chatService';
 import './Messages.css';
 
@@ -239,6 +242,7 @@ export default function Messages() {
   const router = useRouter();
   const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
   const { user, loading: authLoading } = useAuth();
+  const { unreadCount } = useChat();
   const [conversations, setConversations] = useState([]);
   const [isLoadingConvs, setIsLoadingConvs] = useState(true);
   const [activeChatId, setActiveChatId] = useState(null);
@@ -325,6 +329,10 @@ export default function Messages() {
             resolvedImage = parts[1].trim();
           }
 
+          const isCurrentActive = 
+            activeChatIdRef.current === newMsg.conversation_id || 
+            (newMsg.conversation_id && toValidUUID(activeChatIdRef.current) === toValidUUID(newMsg.conversation_id));
+
           const formatted = {
             id: newMsg.id || generateUUID(),
             sender: 'them',
@@ -337,12 +345,15 @@ export default function Messages() {
             image: resolvedImage,
             time: newMsg.created_at ? new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
             timestamp: newMsg.created_at ? new Date(newMsg.created_at).getTime() : Date.now(),
-            status: activeChatIdRef.current === newMsg.conversation_id ? 'read' : 'delivered'
+            status: isCurrentActive ? 'read' : 'delivered'
           };
 
           // Acknowledge delivery back to sender
           if (newMsg.conversation_id && newMsg.sender_id) {
             broadcastMessageDelivered(newMsg.conversation_id, newMsg.id, newMsg.sender_id);
+            if (isCurrentActive) {
+              markConversationAsRead(newMsg.conversation_id, user.id);
+            }
           }
 
           // Generate in-app notification so Notifications view and bell update immediately
@@ -393,6 +404,7 @@ export default function Messages() {
             // AUTO-HEAL: If conversation does NOT exist yet in recipient's local state, create it now!
             if (!convExists) {
               const pInfo = newMsg.product_info || {};
+              const counterpartDisplayName = newMsg.sender_name || 'Interested Buyer';
               const autoCreatedConv = normalizeConversation({
                 id: newMsg.conversation_id,
                 buyer_id: newMsg.sender_id,
@@ -400,7 +412,7 @@ export default function Messages() {
                 product_id: pInfo.id || newMsg.product_id,
                 contact: {
                   id: newMsg.sender_id,
-                  name: newMsg.sender_name || 'Interested Buyer',
+                  name: counterpartDisplayName,
                   avatar: newMsg.sender_avatar || '',
                   isOnline: true,
                   verified: true,
@@ -414,7 +426,7 @@ export default function Messages() {
                   image: pInfo.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400&q=80',
                   condition: pInfo.condition || 'Used'
                 },
-                unread_count: 1,
+                unread_count: isCurrentActive ? 0 : 1,
                 messages: [formatted],
                 isMuted: isChatMuted
               }, user?.id);
@@ -424,74 +436,76 @@ export default function Messages() {
                 setIsMobileDetailOpen(true);
               }
 
-              // Also fetch fresh from database in background to hydrate full counterpart details
-              fetchUserConversations(user).then(fresh => {
-                if (fresh && fresh.length > 0) {
-                  setConversations(prevConvs => {
-                    return fresh.map(c => {
-                      const localExisting = prevConvs.find(p => p.id === c.id);
-                      if (localExisting && localExisting.messages?.length > (c.messages?.length || 0)) {
-                        return { ...c, messages: localExisting.messages, isMuted: mutedSet.has(c.id) || Boolean(c.isMuted) };
-                      }
-                      return {
-                        ...c,
-                        isMuted: mutedSet.has(c.id) || Boolean(c.isMuted)
-                      };
-                    });
-                  });
-                }
-              });
-
-              return [autoCreatedConv, ...prev];
+              const nextList = [autoCreatedConv, ...prev];
+              saveCachedConversations(user?.id, nextList);
+              return nextList;
             }
 
-            return prev.map(c => {
+            const nextList = prev.map(c => {
               if (c.id === newMsg.conversation_id || toValidUUID(c.id) === toValidUUID(newMsg.conversation_id)) {
                 if (c.messages?.some(m => m.id === formatted.id)) return c;
 
-                const isCurrentActive = c.id === activeChatIdRef.current;
                 if (isCurrentActive) {
                   markConversationAsRead(c.id, user.id);
                 }
 
+                // If counterpart contact name or avatar was generic, hydrate from newMsg
+                const updatedContact = {
+                  ...c.contact,
+                  name: (newMsg.sender_name && newMsg.sender_name !== 'Buyer / Seller' && newMsg.sender_name !== 'Interested Buyer') 
+                    ? newMsg.sender_name : (c.contact?.name || 'Contact'),
+                  avatar: newMsg.sender_avatar || c.contact?.avatar || ''
+                };
+
                 return {
                   ...c,
+                  contact: updatedContact,
                   messages: [...(c.messages || []), formatted],
                   unreadCount: isCurrentActive ? 0 : (c.unreadCount || 0) + 1
                 };
               }
               return c;
             });
+
+            // Re-order: move the conversation with the new message to index 0 (top of sidebar!)
+            const targetConv = nextList.find(c => c.id === newMsg.conversation_id || toValidUUID(c.id) === toValidUUID(newMsg.conversation_id));
+            const reordered = targetConv ? [targetConv, ...nextList.filter(c => c !== targetConv)] : nextList;
+            saveCachedConversations(user?.id, reordered);
+            return reordered;
           });
         },
         onStatusChange: ({ messageId, conversationId, originalConversationId, status }) => {
-          setConversations(prev => prev.map(c => {
-            const matchesConv = 
-              c.id === conversationId || 
-              c.id === originalConversationId ||
-              (conversationId && toValidUUID(c.id) === toValidUUID(conversationId));
+          setConversations(prev => {
+            const updated = prev.map(c => {
+              const matchesConv = 
+                c.id === conversationId || 
+                c.id === originalConversationId ||
+                (conversationId && toValidUUID(c.id) === toValidUUID(conversationId));
 
-            if (!matchesConv) return c;
+              if (!matchesConv) return c;
 
-            return {
-              ...c,
-              messages: (c.messages || []).map(m => {
-                if (status === 'read' && m.sender === 'me') {
-                  return { ...m, status: 'read' };
-                }
-                if (status === 'delivered' && m.sender === 'me' && m.status !== 'read') {
-                  if (!messageId || m.id === messageId) {
-                    return { ...m, status: 'delivered' };
+              return {
+                ...c,
+                messages: (c.messages || []).map(m => {
+                  if (status === 'read' && m.sender === 'me') {
+                    return { ...m, status: 'read' };
                   }
-                }
-                return m;
-              })
-            };
-          }));
+                  if (status === 'delivered' && m.sender === 'me' && m.status !== 'read') {
+                    if (!messageId || m.id === messageId) {
+                      return { ...m, status: 'delivered' };
+                    }
+                  }
+                  return m;
+                })
+              };
+            });
+            saveCachedConversations(user?.id, updated);
+            return updated;
+          });
         },
-        onTyping: ({ conversationId, userId, timestamp }) => {
+        onTyping: ({ conversationId, userId, userName, timestamp }) => {
           // Show typing for the conversation, auto-clear after 3 seconds
-          setTypingUsers(prev => ({ ...prev, [conversationId]: { userId, timestamp } }));
+          setTypingUsers(prev => ({ ...prev, [conversationId]: { userId, userName, timestamp } }));
           if (typingTimeoutRefs.current[conversationId]) {
             clearTimeout(typingTimeoutRefs.current[conversationId]);
           }
@@ -722,6 +736,10 @@ export default function Messages() {
       const timeNow = new Date(nowTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const msgId = generateUUID();
 
+      const myProfile = getUserProfileData(user);
+      const myName = myProfile?.fullName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+      const myAvatar = myProfile?.avatarUrl || user?.user_metadata?.avatar_url || '';
+
       const newMsg = {
         id: msgId,
         sender: 'me',
@@ -735,15 +753,24 @@ export default function Messages() {
         status: isCounterpartOnline ? 'delivered' : 'sent'
       };
 
-      // Optimistic UI update
-      setConversations(prev =>
-        prev.map(c => {
-          if (c.id === activeChatId) {
-            return { ...c, messages: [...c.messages, newMsg] };
-          }
-          return c;
-        })
-      );
+      // Optimistic UI update and cache persistence
+      setConversations(prev => {
+        const chatIndex = prev.findIndex(c => c.id === activeChatId);
+        let updated;
+        if (chatIndex >= 0) {
+          const target = {
+            ...prev[chatIndex],
+            lastMessage: newMsg,
+            lastMessageTime: timeNow,
+            messages: [...(prev[chatIndex].messages || []), newMsg]
+          };
+          updated = [target, ...prev.filter((_, i) => i !== chatIndex)];
+        } else {
+          updated = prev;
+        }
+        saveCachedConversations(user?.id, updated);
+        return updated;
+      });
 
       // Upload audio to Supabase Storage and persist message
       try {
@@ -756,6 +783,8 @@ export default function Messages() {
           conversationId: activeChat.id,
           senderId: user.id,
           recipientId: counterpartId,
+          senderName: myName,
+          senderAvatar: myAvatar,
           text: '🎙️ Voice Note',
           audioUrl: cloudAudioUrl || localAudioUrl,
           duration: duration,
@@ -895,9 +924,11 @@ export default function Messages() {
             const resolvedPrice = Number(poolItem?.price || prodPriceParam || 0);
             const resolvedImage = poolItem?.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400&q=80';
 
+            const targetSellerUid = sellerId || poolItem?.sellerId || poolItem?.userId || '';
+
             const res = await getOrCreateConversation({
               user,
-              sellerId: sellerId || poolItem?.sellerId || poolItem?.userId || '',
+              sellerId: targetSellerUid,
               productId: prodId,
               productDetails: { name: resolvedName, price: resolvedPrice, image: resolvedImage }
             });
@@ -912,9 +943,10 @@ export default function Messages() {
             const newChatObj = normalizeConversation({
               id: res.conversationId,
               buyer_id: user.id,
-              seller_id: sellerId || poolItem?.sellerId || poolItem?.userId || '',
+              seller_id: targetSellerUid,
               product_id: prodId,
               contact: {
+                id: targetSellerUid,
                 name: sellerName !== 'Marketplace Seller' ? sellerName : (poolItem?.sellerName || 'Marketplace Seller'),
                 avatar: poolItem?.sellerAvatar || '',
                 isOnline: true,
@@ -935,7 +967,9 @@ export default function Messages() {
 
             setConversations(prev => {
               if (prev.some(c => c.id === newChatObj.id)) return prev;
-              return [newChatObj, ...prev];
+              const updated = [newChatObj, ...prev];
+              saveCachedConversations(user?.id, updated);
+              return updated;
             });
             setActiveChatId(newChatObj.id);
             setIsMobileDetailOpen(true);
@@ -1176,6 +1210,10 @@ export default function Messages() {
     const counterpartId = activeChat.contact?.id || (String(activeChat.buyer_id || '').toLowerCase() === String(user?.id || '').toLowerCase() ? activeChat.seller_id : activeChat.buyer_id);
     const isCounterpartOnline = counterpartId ? onlineUserIds.has(counterpartId) : false;
 
+    const myProfile = getUserProfileData(user);
+    const myName = myProfile?.fullName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+    const myAvatar = myProfile?.avatarUrl || user?.user_metadata?.avatar_url || '';
+
     const nowTs = Date.now();
     const timeNow = new Date(nowTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const messageText = isOffer ? `🏷️ Proposed Offer: ₦${Number(offerVal).toLocaleString('en-NG')}` : text;
@@ -1200,18 +1238,25 @@ export default function Messages() {
       status: initialStatus
     };
 
-    // Optimistic UI update
-    setConversations(prev =>
-      prev.map(c => {
-        if (c.id === activeChat.id) {
-          return {
-            ...c,
-            messages: [...(c.messages || []), newMsg]
-          };
-        }
-        return c;
-      })
-    );
+    // Optimistic UI update and local cache persistence
+    setConversations(prev => {
+      const chatIndex = prev.findIndex(c => c.id === activeChat.id);
+      let updated;
+      if (chatIndex >= 0) {
+        const targetChat = {
+          ...prev[chatIndex],
+          lastMessage: newMsg,
+          lastMessageTime: timeNow,
+          messages: [...(prev[chatIndex].messages || []), newMsg]
+        };
+        // Move active chat to the top of sidebar list
+        updated = [targetChat, ...prev.filter((_, idx) => idx !== chatIndex)];
+      } else {
+        updated = prev;
+      }
+      saveCachedConversations(user?.id, updated);
+      return updated;
+    });
 
     const attachmentToUpload = selectedAttachment;
     if (!isOffer) setInputMessage('');
@@ -1231,6 +1276,8 @@ export default function Messages() {
           conversationId: activeChat.id,
           senderId: user.id,
           recipientId: counterpartId,
+          senderName: myName,
+          senderAvatar: myAvatar,
           text: messageText,
           isOffer,
           offerAmount: offerVal,
@@ -1240,8 +1287,8 @@ export default function Messages() {
         });
 
         if (savedResult && savedResult.id) {
-          setConversations(prev =>
-            prev.map(c => {
+          setConversations(prev => {
+            const updated = prev.map(c => {
               if (c.id === activeChat.id) {
                 return {
                   ...c,
@@ -1249,8 +1296,10 @@ export default function Messages() {
                 };
               }
               return c;
-            })
-          );
+            });
+            saveCachedConversations(user?.id, updated);
+            return updated;
+          });
         }
       } catch (err) {
         console.error('Error sending message to cloud:', err);
@@ -1324,7 +1373,12 @@ export default function Messages() {
           <NavLink to="/messages" replace className={({ isActive }) => isActive ? "home-nav-item home-nav-item-active" : "home-nav-item"}>
             {({ isActive }) => (
               <span className="home-nav-icon-btn">
-                <MessageSquareMore className="home-nav-icon" color={isActive ? "#1d4ed8" : "white"} />
+                <div className="home-nav-icon-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MessageSquareMore className="home-nav-icon" color={isActive ? "#1d4ed8" : "white"} />
+                  {unreadCount > 0 && (
+                    <span className="home-nav-unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+                  )}
+                </div>
                 <div className="home-header-tooltip">My Messages</div>
               </span>
             )}

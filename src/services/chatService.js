@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabaseClient.js';
 import { getGeneralProductPool } from '../utils/userSync';
 
 /**
@@ -8,8 +8,24 @@ import { getGeneralProductPool } from '../utils/userSync';
  */
 let _sharedChannel = null;
 let _sharedChannelReady = false;
+let _sharedChannelSubscribers = 0;
 
-const getSharedChannel = () => {
+/**
+ * Cross-tab BroadcastChannel for 0ms latency sync across windows & tabs
+ */
+let _localBroadcastChannel = null;
+const getLocalBroadcastChannel = () => {
+  if (typeof window !== 'undefined' && typeof window.BroadcastChannel !== 'undefined') {
+    if (!_localBroadcastChannel) {
+      try {
+        _localBroadcastChannel = new window.BroadcastChannel('buyoh-chat-sync');
+      } catch (e) {}
+    }
+  }
+  return _localBroadcastChannel;
+};
+
+export const getSharedChannel = () => {
   if (!_sharedChannel) {
     _sharedChannel = supabase.channel('buyoh-marketplace-realtime', {
       config: {
@@ -27,19 +43,29 @@ const getSharedChannel = () => {
 
 export const setSharedChannel = (channel) => {
   _sharedChannel = channel;
+  _sharedChannelReady = true;
 };
 
 const safeBroadcast = async (event, payload) => {
+  // 1. Broadcast via local BroadcastChannel for instant same-browser cross-tab delivery
+  try {
+    const localBc = getLocalBroadcastChannel();
+    if (localBc) {
+      localBc.postMessage({ type: 'broadcast', event, payload });
+    }
+  } catch (e) {}
+
+  // 2. Broadcast via Supabase Realtime WebSocket for cross-browser & cross-device delivery
   try {
     const channel = getSharedChannel();
     if (_sharedChannelReady) {
       await channel.send({ type: 'broadcast', event, payload });
     } else {
-      // Channel may be connecting; retry every 200ms up to 15 times (~3s)
+      // Channel may be connecting; retry every 150ms up to 20 times (~3s)
       let attempts = 0;
       const timer = setInterval(async () => {
         attempts++;
-        if (_sharedChannelReady || attempts > 15) {
+        if (_sharedChannelReady || attempts > 20) {
           clearInterval(timer);
           try {
             await channel.send({ type: 'broadcast', event, payload });
@@ -47,7 +73,7 @@ const safeBroadcast = async (event, payload) => {
             console.warn('[chatService] Delayed broadcast warning:', e);
           }
         }
-      }, 200);
+      }, 150);
     }
   } catch (e) {
     console.warn('[chatService] Broadcast error:', e);
@@ -93,7 +119,6 @@ export const uploadChatAttachment = async (file, conversationId, senderId, type 
 
     if (error) {
       console.warn('[chatService] Supabase storage upload notice:', error.message, '-> falling back to data URL');
-      // Fallback: serialize small audio blob or image to Data URL so recipient can still play/view it
       if (file.size && file.size < 3000000) {
         return await blobToDataUrl(file);
       }
@@ -107,19 +132,18 @@ export const uploadChatAttachment = async (file, conversationId, senderId, type 
     return urlData?.publicUrl || null;
   } catch (e) {
     console.warn('[chatService] Upload attachment exception:', e);
-    // Fallback on exception
     return await blobToDataUrl(file);
   }
 };
 
 /**
  * Broadcast a typing indicator to the counterpart via Realtime.
- * Debounced on the caller side.
  */
-export const broadcastTyping = (conversationId, userId) => {
+export const broadcastTyping = (conversationId, userId, userName = '') => {
   safeBroadcast('user_typing', {
     conversation_id: conversationId,
     user_id: userId,
+    user_name: userName,
     timestamp: Date.now()
   });
 };
@@ -163,7 +187,19 @@ export const toValidUUID = (input) => {
   const part3 = '4' + hex(h3).slice(1, 4);
   const part4 = 'a' + hex(h4).slice(1, 4);
   const part5 = hex(h1 ^ h3) + hex(h2 ^ h4).slice(0, 4);
-  return `${part1}-${part2}-${part3}-${part4}-${part5}`;
+  return `${part1}-${part2}-${part3}-${part4}-${part5}`.toLowerCase();
+};
+
+/**
+ * Deterministically construct a consistent conversation UUID for two users and an optional product.
+ * Whether User A or User B calls this, the resulting UUID is 100% identical.
+ */
+export const buildDeterministicConversationId = (user1Id, user2Id, productId) => {
+  const u1 = String(user1Id || '').toLowerCase().trim();
+  const u2 = String(user2Id || '').toLowerCase().trim();
+  const p = String(productId || 'general').trim();
+  const sortedUsers = [u1, u2].sort().join(':');
+  return toValidUUID(`${sortedUsers}:${p}`);
 };
 
 /**
@@ -184,6 +220,71 @@ export const formatLastSeen = (isoDate, isOnline = false) => {
     return `Last seen ${diffDays} days ago`;
   } catch (e) {
     return 'Offline';
+  }
+};
+
+/**
+ * Local storage caching helpers
+ */
+export const getCachedConversations = (userId) => {
+  if (!userId || typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(`buyoh_cloud_convs_${userId}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.map(c => normalizeConversation(c, userId)).filter(Boolean);
+      }
+    }
+  } catch (e) {}
+  return [];
+};
+
+export const saveCachedConversations = (userId, conversations) => {
+  if (!userId || typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`buyoh_cloud_convs_${userId}`, JSON.stringify(conversations));
+    window.dispatchEvent(new CustomEvent('buyoh_conversations_updated', { detail: conversations }));
+  } catch (e) {}
+};
+
+/**
+ * Persist a single message to local cache for a user immediately (used for both send and receive)
+ */
+export const appendMessageToUserCache = (userId, conversationId, messageObj, conversationMeta = null) => {
+  if (!userId || !conversationId || !messageObj || typeof window === 'undefined') return;
+
+  try {
+    const existingList = getCachedConversations(userId);
+    const validConvId = toValidUUID(conversationId);
+    let conv = existingList.find(c => c.id === conversationId || toValidUUID(c.id) === validConvId);
+
+    if (conv) {
+      // Append message if not already present
+      if (!conv.messages.some(m => m.id === messageObj.id)) {
+        conv.messages = [...conv.messages, messageObj];
+        if (messageObj.sender === 'them' && messageObj.status !== 'read') {
+          conv.unreadCount = (conv.unreadCount || 0) + 1;
+        }
+      }
+      // Re-order: move this conversation to the top
+      const updatedList = [conv, ...existingList.filter(c => c.id !== conv.id)];
+      saveCachedConversations(userId, updatedList);
+    } else if (conversationMeta) {
+      // Create new conversation entry in local cache
+      const newConv = normalizeConversation({
+        ...conversationMeta,
+        id: conversationId,
+        messages: [messageObj],
+        unread_count: messageObj.sender === 'them' ? 1 : 0
+      }, userId);
+
+      if (newConv) {
+        saveCachedConversations(userId, [newConv, ...existingList]);
+      }
+    }
+  } catch (e) {
+    console.warn('[chatService] appendMessageToUserCache notice:', e);
   }
 };
 
@@ -213,7 +314,7 @@ export const normalizeConversation = (raw, currentUserId = null) => {
 
   let contact = {
     id: counterpartId,
-    name: raw.contact?.name || raw.sellerName || raw.buyerName || (isSelling ? 'Buyer' : 'Seller'),
+    name: raw.contact?.name || raw.sellerName || raw.buyerName || (isSelling ? 'Interested Buyer' : 'Marketplace Seller'),
     avatar: raw.contact?.avatar || raw.sellerAvatar || raw.buyerAvatar || '',
     phone: raw.contact?.phone || raw.sellerPhone || raw.buyerPhone || '+234 800 000 0000',
     whatsapp: raw.contact?.whatsapp || raw.sellerWhatsApp || raw.buyerWhatsApp || '',
@@ -286,17 +387,17 @@ export const normalizeConversation = (raw, currentUserId = null) => {
 };
 
 /**
- * Fetch all conversations for a user from Supabase (with fallback to local storage).
- * Backward-compatible with databases that do not have updated_at column yet.
+ * Fetch all conversations for a user from Supabase, merging with cached local conversations
  */
 export const fetchUserConversations = async (user) => {
   if (!user?.id) {
     return [];
   }
 
+  const cached = getCachedConversations(user.id);
+
   try {
     // 1. Fetch conversations from Supabase
-    // Try ordering by updated_at, fallback to created_at if updated_at does not exist yet
     let convRows = null;
     let { data: rowsWithUpdated, error: errUpdated } = await supabase
       .from('conversations')
@@ -313,14 +414,11 @@ export const fetchUserConversations = async (user) => {
         .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
         .order('created_at', { ascending: false });
 
-      if (errCreated) {
-        console.warn('[chatService] Fetch conversations notice:', errCreated.message);
-      }
       convRows = rowsWithCreated || [];
     }
 
     if (Array.isArray(convRows) && convRows.length > 0) {
-      // 2. Fetch profiles for all counterparts to display real names, avatars, phone numbers
+      // 2. Fetch profiles for all counterparts
       const userUidLower = String(user.id).toLowerCase();
       const counterpartIds = [...new Set(
         convRows.map(c => {
@@ -372,18 +470,30 @@ export const fetchUserConversations = async (user) => {
         }
       });
 
-      // 5. Build normalized list
-      const normalized = convRows.map(row => {
+      // 5. Build normalized cloud list
+      const cloudNormalized = convRows.map(row => {
         const isBuyer = String(row.buyer_id || '').toLowerCase() === userUidLower;
         const counterpartId = isBuyer ? row.seller_id : row.buyer_id;
         const profile = profileMap[String(counterpartId).toLowerCase()] || profileMap[counterpartId] || {};
-        const prod = productMap[String(row.product_id)] || {};
+        const prod = productMap[String(row.product_id)] || productMap[toValidUUID(row.product_id)] || {};
 
         let memberDuration = '5+ years on BuyOh';
         if (profile.created_at) {
           const yrs = Math.max(1, Math.floor((Date.now() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24 * 365)));
           memberDuration = `${yrs}+ year${yrs > 1 ? 's' : ''} on BuyOh`;
         }
+
+        // Merge messages from DB and local cache
+        const dbMsgs = messagesByConv[row.id] || [];
+        const localMatch = cached.find(c => c.id === row.id || toValidUUID(c.id) === toValidUUID(row.id));
+        const localMsgs = localMatch ? localMatch.messages : [];
+
+        // Union messages by ID
+        const msgMap = new Map();
+        [...localMsgs, ...dbMsgs].forEach(m => {
+          if (m && m.id) msgMap.set(m.id, m);
+        });
+        const combinedMsgs = Array.from(msgMap.values()).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
         const rawObj = {
           id: row.id,
@@ -393,11 +503,11 @@ export const fetchUserConversations = async (user) => {
           unread_count: row.unread_count || 0,
           contact: {
             id: counterpartId,
-            name: profile.full_name || profile.name || (row.seller_id === user.id ? 'Interested Buyer' : 'Marketplace Seller'),
-            avatar: profile.avatar_url || '',
-            phone: profile.phone || '+234 800 000 0000',
-            whatsapp: profile.whatsapp || profile.phone || '',
-            location: profile.location || 'Nigeria',
+            name: profile.full_name || profile.name || localMatch?.contact?.name || (isBuyer ? 'Marketplace Seller' : 'Interested Buyer'),
+            avatar: profile.avatar_url || localMatch?.contact?.avatar || '',
+            phone: profile.phone || localMatch?.contact?.phone || '+234 800 000 0000',
+            whatsapp: profile.whatsapp || profile.phone || localMatch?.contact?.whatsapp || '',
+            location: profile.location || localMatch?.contact?.location || 'Nigeria',
             isOnline: false,
             lastSeen: formatLastSeen(profile.updated_at, false),
             verified: Boolean(profile.verified),
@@ -407,44 +517,35 @@ export const fetchUserConversations = async (user) => {
           },
           product: {
             id: row.product_id,
-            name: prod.name || 'Listing Item',
-            price: Number(prod.price || 0),
-            image: prod.image || (Array.isArray(prod.images) ? prod.images[0] : '') || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400&q=80',
-            condition: prod.condition || 'Used'
+            name: prod.name || localMatch?.product?.name || 'Listing Item',
+            price: Number(prod.price || localMatch?.product?.price || 0),
+            image: prod.image || localMatch?.product?.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400&q=80',
+            condition: prod.condition || localMatch?.product?.condition || 'Used'
           },
-          messages: messagesByConv[row.id] || []
+          messages: combinedMsgs
         };
 
         return normalizeConversation(rawObj, user.id);
       }).filter(Boolean);
 
-      // Cache locally
-      try {
-        localStorage.setItem(`buyoh_cloud_convs_${user.id}`, JSON.stringify(normalized));
-      } catch (e) {}
+      // Merge any local-only conversations not yet in Supabase
+      const cloudIds = new Set(cloudNormalized.map(c => toValidUUID(c.id)));
+      const onlyLocal = cached.filter(c => !cloudIds.has(toValidUUID(c.id)));
+      const merged = [...cloudNormalized, ...onlyLocal];
 
-      return normalized;
+      saveCachedConversations(user.id, merged);
+      return merged;
     }
   } catch (err) {
     console.error('[chatService] Fetch error:', err);
   }
 
-  // Fallback: Check local cache for this user
-  try {
-    const cached = localStorage.getItem(`buyoh_cloud_convs_${user.id}`);
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed)) {
-        return parsed.map(c => normalizeConversation(c, user.id)).filter(Boolean);
-      }
-    }
-  } catch (e) {}
-
-  return [];
+  // If Supabase query failed or returned empty, return cached conversations
+  return cached;
 };
 
 /**
- * Get or create a conversation in Supabase for a specific product and seller
+ * Get or create a conversation with a deterministic UUID shared by both accounts
  */
 export const getOrCreateConversation = async ({ user, sellerId, productId, productDetails }) => {
   if (!user?.id) {
@@ -460,36 +561,37 @@ export const getOrCreateConversation = async ({ user, sellerId, productId, produ
   const validSellerId = toValidUUID(sellerId || 'platform-seller');
   const validProductId = toValidUUID(productId || 'general-product');
 
+  // Compute the deterministic conversation ID shared symmetrically by both participants
+  const deterministicConvId = buildDeterministicConversationId(user.id, sellerId, productId);
+
+  // Check if conversation already exists in local cache
+  const cached = getCachedConversations(user.id);
+  const existingLocal = cached.find(c => 
+    c.id === deterministicConvId || 
+    toValidUUID(c.id) === deterministicConvId ||
+    (c.product_id === validProductId && (c.contact?.id === sellerId || c.contact?.id === validSellerId))
+  );
+
+  if (existingLocal) {
+    return { conversationId: existingLocal.id, isNew: false };
+  }
+
   try {
     // 1. Check if conversation already exists in Supabase
     const { data: existingRows } = await supabase
       .from('conversations')
       .select('*')
-      .or(`and(buyer_id.eq.${validBuyerId},seller_id.eq.${validSellerId}),and(buyer_id.eq.${validSellerId},seller_id.eq.${validBuyerId})`)
+      .or(`id.eq.${deterministicConvId},and(buyer_id.eq.${validBuyerId},seller_id.eq.${validSellerId}),and(buyer_id.eq.${validSellerId},seller_id.eq.${validBuyerId})`)
       .limit(10);
 
     if (existingRows && existingRows.length > 0) {
-      const match = existingRows.find(r => String(r.product_id).toLowerCase() === String(validProductId).toLowerCase()) || existingRows[0];
+      const match = existingRows.find(r => r.id === deterministicConvId || String(r.product_id).toLowerCase() === String(validProductId).toLowerCase()) || existingRows[0];
       return { conversationId: match.id, isNew: false };
     }
 
-    // Also check if conversation exists by buyer & product
-    const { data: fallbackRows } = await supabase
-      .from('conversations')
-      .select('*')
-      .eq('product_id', validProductId)
-      .eq('buyer_id', validBuyerId)
-      .limit(1);
-
-    if (fallbackRows && fallbackRows.length > 0) {
-      return { conversationId: fallbackRows[0].id, isNew: false };
-    }
-
-    // 2. Create new conversation in Supabase with ONLY columns guaranteed to exist
-    const newConvId = generateUUID();
-
+    // 2. Insert new conversation in Supabase with the deterministic UUID
     const insertPayload = {
-      id: newConvId,
+      id: deterministicConvId,
       buyer_id: validBuyerId,
       seller_id: validSellerId,
       product_id: validProductId,
@@ -504,24 +606,24 @@ export const getOrCreateConversation = async ({ user, sellerId, productId, produ
 
     if (insErr) {
       console.warn('[chatService] Insert conversation notice:', insErr.message);
-      return { conversationId: newConvId, isNew: true, fallback: true };
     }
 
-    return { conversationId: inserted?.id || newConvId, isNew: true };
+    return { conversationId: inserted?.id || deterministicConvId, isNew: true };
   } catch (err) {
-    console.error('[chatService] getOrCreateConversation error:', err);
-    const fallbackId = generateUUID();
-    return { conversationId: fallbackId, isNew: true, fallback: true };
+    console.warn('[chatService] getOrCreateConversation exception:', err);
+    return { conversationId: deterministicConvId, isNew: true, fallback: true };
   }
 };
 
 /**
- * Send a message to a conversation in Supabase + Broadcast in Realtime.
- * 100% resilient against schema differences (whether image/updated_at columns exist or not).
+ * Send a message to a conversation in Supabase + Broadcast in Realtime + Multi-tab sync.
+ * Normal messaging app behavior: instant delivery, optimistic rendering, persistent local cache.
  */
 export const sendMessage = async ({
   conversationId,
   senderId,
+  senderName = '',
+  senderAvatar = '',
   recipientId,
   text,
   isOffer = false,
@@ -536,10 +638,55 @@ export const sendMessage = async ({
 
   const validConvId = toValidUUID(conversationId);
   const validSenderId = toValidUUID(senderId);
+  const validRecipientId = toValidUUID(recipientId || 'platform-seller');
   const validMsgId = generateUUID();
   const now = new Date();
 
-  // Pre-flight check: ensure parent conversation exists in Supabase to satisfy foreign key constraint
+  // Base payload matching standard public.messages schema
+  const basePayload = {
+    id: validMsgId,
+    conversation_id: validConvId,
+    sender_id: validSenderId,
+    text: text || '',
+    is_offer: Boolean(isOffer),
+    offer_amount: Number(offerAmount) || 0,
+    audio_url: audioUrl || null,
+    duration: duration || null,
+    image: image || null,
+    status: isRecipientOnline ? 'delivered' : 'sent',
+    created_at: now.toISOString()
+  };
+
+  // Immediate Local Cache update for sender
+  const senderMessage = {
+    id: validMsgId,
+    sender: 'me',
+    sender_id: validSenderId,
+    text: text || '',
+    isOffer: Boolean(isOffer),
+    offerAmount: Number(offerAmount) || 0,
+    audioUrl: audioUrl || null,
+    duration: duration || null,
+    image: image || null,
+    status: isRecipientOnline ? 'delivered' : 'sent',
+    time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    timestamp: now.getTime()
+  };
+
+  appendMessageToUserCache(senderId, validConvId, senderMessage, {
+    id: validConvId,
+    buyer_id: validSenderId,
+    seller_id: validRecipientId,
+    product_id: productInfo?.id || '',
+    contact: {
+      id: recipientId,
+      name: 'Recipient',
+      avatar: ''
+    },
+    product: productInfo || { name: 'Marketplace Item' }
+  });
+
+  // Pre-flight check / insert parent conversation in Supabase
   try {
     const { data: convCheck } = await supabase
       .from('conversations')
@@ -548,7 +695,6 @@ export const sendMessage = async ({
       .maybeSingle();
 
     if (!convCheck) {
-      const validRecipientId = toValidUUID(recipientId || 'platform-seller');
       await supabase
         .from('conversations')
         .insert({
@@ -563,102 +709,48 @@ export const sendMessage = async ({
     console.warn('[chatService] Pre-flight conversation check warning:', preErr);
   }
 
-  // Base payload that strictly matches standard public.messages schema
-  const basePayload = {
-    id: validMsgId,
-    conversation_id: validConvId,
-    sender_id: validSenderId,
-    text: text || '',
-    is_offer: Boolean(isOffer),
-    offer_amount: Number(offerAmount) || 0,
-    audio_url: audioUrl || null,
-    duration: duration || null,
-    status: isRecipientOnline ? 'delivered' : 'sent',
-    created_at: now.toISOString()
-  };
-
-  let savedMessage = null;
-
+  // Insert into public.messages table
+  let savedMessage = basePayload;
   try {
-    // 1. Try insert. Only attach image if it is a valid non-empty string
     let insertPayload = { ...basePayload };
-    if (image && typeof image === 'string') {
-      insertPayload.image = image;
-    }
-
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from('messages')
       .insert(insertPayload)
       .select('*')
       .maybeSingle();
 
-    // If schema cache says image column does not exist, retry without image and embed in text
-    if (error && error.message && error.message.includes('image')) {
-      console.warn('[chatService] Database missing image column; embedding in text payload');
-      const fallbackPayload = { ...basePayload };
-      if (image) {
-        fallbackPayload.text = fallbackPayload.text ? `${fallbackPayload.text}\n[image] ${image}` : `[image] ${image}`;
-      }
-      const retryImg = await supabase
-        .from('messages')
-        .insert(fallbackPayload)
-        .select('*')
-        .maybeSingle();
-
-      data = retryImg.data;
-      error = retryImg.error;
+    if (!error && data) {
+      savedMessage = data;
+    } else if (error) {
+      console.warn('[chatService] Send message DB notice:', error.message);
     }
-
-    // Auto-heal if foreign key violated
-    if (error && error.message && (error.message.includes('foreign key') || error.message.includes('violates'))) {
-      try {
-        await supabase.from('conversations').upsert({
-          id: validConvId,
-          buyer_id: validSenderId,
-          seller_id: toValidUUID(recipientId),
-          unread_count: 1
-        }, { onConflict: 'id' });
-
-        const retryFk = await supabase
-          .from('messages')
-          .insert(basePayload)
-          .select('*')
-          .maybeSingle();
-
-        data = retryFk.data;
-        error = retryFk.error;
-      } catch (healErr) {
-        console.warn('[chatService] Auto-heal message insert failed:', healErr);
-      }
-    }
-
-    if (error) {
-      console.warn('[chatService] Send message warning:', error.message);
-    }
-
-    savedMessage = data || basePayload;
   } catch (err) {
-    console.error('[chatService] sendMessage error:', err);
-    savedMessage = basePayload;
+    console.warn('[chatService] sendMessage DB exception:', err);
   }
 
-  // 2. Broadcast via shared Realtime Channel for instant cross-tab & cross-device delivery
-  safeBroadcast('new_message', {
+  // Broadcast via shared Realtime Channel + BroadcastChannel for instant cross-account delivery
+  const broadcastPayload = {
     ...savedMessage,
+    id: validMsgId,
     conversation_id: validConvId,
     original_conversation_id: conversationId,
     recipient_id: recipientId,
     sender_id: senderId,
+    sender_name: senderName,
+    sender_avatar: senderAvatar,
     image: image || savedMessage.image,
-    product_info: productInfo
-  });
+    product_info: productInfo,
+    created_at: now.toISOString()
+  };
 
-  // 3. Dispatch in-app notification to counterpart profile
+  safeBroadcast('new_message', broadcastPayload);
+
+  // Dispatch in-app notification to counterpart profile
   if (recipientId && String(recipientId).toLowerCase() !== String(senderId).toLowerCase()) {
     try {
-      const notifTitle = isOffer ? 'New Offer Received' : 'New Message';
+      const notifTitle = isOffer ? 'New Offer Received' : `New Message from ${senderName || 'Buyer'}`;
       const notifMsg = isOffer 
-        ? `Someone made an offer of ₦${Number(offerAmount).toLocaleString('en-NG')} on "${productInfo?.name || 'your listing'}".`
+        ? `${senderName || 'A buyer'} made an offer of ₦${Number(offerAmount).toLocaleString('en-NG')} on "${productInfo?.name || 'your listing'}".`
         : (text || 'Sent you an attachment').substring(0, 80);
 
       const newNotifItem = {
@@ -675,25 +767,6 @@ export const sendMessage = async ({
         recipient_id: recipientId,
         notification: newNotifItem
       });
-
-      // Update counterpart's profile notifications directly
-      try {
-        const { data: recipientProfile } = await supabase
-          .from('profiles')
-          .select('notifications')
-          .eq('id', recipientId)
-          .maybeSingle();
-
-        if (recipientProfile) {
-          const existingNotifs = Array.isArray(recipientProfile.notifications) ? recipientProfile.notifications : [];
-          existingNotifs.unshift(newNotifItem);
-
-          await supabase
-            .from('profiles')
-            .update({ notifications: existingNotifs, updated_at: now.toISOString() })
-            .eq('id', recipientId);
-        }
-      } catch (e) {}
     } catch (notifErr) {
       console.warn('[chatService] Notification dispatch notice:', notifErr);
     }
@@ -703,13 +776,30 @@ export const sendMessage = async ({
 };
 
 /**
- * Mark messages in a conversation as read in Supabase and broadcast read event
+ * Mark messages in a conversation as read in Supabase, local cache, and broadcast event
  */
 export const markConversationAsRead = async (conversationId, currentUserId) => {
   if (!conversationId || !currentUserId) return;
   const validConvId = toValidUUID(conversationId);
   const validUserId = toValidUUID(currentUserId);
 
+  // Update local cache
+  try {
+    const list = getCachedConversations(currentUserId);
+    const updated = list.map(c => {
+      if (c.id === conversationId || toValidUUID(c.id) === validConvId) {
+        return {
+          ...c,
+          unreadCount: 0,
+          messages: (c.messages || []).map(m => m.sender === 'them' ? { ...m, status: 'read' } : m)
+        };
+      }
+      return c;
+    });
+    saveCachedConversations(currentUserId, updated);
+  } catch (e) {}
+
+  // Update Supabase
   try {
     await supabase
       .from('messages')
@@ -721,16 +811,16 @@ export const markConversationAsRead = async (conversationId, currentUserId) => {
       .from('conversations')
       .update({ unread_count: 0 })
       .eq('id', validConvId);
-
-    // Broadcast message_read event so sender's double tick turns read
-    safeBroadcast('message_read', {
-      conversation_id: validConvId,
-      original_conversation_id: conversationId,
-      read_by: currentUserId
-    });
   } catch (e) {
-    console.warn('[chatService] Mark as read notice:', e);
+    console.warn('[chatService] Mark as read DB notice:', e);
   }
+
+  // Broadcast message_read event so sender's double tick turns blue
+  safeBroadcast('message_read', {
+    conversation_id: validConvId,
+    original_conversation_id: conversationId,
+    read_by: currentUserId
+  });
 };
 
 /**
@@ -746,24 +836,124 @@ export const broadcastMessageDelivered = (conversationId, messageId, senderId) =
 };
 
 /**
- * Subscribe to real-time incoming messages, status changes & online presence
+ * Global Realtime Chat Manager singleton:
+ * Listens to incoming messages, delivers them across tabs & windows,
+ * and maintains continuous connectivity.
  */
 export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, onPresenceChange, onTyping }) => {
   if (!userId || typeof window === 'undefined') return () => {};
 
-  // Remove any previously shared channel so we get a fresh one with presence config
-  if (_sharedChannel) {
-    try { supabase.removeChannel(_sharedChannel); } catch (e) {}
-    _sharedChannel = null;
-    _sharedChannelReady = false;
-  }
-
   const currentUid = String(userId || '').toLowerCase();
+  const channel = getSharedChannel();
+  _sharedChannelSubscribers++;
 
-  const channel = supabase.channel('buyoh-marketplace-realtime', {
-    config: {
-      broadcast: { ack: true, self: false },
-      presence: { key: userId }
+  // Handler for incoming message broadcast (handles both Supabase Realtime & local BroadcastChannel)
+  const handleIncomingMessage = (payload) => {
+    if (!payload) return;
+    const targetRecipient = String(payload.recipient_id || '').toLowerCase();
+    const sender = String(payload.sender_id || '').toLowerCase();
+
+    // Accept if recipient is this user, or if sender is NOT this user
+    const isTarget = targetRecipient === currentUid ||
+      (payload.recipient_id && toValidUUID(payload.recipient_id) === toValidUUID(userId)) ||
+      (!payload.recipient_id && sender !== currentUid);
+
+    if (isTarget && sender !== currentUid) {
+      // 1. Acknowledge delivery back to sender
+      if (payload.conversation_id && payload.sender_id) {
+        broadcastMessageDelivered(payload.conversation_id, payload.id, payload.sender_id);
+      }
+
+      // 2. Persist to recipient's local cache immediately
+      const formattedForRecipient = {
+        id: payload.id || generateUUID(),
+        sender: 'them',
+        sender_id: payload.sender_id,
+        text: payload.text || '',
+        isOffer: Boolean(payload.is_offer),
+        offerAmount: Number(payload.offer_amount || 0),
+        audioUrl: payload.audio_url || null,
+        duration: payload.duration || null,
+        image: payload.image || null,
+        time: payload.created_at ? new Date(payload.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
+        timestamp: payload.created_at ? new Date(payload.created_at).getTime() : Date.now(),
+        status: 'delivered'
+      };
+
+      appendMessageToUserCache(userId, payload.conversation_id, formattedForRecipient, {
+        id: payload.conversation_id,
+        buyer_id: payload.sender_id,
+        seller_id: userId,
+        product_id: payload.product_info?.id || payload.product_id || '',
+        contact: {
+          id: payload.sender_id,
+          name: payload.sender_name || 'Counterpart',
+          avatar: payload.sender_avatar || '',
+          isOnline: true,
+          verified: true
+        },
+        product: payload.product_info || { name: 'Marketplace Item' }
+      });
+
+      // 3. Dispatch global in-app event so notification bell & toast update
+      window.dispatchEvent(new CustomEvent('buyoh_chat_message_received', { detail: payload }));
+
+      // 4. Trigger caller callback
+      if (typeof onNewMessage === 'function') {
+        onNewMessage(payload);
+      }
+    }
+  };
+
+  // Handler for status changes (delivered, read)
+  const handleStatusChange = (statusPayload) => {
+    if (!statusPayload) return;
+    if (typeof onStatusChange === 'function') {
+      onStatusChange(statusPayload);
+    }
+  };
+
+  // 1. Listen to Supabase Realtime Broadcasts
+  channel.on('broadcast', { event: 'new_message' }, (event) => {
+    handleIncomingMessage(event.payload);
+  });
+
+  channel.on('broadcast', { event: 'message_delivered' }, (event) => {
+    const payload = event.payload;
+    if (!payload) return;
+    const sender = String(payload.sender_id || '').toLowerCase();
+    if (sender === currentUid || (payload.sender_id && toValidUUID(payload.sender_id) === toValidUUID(userId))) {
+      handleStatusChange({
+        messageId: payload.message_id,
+        conversationId: payload.conversation_id,
+        originalConversationId: payload.original_conversation_id,
+        status: 'delivered'
+      });
+    }
+  });
+
+  channel.on('broadcast', { event: 'message_read' }, (event) => {
+    const payload = event.payload;
+    if (payload && String(payload.read_by || '').toLowerCase() !== currentUid) {
+      handleStatusChange({
+        conversationId: payload.conversation_id,
+        originalConversationId: payload.original_conversation_id,
+        status: 'read'
+      });
+    }
+  });
+
+  channel.on('broadcast', { event: 'user_typing' }, (event) => {
+    const payload = event.payload;
+    if (payload && String(payload.user_id || '').toLowerCase() !== currentUid) {
+      if (typeof onTyping === 'function') {
+        onTyping({
+          conversationId: payload.conversation_id,
+          userId: payload.user_id,
+          userName: payload.user_name,
+          timestamp: payload.timestamp
+        });
+      }
     }
   });
 
@@ -776,90 +966,52 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
     }
   });
 
-  // Listen to Realtime Broadcasts for instant cross-tab / cross-device messaging
-  channel.on('broadcast', { event: 'new_message' }, (event) => {
-    const payload = event.payload;
-    if (!payload) return;
-    const targetRecipient = String(payload.recipient_id || '').toLowerCase();
-    const sender = String(payload.sender_id || '').toLowerCase();
-    
-    // Accept if recipient is this user, or if sender is NOT this user and belongs to active chat
-    const isTarget = targetRecipient === currentUid ||
-      (payload.recipient_id && toValidUUID(payload.recipient_id) === toValidUUID(userId)) ||
-      (!payload.recipient_id && sender !== currentUid);
-
-    if (isTarget && typeof onNewMessage === 'function') {
-      onNewMessage(payload);
-    }
-  });
-
-  // Listen to Realtime Broadcasts for instant notification delivery
-  channel.on('broadcast', { event: 'new_notification' }, (event) => {
-    const payload = event.payload;
-    if (!payload) return;
-    const targetRecipient = String(payload.recipient_id || '').toLowerCase();
-    const isTarget = targetRecipient === currentUid ||
-      (payload.recipient_id && toValidUUID(payload.recipient_id) === toValidUUID(userId));
-
-    if (isTarget && payload.notification) {
-      try {
-        const localKey = `buyoh_notifications_${userId}`;
-        const raw = localStorage.getItem(localKey);
-        const list = raw ? JSON.parse(raw) : [];
-        if (!list.some(n => n.id === payload.notification.id)) {
-          list.unshift(payload.notification);
-          localStorage.setItem(localKey, JSON.stringify(list));
-          localStorage.setItem('buyoh_notifications_v1', JSON.stringify(list));
-          window.dispatchEvent(new CustomEvent('buyoh_notifications_updated'));
-        }
-      } catch (e) {}
-    }
-  });
-
-  channel.on('broadcast', { event: 'message_delivered' }, (event) => {
-    const payload = event.payload;
-    if (!payload) return;
-    const sender = String(payload.sender_id || '').toLowerCase();
-    if (sender === currentUid || (payload.sender_id && toValidUUID(payload.sender_id) === toValidUUID(userId))) {
-      if (typeof onStatusChange === 'function') {
-        onStatusChange({
+  // 2. Listen to local BroadcastChannel for zero-latency multi-tab sync
+  const localBc = getLocalBroadcastChannel();
+  const bcHandler = (event) => {
+    const data = event.data;
+    if (!data) return;
+    if (data.event === 'new_message') {
+      handleIncomingMessage(data.payload);
+    } else if (data.event === 'message_delivered') {
+      const payload = data.payload;
+      if (payload && (String(payload.sender_id || '').toLowerCase() === currentUid)) {
+        handleStatusChange({
           messageId: payload.message_id,
           conversationId: payload.conversation_id,
           originalConversationId: payload.original_conversation_id,
           status: 'delivered'
         });
       }
-    }
-  });
-
-  channel.on('broadcast', { event: 'message_read' }, (event) => {
-    const payload = event.payload;
-    if (payload && String(payload.read_by || '').toLowerCase() !== currentUid) {
-      if (typeof onStatusChange === 'function') {
-        onStatusChange({
+    } else if (data.event === 'message_read') {
+      const payload = data.payload;
+      if (payload && String(payload.read_by || '').toLowerCase() !== currentUid) {
+        handleStatusChange({
           conversationId: payload.conversation_id,
           originalConversationId: payload.original_conversation_id,
           status: 'read'
         });
       }
-    }
-  });
-
-  // Listen to typing indicator broadcasts
-  channel.on('broadcast', { event: 'user_typing' }, (event) => {
-    const payload = event.payload;
-    if (payload && String(payload.user_id || '').toLowerCase() !== currentUid) {
-      if (typeof onTyping === 'function') {
-        onTyping({
-          conversationId: payload.conversation_id,
-          userId: payload.user_id,
-          timestamp: payload.timestamp
-        });
+    } else if (data.event === 'user_typing') {
+      const payload = data.payload;
+      if (payload && String(payload.user_id || '').toLowerCase() !== currentUid) {
+        if (typeof onTyping === 'function') {
+          onTyping({
+            conversationId: payload.conversation_id,
+            userId: payload.user_id,
+            userName: payload.user_name,
+            timestamp: payload.timestamp
+          });
+        }
       }
     }
-  });
+  };
 
-  // Also listen to Postgres changes on messages table as persistent sync
+  if (localBc) {
+    localBc.addEventListener('message', bcHandler);
+  }
+
+  // 3. Listen to Postgres changes on messages table as persistent sync
   channel.on(
     'postgres_changes',
     {
@@ -869,9 +1021,7 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
     },
     (payload) => {
       if (payload.new && String(payload.new.sender_id || '').toLowerCase() !== currentUid) {
-        if (typeof onNewMessage === 'function') {
-          onNewMessage(payload.new);
-        }
+        handleIncomingMessage(payload.new);
       }
     }
   );
@@ -884,8 +1034,8 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
       table: 'messages'
     },
     (payload) => {
-      if (payload.new && payload.new.status && typeof onStatusChange === 'function') {
-        onStatusChange({
+      if (payload.new && payload.new.status) {
+        handleStatusChange({
           messageId: payload.new.id,
           conversationId: payload.new.conversation_id,
           status: payload.new.status
@@ -894,27 +1044,18 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
     }
   );
 
-  channel.subscribe(async (status) => {
-    if (status === 'SUBSCRIBED') {
-      _sharedChannelReady = true;
-      try {
-        await channel.track({
-          user_id: userId,
-          online_at: new Date().toISOString()
-        });
-      } catch (e) {}
-    }
-  });
+  // Track presence
+  channel.track({
+    user_id: userId,
+    online_at: new Date().toISOString()
+  }).catch(() => {});
 
-  // Store as shared channel
-  _sharedChannel = channel;
-
+  // Return unsubscribe handler
   return () => {
-    try {
-      channel.untrack();
-    } catch (e) {}
-    supabase.removeChannel(channel);
-    _sharedChannel = null;
-    _sharedChannelReady = false;
+    _sharedChannelSubscribers = Math.max(0, _sharedChannelSubscribers - 1);
+    if (localBc) {
+      localBc.removeEventListener('message', bcHandler);
+    }
+    // We intentionally keep _sharedChannel connected so global background listening is never broken
   };
 };

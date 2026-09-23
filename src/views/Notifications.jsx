@@ -9,6 +9,7 @@ import {
   PanelTop, UserRound, Bookmark, Sparkles, ShoppingBag, Eye
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useChat } from '../context/ChatContext';
 import { getNotificationsForUser, saveNotificationsForUser, syncUserDataFromCloud } from '../utils/userSync';
 import './Notifications.css';
 
@@ -64,6 +65,7 @@ export default function Notifications() {
   const router = useRouter();
   const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
   const { user } = useAuth();
+  const { unreadCount } = useChat();
 
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const [activeTab, setActiveTab] = useState('all'); // all, unread, offers, alerts
@@ -160,7 +162,12 @@ export default function Notifications() {
         <div className="home-nav-links">
           <NavLink to="/messages" replace className="home-nav-item">
             <span className="home-nav-icon-btn">
-              <MessageSquareMore className="home-nav-icon" color="white" />
+              <div className="home-nav-icon-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <MessageSquareMore className="home-nav-icon" color="white" />
+                {unreadCount > 0 && (
+                  <span className="home-nav-unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+                )}
+              </div>
               <div className="home-header-tooltip">My Messages</div>
             </span>
           </NavLink>

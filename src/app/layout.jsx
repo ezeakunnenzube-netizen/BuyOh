@@ -12,6 +12,7 @@ import '../views/SellItem.css';
 import '../views/MyAdverts.css';
 import '../views/SavedAdverts.css';
 import { AuthProvider } from '../context/AuthContext';
+import { ChatProvider } from '../context/ChatContext';
 import Footer from '../components/Footer';
 
 const poppins = Poppins({
@@ -51,15 +52,17 @@ export default function RootLayout({ children }) {
     <html lang="en" className={poppins.variable}>
       <body className={poppins.className}>
         <AuthProvider>
-          <Suspense fallback={null}>
-            <MobileSwipeNavigator />
-          </Suspense>
-          <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-            <main style={{ flex: '1 0 auto' }}>
-              {children}
-            </main>
-            <Footer />
-          </div>
+          <ChatProvider>
+            <Suspense fallback={null}>
+              <MobileSwipeNavigator />
+            </Suspense>
+            <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+              <main style={{ flex: '1 0 auto' }}>
+                {children}
+              </main>
+              <Footer />
+            </div>
+          </ChatProvider>
         </AuthProvider>
       </body>
     </html>

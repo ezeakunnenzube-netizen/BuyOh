@@ -5,12 +5,14 @@ import { Home, MessageSquareMore, Bookmark, UserRound } from "lucide-react";
 import NavLink from "./NavLink";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
+import { useChat } from "../context/ChatContext";
 import { Suspense } from "react";
 
 function FooterContent() {
   const pathname = usePathname() || '/';
   const searchParams = useSearchParams();
   const { user, loading, setIsAuthOpen } = useAuth();
+  const { unreadCount } = useChat();
 
   // Hide mobile tab footer when viewing an individual conversation in messages
   const chatId = searchParams?.get('chatId');
@@ -43,7 +45,14 @@ function FooterContent() {
       <NavLink to="/messages" className="tab-item" replace>
         {({ isActive }) => (
           <>
-            <MessageSquareMore size={22} className={`tab-icon ${isActive ? 'tab-icon-active' : ''}`} />
+            <div className="tab-icon-wrap">
+              <MessageSquareMore size={22} className={`tab-icon ${isActive ? 'tab-icon-active' : ''}`} />
+              {unreadCount > 0 && (
+                <span className="tab-unread-badge">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </div>
             <span className={`tab-label ${isActive ? 'tab-label-active' : ''}`}>Messages</span>
           </>
         )}

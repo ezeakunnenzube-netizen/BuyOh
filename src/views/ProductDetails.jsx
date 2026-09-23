@@ -12,8 +12,9 @@ import {
 } from 'lucide-react';
 import { products } from '../data/productData';
 import { useAuth } from '../context/AuthContext';
+import { useChat } from '../context/ChatContext';
 import { supabase } from '../lib/supabaseClient';
-import { getSavedItemsForUser, saveItemsForUser, getAllPublicListings, getGeneralProductPool, getMyListingsForUser, saveMyListingsForUser } from '../utils/userSync';
+import { getSavedItemsForUser, saveItemsForUser, getAllPublicListings, getGeneralProductPool, getMyListingsForUser, saveMyListingsForUser, getUserProfileData } from '../utils/userSync';
 import { isConditionApplicable, shouldShowConditionBadge } from '../utils/productUtils';
 import { getOrCreateConversation, sendMessage as sendCloudMessage } from '../services/chatService';
 import './ProductDetails.css';
@@ -24,6 +25,7 @@ export default function ProductDetails({ params: serverParams }) {
   const router = useRouter();
   const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
   const { user, loading, setIsAuthOpen } = useAuth();
+  const { unreadCount } = useChat();
   
   const [product, setProduct] = useState(() => {
     if (!productId) return null;
@@ -463,10 +465,16 @@ export default function ProductDetails({ params: serverParams }) {
           productDetails: product
         });
 
+        const myProfile = getUserProfileData(user);
+        const myName = myProfile?.fullName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+        const myAvatar = myProfile?.avatarUrl || user?.user_metadata?.avatar_url || '';
+
         await sendCloudMessage({
           conversationId: convRes.conversationId,
           senderId: user.id,
           recipientId: targetSellerId,
+          senderName: myName,
+          senderAvatar: myAvatar,
           text: `📞 Callback Request: Please call me back at ${callbackPhone} (Preferred time: ${callbackTime}). ${callbackNote ? `Note: ${callbackNote}` : ''}`,
           productInfo: product
         });
@@ -558,10 +566,16 @@ export default function ProductDetails({ params: serverParams }) {
         return;
       }
 
+      const myProfile = getUserProfileData(user);
+      const myName = myProfile?.fullName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+      const myAvatar = myProfile?.avatarUrl || user?.user_metadata?.avatar_url || '';
+
       await sendCloudMessage({
         conversationId: convRes.conversationId,
         senderId: user.id,
         recipientId: targetSellerId,
+        senderName: myName,
+        senderAvatar: myAvatar,
         text: `🏷️ Make an Offer: ₦${Number(offerPrice).toLocaleString('en-NG')}`,
         isOffer: true,
         offerAmount: Number(offerPrice),
@@ -931,7 +945,12 @@ export default function ProductDetails({ params: serverParams }) {
             <>
               <NavLink to="/messages" replace className={({isActive})=>isActive?"home-nav-item home-nav-item-active":"home-nav-item"}>
                 {({isActive})=>(<span className="home-nav-icon-btn">
-                  <MessageSquareMore className="home-nav-icon" color={isActive?"#1d4ed8":"white"}/>
+                  <div className="home-nav-icon-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <MessageSquareMore className="home-nav-icon" color={isActive?"#1d4ed8":"white"}/>
+                    {unreadCount > 0 && (
+                      <span className="home-nav-unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+                    )}
+                  </div>
                   <div className="home-header-tooltip">My Messages</div>
                 </span>)}
               </NavLink>
