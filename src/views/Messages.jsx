@@ -306,10 +306,11 @@ export default function Messages() {
     if (user?.id) {
       unsubscribe = subscribeToRealtimeChat(user.id, {
         onPresenceChange: (onlineIds) => {
-          setOnlineUserIds(new Set(onlineIds));
+          const lowerOnlineSet = new Set((onlineIds || []).map(id => String(id).toLowerCase()));
+          setOnlineUserIds(lowerOnlineSet);
           setConversations(prev => prev.map(c => {
-            const cId = c.contact?.id;
-            const isOnline = cId ? onlineIds.includes(cId) : false;
+            const cId = c.contact?.id || (String(c.buyer_id || '').toLowerCase() === String(user?.id || '').toLowerCase() ? c.seller_id : c.buyer_id);
+            const isOnline = cId ? lowerOnlineSet.has(String(cId).toLowerCase()) : false;
             return {
               ...c,
               contact: {
@@ -414,7 +415,7 @@ export default function Messages() {
                   id: newMsg.sender_id,
                   name: counterpartDisplayName,
                   avatar: newMsg.sender_avatar || '',
-                  isOnline: true,
+                  isOnline: newMsg.sender_id ? onlineUserIds.has(String(newMsg.sender_id).toLowerCase()) : false,
                   verified: true,
                   phone: '+234 800 000 0000',
                   location: 'Nigeria'
@@ -565,6 +566,13 @@ export default function Messages() {
   useEffect(() => {
     setFollowedSellers(getFollowedSellersForUser(user));
   }, [user]);
+
+  // Real-time online status derived dynamically from active Phoenix presence
+  const isChatUserOnline = (chat) => {
+    if (!chat) return false;
+    const counterpartId = chat.contact?.id || (String(chat.buyer_id || '').toLowerCase() === String(user?.id || '').toLowerCase() ? chat.seller_id : chat.buyer_id);
+    return counterpartId ? onlineUserIds.has(String(counterpartId).toLowerCase()) : false;
+  };
 
   const isFollowingSeller = (name) => followedSellers.includes(name);
 
@@ -736,8 +744,7 @@ export default function Messages() {
     const persistVoiceNote = async (audioBlob, localAudioUrl) => {
       if (!activeChat || !user?.id) return;
 
-      const counterpartId = activeChat.contact?.id || (activeChat.buyer_id === user?.id ? activeChat.seller_id : activeChat.buyer_id);
-      const isCounterpartOnline = counterpartId ? onlineUserIds.has(counterpartId) : false;
+      const isCounterpartOnline = isChatUserOnline(activeChat);
       const nowTs = Date.now();
       const timeNow = new Date(nowTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const msgId = generateUUID();
@@ -955,7 +962,7 @@ export default function Messages() {
                 id: targetSellerUid,
                 name: sellerName !== 'Marketplace Seller' ? sellerName : (poolItem?.sellerName || 'Marketplace Seller'),
                 avatar: poolItem?.sellerAvatar || '',
-                isOnline: true,
+                isOnline: targetSellerUid ? onlineUserIds.has(String(targetSellerUid).toLowerCase()) : false,
                 verified: true,
                 phone: poolItem?.sellerPhone || poolItem?.phone || '+234 800 000 0000',
                 location: poolItem?.location || 'Nigeria'
@@ -1224,7 +1231,7 @@ export default function Messages() {
     }
 
     const counterpartId = activeChat.contact?.id || (String(activeChat.buyer_id || '').toLowerCase() === String(user?.id || '').toLowerCase() ? activeChat.seller_id : activeChat.buyer_id);
-    const isCounterpartOnline = counterpartId ? onlineUserIds.has(counterpartId) : false;
+    const isCounterpartOnline = isChatUserOnline(activeChat);
 
     const myProfile = getUserProfileData(user);
     const myName = myProfile?.fullName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
@@ -1529,7 +1536,7 @@ export default function Messages() {
                   >
                     <div className="chat-avatar-wrap">
                       {renderContactAvatar(chat?.contact?.avatar, chat?.contact?.name, "chat-avatar")}
-                      {chat?.contact?.isOnline && <span className="online-indicator" title="Online" />}
+                      {isChatUserOnline(chat) && <span className="online-indicator" title="Online" />}
                     </div>
 
                     <div className="chat-item-content">
@@ -1586,7 +1593,7 @@ export default function Messages() {
                   >
                     <div className="contact-avatar-wrap">
                       {renderContactAvatar(activeChat?.contact?.avatar, activeChat?.contact?.name, "contact-avatar")}
-                      {activeChat?.contact?.isOnline && <span className="online-indicator" />}
+                      {isChatUserOnline(activeChat) && <span className="online-indicator" title="Online" />}
                     </div>
                   </button>
 
@@ -1608,10 +1615,10 @@ export default function Messages() {
                           <span className="typing-dot" />
                           <span className="typing-label">typing...</span>
                         </span>
-                      ) : activeChat?.contact?.isOnline ? (
+                      ) : isChatUserOnline(activeChat) ? (
                         <span className="text-online">● Online</span>
                       ) : (
-                        <span className="text-offline">● Offline{activeChat?.contact?.location ? ` · ${activeChat.contact.location}` : ''}</span>
+                        <span className="text-offline">● {activeChat?.contact?.lastSeen && activeChat.contact.lastSeen !== 'Online' ? activeChat.contact.lastSeen : 'Offline'}{activeChat?.contact?.location ? ` · ${activeChat.contact.location}` : ''}</span>
                       )}
                     </p>
                   </div>
@@ -1637,20 +1644,6 @@ export default function Messages() {
                     >
                       <Phone size={18} />
                       <span className="call-btn-text">Call</span>
-                    </a>
-                  )}
-
-                  {/* WhatsApp button */}
-                  {(activeChat?.contact?.phone || activeChat?.contact?.whatsapp) && (
-                    <a
-                      href={`https://wa.me/${(activeChat.contact.whatsapp || activeChat.contact.phone).replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello! I'm reaching out from BuyOh regarding "${activeChat?.product?.name || 'your listing'}"`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="header-whatsapp-btn"
-                      title="Chat on WhatsApp"
-                    >
-                      <MessageCircle size={17} />
-                      <span className="whatsapp-btn-text">WhatsApp</span>
                     </a>
                   )}
 
@@ -2373,8 +2366,8 @@ export default function Messages() {
                     </div>
 
                     <div className="jiji-last-seen-row">
-                      <span className={`jiji-last-seen-pill ${(onlineUserIds.has(activeChat.contact?.id) || activeChat.contact?.isOnline) ? 'is-online' : ''}`}>
-                        {(onlineUserIds.has(activeChat.contact?.id) || activeChat.contact?.isOnline) ? '● Online now' : (activeChat.contact?.lastSeen || 'Last seen recently')}
+                      <span className={`jiji-last-seen-pill ${isChatUserOnline(activeChat) ? 'is-online' : ''}`}>
+                        {isChatUserOnline(activeChat) ? '● Online now' : (activeChat.contact?.lastSeen && activeChat.contact.lastSeen !== 'Online' ? activeChat.contact.lastSeen : 'Offline')}
                       </span>
                     </div>
                   </div>
@@ -2415,16 +2408,6 @@ export default function Messages() {
                       >
                         Call Now
                       </a>
-                      {(activeChat.contact?.whatsapp || activeChat.contact?.phone) && (
-                        <a 
-                          href={`https://wa.me/${(activeChat.contact?.whatsapp || activeChat.contact?.phone).replace(/[^0-9]/g, '')}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="jiji-whatsapp-link"
-                        >
-                          WhatsApp
-                        </a>
-                      )}
                     </div>
                   </div>
                 )}

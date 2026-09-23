@@ -901,7 +901,7 @@ const _dispatchIncomingMessage = (payload) => {
           id: payload.sender_id,
           name: payload.sender_name || 'Counterpart',
           avatar: payload.sender_avatar || '',
-          isOnline: true,
+          isOnline: false,
           verified: true
         },
         product: payload.product_info || { name: 'Marketplace Item' }
@@ -972,25 +972,42 @@ const _dispatchPresenceSync = () => {
   if (!_sharedChannel) return;
   try {
     const state = _sharedChannel.presenceState();
-    const onlineIds = Object.keys(state);
-    for (const sub of _activeChatSubscribers) {
-      if (typeof sub.onPresenceChange === 'function') {
-        sub.onPresenceChange(onlineIds);
+    const onlineIds = new Set();
+    if (state && typeof state === 'object') {
+      for (const [key, presences] of Object.entries(state)) {
+        if (key && key !== 'user' && key !== 'guest') {
+          onlineIds.add(key.toLowerCase());
+        }
+        if (Array.isArray(presences)) {
+          for (const p of presences) {
+            if (p.user_id) onlineIds.add(String(p.user_id).toLowerCase());
+            if (p.userId) onlineIds.add(String(p.userId).toLowerCase());
+          }
+        }
       }
     }
-  } catch (e) {}
+    const onlineIdsArray = Array.from(onlineIds);
+    for (const sub of _activeChatSubscribers) {
+      if (typeof sub.onPresenceChange === 'function') {
+        sub.onPresenceChange(onlineIdsArray);
+      }
+    }
+  } catch (e) {
+    console.warn('Presence sync error:', e);
+  }
 };
 
-function initOrGetSharedChannel() {
+function initOrGetSharedChannel(userId = null) {
   if (typeof window === 'undefined') return null;
 
   ensureBroadcastChannelListener();
 
   if (!_sharedChannel) {
+    const presenceKey = userId ? String(userId).toLowerCase() : 'user';
     _sharedChannel = supabase.channel('buyoh-marketplace-realtime', {
       config: {
         broadcast: { ack: true, self: false },
-        presence: { key: 'user' }
+        presence: { key: presenceKey }
       }
     });
 
@@ -1011,8 +1028,14 @@ function initOrGetSharedChannel() {
       _dispatchTyping(event.payload);
     });
 
-    // 2. Setup presence handlers BEFORE subscribe()
+    // 2. Setup presence handlers BEFORE subscribe() - sync, join, and leave
     _sharedChannel.on('presence', { event: 'sync' }, () => {
+      _dispatchPresenceSync();
+    });
+    _sharedChannel.on('presence', { event: 'join' }, () => {
+      _dispatchPresenceSync();
+    });
+    _sharedChannel.on('presence', { event: 'leave' }, () => {
       _dispatchPresenceSync();
     });
 
@@ -1042,9 +1065,21 @@ function initOrGetSharedChannel() {
     );
 
     // 4. NOW subscribe() safely once
-    _sharedChannel.subscribe((status) => {
+    _sharedChannel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         _sharedChannelReady = true;
+        // Track presence for all currently registered active subscribers
+        for (const sub of _activeChatSubscribers) {
+          if (sub.userId) {
+            try {
+              await _sharedChannel.track({
+                user_id: String(sub.userId).toLowerCase(),
+                online_at: new Date().toISOString()
+              });
+            } catch (err) {}
+          }
+        }
+        _dispatchPresenceSync();
       }
     });
   }
@@ -1054,9 +1089,10 @@ function initOrGetSharedChannel() {
 export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, onPresenceChange, onTyping } = {}) => {
   if (!userId || typeof window === 'undefined') return () => {};
 
+  const normalizedUid = String(userId).toLowerCase();
   const subscriber = {
-    userId,
-    currentUid: String(userId || '').toLowerCase(),
+    userId: normalizedUid,
+    currentUid: normalizedUid,
     onNewMessage,
     onStatusChange,
     onPresenceChange,
@@ -1066,18 +1102,49 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
   _activeChatSubscribers.add(subscriber);
 
   // Initialize shared channel (attaches all handlers once and calls subscribe())
-  const channel = initOrGetSharedChannel();
+  const channel = initOrGetSharedChannel(normalizedUid);
 
-  // Track presence for this user
-  if (channel && typeof channel.track === 'function') {
+  // If channel is already subscribed, immediately track presence and dispatch
+  if (channel && _sharedChannelReady && typeof channel.track === 'function') {
     channel.track({
-      user_id: userId,
+      user_id: normalizedUid,
       online_at: new Date().toISOString()
+    }).then(() => {
+      _dispatchPresenceSync();
     }).catch(() => {});
   }
+
+  // Handle page visibility / tab focus to keep presence alive and accurate
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible' && channel && _sharedChannelReady && typeof channel.track === 'function') {
+      channel.track({
+        user_id: normalizedUid,
+        online_at: new Date().toISOString()
+      }).catch(() => {});
+    }
+  };
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
+  // Handle page unload / navigation away to untrack presence immediately
+  const handleBeforeUnload = () => {
+    try {
+      if (channel && typeof channel.untrack === 'function') {
+        channel.untrack();
+      }
+    } catch (e) {}
+  };
+  window.addEventListener('beforeunload', handleBeforeUnload);
 
   // Return unsubscribe handler
   return () => {
     _activeChatSubscribers.delete(subscriber);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+
+    // If no more subscribers for this user, untrack
+    const hasRemaining = Array.from(_activeChatSubscribers).some(s => s.userId === normalizedUid);
+    if (!hasRemaining && channel && typeof channel.untrack === 'function') {
+      channel.untrack().catch(() => {});
+    }
   };
 };
