@@ -25,26 +25,14 @@ const getLocalBroadcastChannel = () => {
   return _localBroadcastChannel;
 };
 
-export const getSharedChannel = () => {
-  if (!_sharedChannel) {
-    _sharedChannel = supabase.channel('buyoh-marketplace-realtime', {
-      config: {
-        broadcast: { ack: true, self: false }
-      }
-    });
-    _sharedChannel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        _sharedChannelReady = true;
-      }
-    });
-  }
-  return _sharedChannel;
-};
+export function getSharedChannel() {
+  return initOrGetSharedChannel();
+}
 
-export const setSharedChannel = (channel) => {
+export function setSharedChannel(channel) {
   _sharedChannel = channel;
   _sharedChannelReady = true;
-};
+}
 
 const safeBroadcast = async (event, payload) => {
   // 1. Broadcast via local BroadcastChannel for instant same-browser cross-tab delivery
@@ -398,23 +386,19 @@ export const fetchUserConversations = async (user) => {
 
   try {
     // 1. Fetch conversations from Supabase
+    // 1. Fetch conversations from Supabase
     let convRows = null;
-    let { data: rowsWithUpdated, error: errUpdated } = await supabase
+    const { data: rows, error: errConv } = await supabase
       .from('conversations')
       .select('*')
       .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
-      .order('updated_at', { ascending: false });
+      .order('created_at', { ascending: false });
 
-    if (!errUpdated && Array.isArray(rowsWithUpdated)) {
-      convRows = rowsWithUpdated;
+    if (!errConv && Array.isArray(rows)) {
+      convRows = rows;
     } else {
-      const { data: rowsWithCreated, error: errCreated } = await supabase
-        .from('conversations')
-        .select('*')
-        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
-        .order('created_at', { ascending: false });
-
-      convRows = rowsWithCreated || [];
+      if (errConv) console.warn('[chatService] fetchUserConversations notice:', errConv.message);
+      convRows = [];
     }
 
     if (Array.isArray(convRows) && convRows.length > 0) {
@@ -840,22 +824,50 @@ export const broadcastMessageDelivered = (conversationId, messageId, senderId) =
  * Listens to incoming messages, delivers them across tabs & windows,
  * and maintains continuous connectivity.
  */
-export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, onPresenceChange, onTyping }) => {
-  if (!userId || typeof window === 'undefined') return () => {};
+/**
+ * Global Realtime Chat Manager & Subscribers Registry.
+ *
+ * NOTE: Phoenix Channels / Supabase Realtime require all event handlers
+ * (.on('broadcast'), .on('presence'), .on('postgres_changes')) to be attached
+ * BEFORE .subscribe() is invoked on the channel.
+ *
+ * This singleton registers all channel callbacks ONCE at creation time,
+ * and dynamically dispatches incoming events to all active subscriber callbacks
+ * across components (e.g. ChatContext and Messages page).
+ */
+const _activeChatSubscribers = new Set();
+let _bcListenerAttached = false;
 
-  const currentUid = String(userId || '').toLowerCase();
-  const channel = getSharedChannel();
-  _sharedChannelSubscribers++;
+const ensureBroadcastChannelListener = () => {
+  if (_bcListenerAttached) return;
+  const localBc = getLocalBroadcastChannel();
+  if (!localBc) return;
+  _bcListenerAttached = true;
 
-  // Handler for incoming message broadcast (handles both Supabase Realtime & local BroadcastChannel)
-  const handleIncomingMessage = (payload) => {
-    if (!payload) return;
-    const targetRecipient = String(payload.recipient_id || '').toLowerCase();
-    const sender = String(payload.sender_id || '').toLowerCase();
+  localBc.addEventListener('message', (event) => {
+    const data = event.data;
+    if (!data) return;
+    if (data.event === 'new_message') {
+      _dispatchIncomingMessage(data.payload);
+    } else if (data.event === 'message_delivered') {
+      _dispatchStatusChange(data.payload, 'delivered');
+    } else if (data.event === 'message_read') {
+      _dispatchStatusChange(data.payload, 'read');
+    } else if (data.event === 'user_typing') {
+      _dispatchTyping(data.payload);
+    }
+  });
+};
 
-    // Accept if recipient is this user, or if sender is NOT this user
+const _dispatchIncomingMessage = (payload) => {
+  if (!payload) return;
+  const targetRecipient = String(payload.recipient_id || '').toLowerCase();
+  const sender = String(payload.sender_id || '').toLowerCase();
+
+  for (const sub of _activeChatSubscribers) {
+    const currentUid = sub.currentUid;
     const isTarget = targetRecipient === currentUid ||
-      (payload.recipient_id && toValidUUID(payload.recipient_id) === toValidUUID(userId)) ||
+      (payload.recipient_id && toValidUUID(payload.recipient_id) === toValidUUID(sub.userId)) ||
       (!payload.recipient_id && sender !== currentUid);
 
     if (isTarget && sender !== currentUid) {
@@ -880,10 +892,10 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
         status: 'delivered'
       };
 
-      appendMessageToUserCache(userId, payload.conversation_id, formattedForRecipient, {
+      appendMessageToUserCache(sub.userId, payload.conversation_id, formattedForRecipient, {
         id: payload.conversation_id,
         buyer_id: payload.sender_id,
-        seller_id: userId,
+        seller_id: sub.userId,
         product_id: payload.product_info?.id || payload.product_id || '',
         contact: {
           id: payload.sender_id,
@@ -896,58 +908,56 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
       });
 
       // 3. Dispatch global in-app event so notification bell & toast update
-      window.dispatchEvent(new CustomEvent('buyoh_chat_message_received', { detail: payload }));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('buyoh_chat_message_received', { detail: payload }));
+      }
 
       // 4. Trigger caller callback
-      if (typeof onNewMessage === 'function') {
-        onNewMessage(payload);
+      if (typeof sub.onNewMessage === 'function') {
+        sub.onNewMessage(payload);
       }
     }
-  };
+  }
+};
 
-  // Handler for status changes (delivered, read)
-  const handleStatusChange = (statusPayload) => {
-    if (!statusPayload) return;
-    if (typeof onStatusChange === 'function') {
-      onStatusChange(statusPayload);
+const _dispatchStatusChange = (payload, overrideStatus = null) => {
+  if (!payload) return;
+  const status = overrideStatus || payload.status;
+  for (const sub of _activeChatSubscribers) {
+    if (status === 'delivered') {
+      const sender = String(payload.sender_id || '').toLowerCase();
+      if (sender === sub.currentUid || (payload.sender_id && toValidUUID(payload.sender_id) === toValidUUID(sub.userId))) {
+        if (typeof sub.onStatusChange === 'function') {
+          sub.onStatusChange({
+            messageId: payload.message_id || payload.id,
+            conversationId: payload.conversation_id,
+            originalConversationId: payload.original_conversation_id,
+            status: 'delivered'
+          });
+        }
+      }
+    } else if (status === 'read') {
+      if (String(payload.read_by || '').toLowerCase() !== sub.currentUid) {
+        if (typeof sub.onStatusChange === 'function') {
+          sub.onStatusChange({
+            conversationId: payload.conversation_id,
+            originalConversationId: payload.original_conversation_id,
+            status: 'read'
+          });
+        }
+      }
+    } else if (typeof sub.onStatusChange === 'function') {
+      sub.onStatusChange(payload);
     }
-  };
+  }
+};
 
-  // 1. Listen to Supabase Realtime Broadcasts
-  channel.on('broadcast', { event: 'new_message' }, (event) => {
-    handleIncomingMessage(event.payload);
-  });
-
-  channel.on('broadcast', { event: 'message_delivered' }, (event) => {
-    const payload = event.payload;
-    if (!payload) return;
-    const sender = String(payload.sender_id || '').toLowerCase();
-    if (sender === currentUid || (payload.sender_id && toValidUUID(payload.sender_id) === toValidUUID(userId))) {
-      handleStatusChange({
-        messageId: payload.message_id,
-        conversationId: payload.conversation_id,
-        originalConversationId: payload.original_conversation_id,
-        status: 'delivered'
-      });
-    }
-  });
-
-  channel.on('broadcast', { event: 'message_read' }, (event) => {
-    const payload = event.payload;
-    if (payload && String(payload.read_by || '').toLowerCase() !== currentUid) {
-      handleStatusChange({
-        conversationId: payload.conversation_id,
-        originalConversationId: payload.original_conversation_id,
-        status: 'read'
-      });
-    }
-  });
-
-  channel.on('broadcast', { event: 'user_typing' }, (event) => {
-    const payload = event.payload;
-    if (payload && String(payload.user_id || '').toLowerCase() !== currentUid) {
-      if (typeof onTyping === 'function') {
-        onTyping({
+const _dispatchTyping = (payload) => {
+  if (!payload) return;
+  for (const sub of _activeChatSubscribers) {
+    if (String(payload.user_id || '').toLowerCase() !== sub.currentUid) {
+      if (typeof sub.onTyping === 'function') {
+        sub.onTyping({
           conversationId: payload.conversation_id,
           userId: payload.user_id,
           userName: payload.user_name,
@@ -955,107 +965,119 @@ export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, 
         });
       }
     }
-  });
+  }
+};
 
-  // Track online presence
-  channel.on('presence', { event: 'sync' }, () => {
-    const state = channel.presenceState();
+const _dispatchPresenceSync = () => {
+  if (!_sharedChannel) return;
+  try {
+    const state = _sharedChannel.presenceState();
     const onlineIds = Object.keys(state);
-    if (typeof onPresenceChange === 'function') {
-      onPresenceChange(onlineIds);
+    for (const sub of _activeChatSubscribers) {
+      if (typeof sub.onPresenceChange === 'function') {
+        sub.onPresenceChange(onlineIds);
+      }
     }
-  });
+  } catch (e) {}
+};
 
-  // 2. Listen to local BroadcastChannel for zero-latency multi-tab sync
-  const localBc = getLocalBroadcastChannel();
-  const bcHandler = (event) => {
-    const data = event.data;
-    if (!data) return;
-    if (data.event === 'new_message') {
-      handleIncomingMessage(data.payload);
-    } else if (data.event === 'message_delivered') {
-      const payload = data.payload;
-      if (payload && (String(payload.sender_id || '').toLowerCase() === currentUid)) {
-        handleStatusChange({
-          messageId: payload.message_id,
-          conversationId: payload.conversation_id,
-          originalConversationId: payload.original_conversation_id,
-          status: 'delivered'
-        });
+function initOrGetSharedChannel() {
+  if (typeof window === 'undefined') return null;
+
+  ensureBroadcastChannelListener();
+
+  if (!_sharedChannel) {
+    _sharedChannel = supabase.channel('buyoh-marketplace-realtime', {
+      config: {
+        broadcast: { ack: true, self: false },
+        presence: { key: 'user' }
       }
-    } else if (data.event === 'message_read') {
-      const payload = data.payload;
-      if (payload && String(payload.read_by || '').toLowerCase() !== currentUid) {
-        handleStatusChange({
-          conversationId: payload.conversation_id,
-          originalConversationId: payload.original_conversation_id,
-          status: 'read'
-        });
+    });
+
+    // 1. Setup broadcast handlers BEFORE subscribe()
+    _sharedChannel.on('broadcast', { event: 'new_message' }, (event) => {
+      _dispatchIncomingMessage(event.payload);
+    });
+
+    _sharedChannel.on('broadcast', { event: 'message_delivered' }, (event) => {
+      _dispatchStatusChange(event.payload, 'delivered');
+    });
+
+    _sharedChannel.on('broadcast', { event: 'message_read' }, (event) => {
+      _dispatchStatusChange(event.payload, 'read');
+    });
+
+    _sharedChannel.on('broadcast', { event: 'user_typing' }, (event) => {
+      _dispatchTyping(event.payload);
+    });
+
+    // 2. Setup presence handlers BEFORE subscribe()
+    _sharedChannel.on('presence', { event: 'sync' }, () => {
+      _dispatchPresenceSync();
+    });
+
+    // 3. Setup Postgres changes handlers BEFORE subscribe()
+    _sharedChannel.on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'messages' },
+      (payload) => {
+        if (payload.new) {
+          _dispatchIncomingMessage(payload.new);
+        }
       }
-    } else if (data.event === 'user_typing') {
-      const payload = data.payload;
-      if (payload && String(payload.user_id || '').toLowerCase() !== currentUid) {
-        if (typeof onTyping === 'function') {
-          onTyping({
-            conversationId: payload.conversation_id,
-            userId: payload.user_id,
-            userName: payload.user_name,
-            timestamp: payload.timestamp
+    );
+
+    _sharedChannel.on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'messages' },
+      (payload) => {
+        if (payload.new && payload.new.status) {
+          _dispatchStatusChange({
+            messageId: payload.new.id,
+            conversationId: payload.new.conversation_id,
+            status: payload.new.status
           });
         }
       }
-    }
+    );
+
+    // 4. NOW subscribe() safely once
+    _sharedChannel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        _sharedChannelReady = true;
+      }
+    });
+  }
+  return _sharedChannel;
+}
+
+export const subscribeToRealtimeChat = (userId, { onNewMessage, onStatusChange, onPresenceChange, onTyping } = {}) => {
+  if (!userId || typeof window === 'undefined') return () => {};
+
+  const subscriber = {
+    userId,
+    currentUid: String(userId || '').toLowerCase(),
+    onNewMessage,
+    onStatusChange,
+    onPresenceChange,
+    onTyping
   };
 
-  if (localBc) {
-    localBc.addEventListener('message', bcHandler);
+  _activeChatSubscribers.add(subscriber);
+
+  // Initialize shared channel (attaches all handlers once and calls subscribe())
+  const channel = initOrGetSharedChannel();
+
+  // Track presence for this user
+  if (channel && typeof channel.track === 'function') {
+    channel.track({
+      user_id: userId,
+      online_at: new Date().toISOString()
+    }).catch(() => {});
   }
-
-  // 3. Listen to Postgres changes on messages table as persistent sync
-  channel.on(
-    'postgres_changes',
-    {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'messages'
-    },
-    (payload) => {
-      if (payload.new && String(payload.new.sender_id || '').toLowerCase() !== currentUid) {
-        handleIncomingMessage(payload.new);
-      }
-    }
-  );
-
-  channel.on(
-    'postgres_changes',
-    {
-      event: 'UPDATE',
-      schema: 'public',
-      table: 'messages'
-    },
-    (payload) => {
-      if (payload.new && payload.new.status) {
-        handleStatusChange({
-          messageId: payload.new.id,
-          conversationId: payload.new.conversation_id,
-          status: payload.new.status
-        });
-      }
-    }
-  );
-
-  // Track presence
-  channel.track({
-    user_id: userId,
-    online_at: new Date().toISOString()
-  }).catch(() => {});
 
   // Return unsubscribe handler
   return () => {
-    _sharedChannelSubscribers = Math.max(0, _sharedChannelSubscribers - 1);
-    if (localBc) {
-      localBc.removeEventListener('message', bcHandler);
-    }
-    // We intentionally keep _sharedChannel connected so global background listening is never broken
+    _activeChatSubscribers.delete(subscriber);
   };
 };
