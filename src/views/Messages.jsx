@@ -1556,7 +1556,6 @@ export default function Messages() {
                           {lastMsg?.text || 'No messages yet'}
                         </p>
                         <div className="chat-item-badges">
-                          {chat?.isMuted && <BellOff size={13} className="chat-muted-icon" title="Muted" />}
                           {(chat?.unreadCount || 0) > 0 && (
                             <span className="unread-badge">{chat.unreadCount}</span>
                           )}
@@ -1603,9 +1602,6 @@ export default function Messages() {
                       {activeChat?.contact?.verified && (
                         <ShieldCheck size={14} className="verified-badge-icon" title="Verified Seller" />
                       )}
-                      {activeChat?.isMuted && (
-                        <BellOff size={14} className="header-muted-indicator" title="Muted" />
-                      )}
                     </div>
                     <p className="contact-status-text">
                       {isTyping ? (
@@ -1626,15 +1622,6 @@ export default function Messages() {
 
                 {/* Right: Action Buttons */}
                 <div className="chat-header-actions">
-                  {/* Mute toggle button */}
-                  <button
-                    className={`header-icon-btn ${activeChat?.isMuted ? 'header-icon-btn-muted' : ''}`}
-                    onClick={() => handleToggleMute(activeChat?.id)}
-                    title={activeChat?.isMuted ? 'Unmute notifications' : 'Mute notifications'}
-                  >
-                    {activeChat?.isMuted ? <BellOff size={19} /> : <Bell size={19} />}
-                  </button>
-
                   {/* Call button */}
                   {activeChat?.contact?.phone && (
                     <a
@@ -1670,25 +1657,7 @@ export default function Messages() {
                           <span>View profile</span>
                         </button>
 
-                        <button
-                          className="dropdown-item"
-                          onClick={() => {
-                            setIsMenuOpen(false);
-                            handleToggleMute(activeChat?.id);
-                          }}
-                        >
-                          {activeChat?.isMuted ? (
-                            <>
-                              <Bell size={17} className="dropdown-icon" />
-                              <span>Unmute notifications</span>
-                            </>
-                          ) : (
-                            <>
-                              <BellOff size={17} className="dropdown-icon" />
-                              <span>Mute notifications</span>
-                            </>
-                          )}
-                        </button>
+
 
                         {activeChat?.contact?.name && (
                           <button
@@ -1706,7 +1675,7 @@ export default function Messages() {
                             ) : (
                               <>
                                 <UserPlus size={17} className="dropdown-icon text-primary" />
-                                <span className="text-primary">Follow seller</span>
+                                <span className="text-primary">Follow </span>
                               </>
                             )}
                           </button>
@@ -1839,7 +1808,11 @@ export default function Messages() {
                   <div className="safety-alert-content">
                     <AlertCircle size={15} className="safety-icon" />
                     <span>
-                      <strong>Safety Tip:</strong> Meet in a public place. Do not make advance payments before physical inspection.
+                      {activeChat?.type === 'selling' ? (
+                        <><strong>Seller Safety Tip:</strong> Verify buyer identity before sharing your address. Always collect payment before handing over the item.</>
+                      ) : (
+                        <><strong>Buyer Safety Tip:</strong> Meet in a public place. Do not make advance payments before physical inspection of the item.</>
+                      )}
                     </span>
                   </div>
                   <button
@@ -2302,7 +2275,7 @@ export default function Messages() {
         <div className="jiji-profile-backdrop" onClick={() => setShowProfileModal(false)}>
           <div className="jiji-profile-container" onClick={e => e.stopPropagation()}>
             
-            {/* Top Navigation Bar in BuyOh Brand Blue */}
+            {/* Top Navigation Bar in BuyOh Brand Warm Orange */}
             <div className="jiji-nav-header">
               <button 
                 type="button"
@@ -2355,7 +2328,7 @@ export default function Messages() {
                     <div className="jiji-seller-badges-row">
                       <span className="jiji-badge-pill">
                         <User size={13} />
-                        {activeChat.contact?.memberSince || '5+ years on BuyOh'}
+                        {activeChat.contact?.memberSince || '5+ years on InfiBuy'}
                       </span>
                       {activeChat.contact?.verified && (
                         <span className="jiji-badge-pill jiji-badge-verified">
@@ -2503,7 +2476,7 @@ export default function Messages() {
                             </span>
                             <span className="jiji-ad-subbadge">
                               <User size={11} />
-                              5+ YEARS ON BUYOH
+                              5+ YEARS ON INFIBUY
                             </span>
                           </div>
                         </div>

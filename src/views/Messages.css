@@ -226,10 +226,10 @@ body {
   right: 1px;
   width: 12px;
   height: 12px;
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   border: 2px solid #ffffff;
   border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(34, 197, 94, 0.3);
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
 }
 
 .chat-item-content {
@@ -489,7 +489,7 @@ body {
   align-items: center;
 }
 
-.text-online { color: #16a34a; }
+.text-online { color: #2563eb; }
 .text-offline { color: #94a3b8; }
 
 /* Typing indicator */
@@ -551,17 +551,14 @@ body {
   background: #eff6ff !important;
   color: #2563eb !important;
 }
-.header-icon-btn-muted {
-  background: #fef2f2 !important;
-  color: #ef4444 !important;
-}
+/* muted state removed */
 
 /* Call button - pill style */
 .header-call-btn {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: #ffffff;
   text-decoration: none;
   padding: 0.45rem 0.85rem;
@@ -569,12 +566,12 @@ body {
   font-size: 0.82rem;
   font-weight: 700;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.35);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
   flex-shrink: 0;
 }
 .header-call-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.45);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.45);
 }
 
 /* Legacy class kept for compatibility */
@@ -1583,7 +1580,7 @@ body {
 }
 
 .more-menu-icon {
-  color: #16a34a; /* Green dots as shown in user screenshot */
+  color: #475569;
 }
 
 .chat-options-dropdown {
@@ -1718,7 +1715,7 @@ body {
   right: 4px;
   width: 14px;
   height: 14px;
-  background: #10b981;
+  background: #2563eb;
   border-radius: 50%;
   border: 2px solid #ffffff;
 }
@@ -1917,20 +1914,20 @@ body {
   height: 44px;
   border-radius: 50%;
   border: none;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
 }
 
 .mic-btn:hover {
   transform: scale(1.08);
-  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
 }
 
 /* Attachment Preview Bar */
@@ -2314,7 +2311,7 @@ body {
 }
 
 .send-record-btn {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   border: none;
   color: #ffffff;
   width: 40px;
@@ -2324,7 +2321,7 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
   transition: all 0.2s ease;
 }
 
@@ -2611,7 +2608,7 @@ body {
 }
 
 .btn-offer-accept {
-  background: #16a34a;
+  background: #2563eb;
   color: #fff;
   border: none;
   padding: 0.35rem 0.75rem;
@@ -2680,7 +2677,7 @@ body {
   color: #2563eb !important; /* double BuyOh brand blue tick */
 }
 
-/* ── BUYOH SELLER PROFILE MODAL ── */
+/* ── BUYOH SELLER PROFILE MODAL (WARM ORANGE THEME) ── */
 .jiji-profile-backdrop {
   position: fixed;
   inset: 0;
@@ -2707,7 +2704,7 @@ body {
   height: 90vh;
   max-height: 840px;
   border-radius: 20px;
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  border: 1px solid rgba(254, 215, 170, 0.6);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -2722,9 +2719,9 @@ body {
   to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
-/* BuyOh Deep Brand Blue Top Nav Bar */
+/* BuyOh Signature Warm Orange Top Nav Bar */
 .jiji-nav-header {
-  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  background: linear-gradient(135deg, #ffa705 0%, #ea580c 100%);
   height: 62px;
   padding: 0 16px;
   display: flex;
@@ -2732,13 +2729,13 @@ body {
   gap: 12px;
   color: #ffffff;
   flex-shrink: 0;
-  box-shadow: 0 4px 16px rgba(29, 78, 216, 0.2);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 18px rgba(234, 88, 12, 0.28);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .jiji-back-btn {
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   color: #ffffff;
   cursor: pointer;
   display: flex;
@@ -2752,7 +2749,7 @@ body {
 }
 
 .jiji-back-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.3);
   transform: translateX(-2px);
 }
 
@@ -2781,8 +2778,8 @@ body {
 
 .jiji-nav-search-input:focus {
   background: #ffffff;
-  border-color: rgba(255, 255, 255, 0.85);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35), 0 4px 12px rgba(0, 0, 0, 0.12);
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4), 0 4px 12px rgba(234, 88, 12, 0.18);
 }
 
 .jiji-nav-search-input::placeholder {
@@ -2814,8 +2811,8 @@ body {
   display: flex;
   align-items: center;
   gap: 5px;
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.32);
   border-radius: 10px;
   padding: 6px 11px;
   font-size: 13px;
@@ -2851,8 +2848,8 @@ body {
   background: #ffffff;
   border-radius: 16px;
   padding: 16px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04);
+  border: 1px solid #fed7aa;
+  box-shadow: 0 4px 16px -2px rgba(234, 88, 12, 0.06);
 }
 
 .jiji-seller-top-row {
@@ -2868,11 +2865,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #eff6ff;
-  border: 2px solid #bfdbfe;
+  background: #fff7ed;
+  border: 2.5px solid #f97316;
   border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.18);
   position: relative;
 }
 
@@ -2919,9 +2916,9 @@ body {
 }
 
 .jiji-badge-verified {
-  color: #1d4ed8;
-  background: #eff6ff;
-  border-color: #bfdbfe;
+  color: #ea580c;
+  background: #ffedd5;
+  border-color: #fed7aa;
 }
 
 .jiji-last-seen-row {
@@ -2940,9 +2937,9 @@ body {
 }
 
 .jiji-last-seen-pill.is-online {
-  color: #059669;
-  background: #dcfce7;
-  border-color: #bbf7d0;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #bfdbfe;
   font-weight: 700;
 }
 
@@ -2991,14 +2988,14 @@ body {
 
 .jiji-feedback-row:hover .jiji-feedback-arrow {
   transform: translateX(2px);
-  color: #1d4ed8;
+  color: #ea580c;
 }
 
-/* Contact Button */
+/* Contact Button (Warm Orange Primary Action) */
 .jiji-show-contact-btn {
   width: 100%;
   height: 46px;
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, #ffa705 0%, #ea580c 100%);
   color: #ffffff;
   border: none;
   border-radius: 12px;
@@ -3011,14 +3008,14 @@ body {
   gap: 8px;
   cursor: pointer;
   margin-top: 14px;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .jiji-show-contact-btn:hover {
-  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
+  box-shadow: 0 6px 18px rgba(234, 88, 12, 0.45);
 }
 
 .jiji-show-contact-btn:active {
@@ -3026,8 +3023,8 @@ body {
 }
 
 .jiji-revealed-contact-box {
-  background: #eff6ff;
-  border: 1.5px solid #bfdbfe;
+  background: #fff7ed;
+  border: 1.5px solid #fed7aa;
   border-radius: 14px;
   padding: 12px 14px;
   margin-top: 14px;
@@ -3042,11 +3039,11 @@ body {
   gap: 8px;
   font-size: 16px;
   font-weight: 800;
-  color: #1d4ed8;
+  color: #ea580c;
 }
 
 .jiji-revealed-phone-number a {
-  color: #1d4ed8;
+  color: #ea580c;
   text-decoration: none;
 }
 
@@ -3058,21 +3055,21 @@ body {
 .jiji-call-link {
   flex: 1;
   padding: 10px;
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, #ffa705 0%, #ea580c 100%);
   color: #ffffff;
   border-radius: 10px;
   text-align: center;
   font-weight: 700;
   font-size: 13.5px;
   text-decoration: none;
-  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 3px 10px rgba(234, 88, 12, 0.25);
   transition: all 0.15s ease;
 }
 
 .jiji-call-link:hover {
-  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
   transform: translateY(-1px);
-  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 5px 14px rgba(234, 88, 12, 0.35);
 }
 
 /* Filters & Sorting Toolbar */
@@ -3111,16 +3108,16 @@ body {
 }
 
 .jiji-filter-chip:hover {
-  border-color: #3b82f6;
-  color: #1d4ed8;
-  background: #f8fafc;
+  border-color: #f97316;
+  color: #ea580c;
+  background: #fff7ed;
 }
 
 .jiji-filter-chip.active {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  border-color: #1d4ed8;
+  background: linear-gradient(135deg, #ffa705 0%, #ea580c 100%);
+  border-color: #ea580c;
   color: #ffffff;
-  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 3px 8px rgba(234, 88, 12, 0.3);
 }
 
 .jiji-sort-and-view {
@@ -3147,8 +3144,8 @@ body {
 }
 
 .jiji-sort-btn:hover {
-  border-color: #3b82f6;
-  color: #1d4ed8;
+  border-color: #f97316;
+  color: #ea580c;
 }
 
 .jiji-view-toggle-btn {
@@ -3166,9 +3163,9 @@ body {
 }
 
 .jiji-view-toggle-btn:hover {
-  border-color: #3b82f6;
-  color: #1d4ed8;
-  background: #f8fafc;
+  border-color: #f97316;
+  color: #ea580c;
+  background: #fff7ed;
 }
 
 /* Adverts Grid & List */
@@ -3188,7 +3185,7 @@ body {
   background: #ffffff;
   padding: 36px 20px;
   border-radius: 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #fed7aa;
   text-align: center;
   color: #64748b;
   font-size: 14px;
@@ -3209,8 +3206,8 @@ body {
 
 .jiji-ad-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.12);
-  border-color: #cbd5e1;
+  box-shadow: 0 12px 28px -4px rgba(234, 88, 12, 0.12);
+  border-color: #fed7aa;
 }
 
 .jiji-ad-img-wrapper {
@@ -3260,19 +3257,19 @@ body {
 }
 
 .jiji-ad-subbadge {
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   border-radius: 999px;
   padding: 2.5px 8px;
   font-size: 9.5px;
   font-weight: 700;
-  color: #1d4ed8;
+  color: #ea580c;
   display: flex;
   align-items: center;
   gap: 3.5px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  border: 1px solid #fed7aa;
 }
 
 .jiji-ad-content {
@@ -3324,9 +3321,9 @@ body {
   font-weight: 600;
   padding: 2px 7px;
   border-radius: 6px;
-  color: #16a34a;
-  background: #dcfce7;
-  border: 1px solid #bbf7d0;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
 }
 
 .jiji-ad-condition-pill.condition-used {
@@ -3344,7 +3341,7 @@ body {
 /* Follow Card CTA */
 .jiji-follow-cta-card {
   background: #ffffff;
-  border: 1.5px solid #bfdbfe;
+  border: 1.5px solid #fed7aa;
   border-radius: 16px;
   padding: 16px 18px;
   text-align: center;
@@ -3353,7 +3350,7 @@ body {
   align-items: center;
   gap: 10px;
   margin-top: 6px;
-  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.05);
+  box-shadow: 0 4px 16px rgba(234, 88, 12, 0.05);
 }
 
 .jiji-follow-cta-title {
@@ -3364,7 +3361,7 @@ body {
 }
 
 .jiji-follow-submit-btn {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, #ffa705 0%, #ea580c 100%);
   color: #ffffff;
   border: none;
   border-radius: 12px;
@@ -3376,14 +3373,14 @@ body {
   align-items: center;
   gap: 6px;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.25);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .jiji-follow-submit-btn:hover {
-  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 6px 16px rgba(234, 88, 12, 0.35);
 }
 
 .jiji-follow-submit-btn.following {

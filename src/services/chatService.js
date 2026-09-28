@@ -311,7 +311,7 @@ export const normalizeConversation = (raw, currentUserId = null) => {
     lastSeen: raw.contact?.lastSeen || 'Recently',
     verified: raw.contact?.verified ?? false,
     rating: raw.contact?.rating || 5.0,
-    memberSince: raw.contact?.memberSince || '5+ years on BuyOh',
+    memberSince: raw.contact?.memberSince || '5+ years on InfiBuy',
     listings: Array.isArray(raw.contact?.listings) ? raw.contact.listings : []
   };
 
