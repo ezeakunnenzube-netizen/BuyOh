@@ -72,3 +72,44 @@ export function shouldShowConditionBadge(product) {
   }
   return isConditionApplicable(product.category, product.subcategory);
 }
+
+/**
+ * Accurately formats the user's membership tenure on InfiBuy from their creation timestamp.
+ * Replaces any legacy "BuyOh" branding with "InfiBuy".
+ * @param {string|null} [rawMemberSince]
+ * @param {string|Date|null} [createdAt]
+ * @returns {string} e.g. "2+ years on InfiBuy", "5 months on InfiBuy", "< 1 year on InfiBuy"
+ */
+export function formatMemberSince(rawMemberSince, createdAt) {
+  if (createdAt) {
+    try {
+      const date = new Date(createdAt);
+      if (!isNaN(date.getTime())) {
+        const diffMs = Math.max(0, Date.now() - date.getTime());
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const diffYears = Math.floor(diffDays / 365.25);
+        const diffMonths = Math.floor(diffDays / 30.4375);
+
+        if (diffYears >= 1) {
+          return `${diffYears}+ year${diffYears > 1 ? 's' : ''} on InfiBuy`;
+        } else if (diffMonths >= 1) {
+          return `${diffMonths} month${diffMonths > 1 ? 's' : ''} on InfiBuy`;
+        } else if (diffDays >= 7) {
+          const weeks = Math.floor(diffDays / 7);
+          return `${weeks} week${weeks > 1 ? 's' : ''} on InfiBuy`;
+        } else if (diffDays >= 1) {
+          return `${diffDays} day${diffDays > 1 ? 's' : ''} on InfiBuy`;
+        } else {
+          return '< 1 year on InfiBuy';
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (rawMemberSince && typeof rawMemberSince === 'string') {
+    return rawMemberSince.replace(/buyoh/gi, 'InfiBuy');
+  }
+
+  return '1+ year on InfiBuy';
+}
+

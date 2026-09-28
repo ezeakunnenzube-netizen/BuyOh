@@ -10,12 +10,13 @@ import {
   ChevronRight, ExternalLink, ChevronUp, ChevronDown, X, User, Flag, Trash2,
   Smile, Paperclip, Mic, Square, Play, Pause, Volume2, FileText,
   BellOff, Bell, Video, UserPlus, UserMinus, Star, SlidersHorizontal,
-  Grid, List, Crown, MessageCircle, MapPin, CornerUpLeft, Copy, Download
+  Grid, List, Crown, MessageCircle, MapPin, CornerUpLeft, Copy, Download, Share2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { supabase } from '../lib/supabaseClient';
 import { getFollowedSellersForUser, saveFollowedSellersForUser, getNotificationsForUser, saveNotificationsForUser, getUserProfileData } from '../utils/userSync';
+import { formatMemberSince } from '../utils/productUtils';
 import { 
   fetchUserConversations, 
   getOrCreateConversation, 
@@ -286,8 +287,66 @@ export default function Messages() {
           }));
           setConversations(syncedConvs);
           const paramChatId = searchParams?.get('chatId');
-          if (paramChatId && syncedConvs.some(c => c.id === paramChatId)) {
-            setActiveChatId(paramChatId);
+          const paramSellerId = searchParams?.get('sellerId');
+          const paramProductId = searchParams?.get('productId');
+          const paramSellerName = searchParams?.get('seller');
+          const shouldOpenProfile = searchParams?.get('openProfile') === 'true';
+
+          let matchedConv = null;
+          if (paramChatId) {
+            matchedConv = syncedConvs.find(c => c.id === paramChatId);
+          }
+          if (!matchedConv && paramSellerId) {
+            matchedConv = syncedConvs.find(c => 
+              String(c.seller_id).toLowerCase() === String(paramSellerId).toLowerCase() || 
+              String(c.contact?.id).toLowerCase() === String(paramSellerId).toLowerCase() || 
+              String(c.buyer_id).toLowerCase() === String(paramSellerId).toLowerCase()
+            );
+          }
+          if (!matchedConv && paramProductId) {
+            matchedConv = syncedConvs.find(c => 
+              String(c.product?.id).toLowerCase() === String(paramProductId).toLowerCase() || 
+              String(c.product_id).toLowerCase() === String(paramProductId).toLowerCase()
+            );
+          }
+
+          if (matchedConv) {
+            setActiveChatId(matchedConv.id);
+            if (shouldOpenProfile) {
+              setShowProfileModal(true);
+              setIsMobileDetailOpen(true);
+            }
+          } else if (paramSellerId || paramSellerName || paramProductId) {
+            const fallbackConv = normalizeConversation({
+              id: paramChatId || generateUUID(),
+              buyer_id: user?.id,
+              seller_id: paramSellerId || 'seller',
+              product_id: paramProductId || '',
+              contact: {
+                id: paramSellerId || 'seller',
+                name: paramSellerName ? decodeURIComponent(paramSellerName) : 'Seller',
+                avatar: '',
+                isOnline: false,
+                verified: true,
+                phone: '+234 800 000 0000',
+                location: 'Nigeria'
+              },
+              product: {
+                id: paramProductId || '',
+                name: 'Listing Item',
+                price: 0,
+                image: ''
+              },
+              unread_count: 0,
+              messages: []
+            }, user?.id);
+
+            setConversations(prev => [fallbackConv, ...prev.filter(c => c.id !== fallbackConv.id)]);
+            setActiveChatId(fallbackConv.id);
+            if (shouldOpenProfile) {
+              setShowProfileModal(true);
+              setIsMobileDetailOpen(true);
+            }
           } else if (syncedConvs.length > 0 && !activeChatId) {
             setActiveChatId(syncedConvs[0].id);
           }
@@ -545,14 +604,68 @@ export default function Messages() {
   // Dropdown 3-dots menu & Jiji Profile modal state
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [sellerProfileMeta, setSellerProfileMeta] = useState(null);
   const [sellerAdverts, setSellerAdverts] = useState([]);
   const [sellerSearchQuery, setSellerSearchQuery] = useState('');
   const [showSellerContact, setShowSellerContact] = useState(false);
-  const [sellerFilterCondition, setSellerFilterCondition] = useState('all');
-  const [sellerSortOrder, setSellerSortOrder] = useState('newest');
   const [isSellerGridView, setIsSellerGridView] = useState(true);
   const [toastMessage, setToastMessage] = useState('');
   const menuRef = useRef(null);
+
+  // Intelligent deep link support for opening seller profile
+  useEffect(() => {
+    if (searchParams?.get('openProfile') === 'true' && activeChatId) {
+      setShowProfileModal(true);
+      setIsMobileDetailOpen(true);
+    }
+  }, [searchParams, activeChatId]);
+
+  // Intelligent history integration for seller profile modal (mobile gesture & desktop back)
+  useEffect(() => {
+    if (showProfileModal) {
+      try {
+        window.history.pushState({ sellerProfileOpen: true }, '');
+      } catch (e) {}
+
+      const handlePopState = () => {
+        setShowProfileModal(false);
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
+    }
+  }, [showProfileModal]);
+
+  const handleCloseProfileModal = () => {
+    if (typeof window !== 'undefined' && window.history.state?.sellerProfileOpen) {
+      window.history.back();
+    } else {
+      setShowProfileModal(false);
+    }
+  };
+
+  const handleShareSellerProfile = async () => {
+    const sellerName = activeChat?.contact?.name || 'Seller';
+    const profileUrl = typeof window !== 'undefined' ? `${window.location.origin}/messages?chatId=${activeChat?.id}&openProfile=true` : '';
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: `${sellerName}'s Store on InfiBuy`,
+          text: `Check out listings from ${sellerName} on InfiBuy!`,
+          url: profileUrl
+        });
+      } catch (err) {}
+    } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(profileUrl);
+        showToast('Seller profile link copied to clipboard!');
+      } catch (e) {
+        showToast('Profile link ready to share');
+      }
+    }
+  };
 
   // In-Chat Make an Offer & Quoted Reply & Lightbox states
   const [showInChatOfferModal, setShowInChatOfferModal] = useState(false);
@@ -1119,12 +1232,23 @@ export default function Messages() {
         try {
           const { data: prof } = await supabase
             .from('profiles')
-            .select('my_listings, phone, whatsapp, location, verified, rating, created_at')
+            .select('id, name, full_name, avatar_url, my_listings, phone, whatsapp, location, verified, rating, created_at')
             .eq('id', counterpartId)
             .single();
 
-          if (prof?.my_listings && Array.isArray(prof.my_listings) && prof.my_listings.length > 0) {
-            listings = prof.my_listings;
+          if (prof) {
+            setSellerProfileMeta({
+              created_at: prof.created_at,
+              verified: prof.verified,
+              rating: prof.rating,
+              phone: prof.phone,
+              whatsapp: prof.whatsapp,
+              location: prof.location
+            });
+
+            if (prof.my_listings && Array.isArray(prof.my_listings) && prof.my_listings.length > 0) {
+              listings = prof.my_listings;
+            }
           }
         } catch (e) {}
       }
@@ -1153,7 +1277,7 @@ export default function Messages() {
     fetchSellerData();
   }, [showProfileModal, activeChat]);
 
-  // Memoized filtered adverts for Jiji seller modal
+  // Memoized filtered adverts for seller modal (filtered by real-time search)
   const filteredSellerAdverts = React.useMemo(() => {
     let list = [...sellerAdverts];
     const q = sellerSearchQuery.trim().toLowerCase();
@@ -1161,19 +1285,12 @@ export default function Messages() {
       list = list.filter(item => 
         (item.name || item.title || '').toLowerCase().includes(q) ||
         (item.description || '').toLowerCase().includes(q) ||
-        (item.condition || '').toLowerCase().includes(q)
+        (item.condition || '').toLowerCase().includes(q) ||
+        (item.category || '').toLowerCase().includes(q)
       );
     }
-    if (sellerFilterCondition !== 'all') {
-      list = list.filter(item => (item.condition || '').toLowerCase().includes(sellerFilterCondition.toLowerCase()));
-    }
-    if (sellerSortOrder === 'price_low') {
-      list.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
-    } else if (sellerSortOrder === 'price_high') {
-      list.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
-    }
     return list;
-  }, [sellerAdverts, sellerSearchQuery, sellerFilterCondition, sellerSortOrder]);
+  }, [sellerAdverts, sellerSearchQuery]);
 
   // Filtering conversations with safe optional chaining
   const filteredConversations = (conversations || []).filter(c => {
@@ -2268,263 +2385,295 @@ export default function Messages() {
         </div>
       </div>
 
+      {/* ── SELLER PROFILE PAGE MODAL ── */}
+      {showProfileModal && activeChat && (() => {
+        const sellerYearsText = formatMemberSince(
+          activeChat.contact?.memberSince, 
+          sellerProfileMeta?.created_at || activeChat.contact?.created_at
+        );
+        const sellerPhoneNum = sellerProfileMeta?.phone || activeChat.contact?.phone || '+234 800 000 0000';
+        const sellerWhatsAppNum = sellerProfileMeta?.whatsapp || activeChat.contact?.whatsapp || sellerPhoneNum;
+        const isSellerVerified = sellerProfileMeta?.verified ?? activeChat.contact?.verified;
+        const sellerRatingVal = sellerProfileMeta?.rating || activeChat.contact?.rating || 5.0;
 
-
-      {/* ── BUYOH SELLER PROFILE PAGE MODAL ── */}
-      {showProfileModal && activeChat && (
-        <div className="jiji-profile-backdrop" onClick={() => setShowProfileModal(false)}>
-          <div className="jiji-profile-container" onClick={e => e.stopPropagation()}>
-            
-            {/* Top Navigation Bar in BuyOh Brand Warm Orange */}
-            <div className="jiji-nav-header">
-              <button 
-                type="button"
-                className="jiji-back-btn" 
-                onClick={() => setShowProfileModal(false)}
-                title="Back to conversation"
-              >
-                <ArrowLeft size={22} />
-              </button>
-
-              <div className="jiji-nav-search-wrap">
-                <input 
-                  type="text"
-                  placeholder={`Search listings from ${activeChat.contact?.name || 'Seller'}...`}
-                  value={sellerSearchQuery}
-                  onChange={e => setSellerSearchQuery(e.target.value)}
-                  className="jiji-nav-search-input"
-                />
-                {sellerSearchQuery && (
-                  <button 
-                    type="button" 
-                    className="jiji-clear-search-btn"
-                    onClick={() => setSellerSearchQuery('')}
-                  >
-                    <X size={16} />
-                  </button>
-                )}
-              </div>
-
-              <div className="jiji-advert-count-badge" title="Total active listings">
-                <span>{filteredSellerAdverts.length}</span>
-                <Tag size={15} />
-              </div>
-            </div>
-
-            {/* Scrollable Content */}
-            <div className="jiji-modal-scroll-area">
+        return (
+          <div className="jiji-profile-backdrop" onClick={handleCloseProfileModal}>
+            <div className="jiji-profile-container" onClick={e => e.stopPropagation()}>
               
-              {/* Seller Identity Card */}
-              <div className="jiji-seller-card">
-                <div className="jiji-seller-top-row">
-                  {/* Rounded avatar */}
-                  <div className="jiji-hex-avatar-wrap">
-                    {renderContactAvatar(activeChat.contact?.avatar, activeChat.contact?.name, "jiji-hex-avatar")}
-                  </div>
-
-                  <div className="jiji-seller-details">
-                    <h2 className="jiji-seller-name">{activeChat.contact?.name || 'Seller'}</h2>
-                    
-                    <div className="jiji-seller-badges-row">
-                      <span className="jiji-badge-pill">
-                        <User size={13} />
-                        {activeChat.contact?.memberSince || '5+ years on InfiBuy'}
-                      </span>
-                      {activeChat.contact?.verified && (
-                        <span className="jiji-badge-pill jiji-badge-verified">
-                          <ShieldCheck size={13} />
-                          Verified Seller
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="jiji-last-seen-row">
-                      <span className={`jiji-last-seen-pill ${isChatUserOnline(activeChat) ? 'is-online' : ''}`}>
-                        {isChatUserOnline(activeChat) ? '● Online now' : (activeChat.contact?.lastSeen && activeChat.contact.lastSeen !== 'Online' ? activeChat.contact.lastSeen : 'Offline')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Feedback Row */}
-                <div className="jiji-feedback-row">
-                  <div className="jiji-feedback-left">
-                    <MessageCircle size={18} className="jiji-feedback-icon" />
-                    <span className="jiji-feedback-text">Feedback ({Math.max(5, (activeChat.contact?.rating ? Math.round(activeChat.contact.rating * 2) : 5))})</span>
-                    <span className="jiji-rating-stars">★★★★★</span>
-                  </div>
-                  <ChevronRight size={18} className="jiji-feedback-arrow" />
-                </div>
-
-                {/* Show Contact CTA Button */}
-                {!showSellerContact ? (
-                  <button 
-                    type="button" 
-                    className="jiji-show-contact-btn"
-                    onClick={() => setShowSellerContact(true)}
-                  >
-                    <Phone size={18} />
-                    <span>Show contact</span>
-                  </button>
-                ) : (
-                  <div className="jiji-revealed-contact-box">
-                    <div className="jiji-revealed-phone-number">
-                      <Phone size={18} />
-                      <a href={`tel:${activeChat.contact?.phone || '+234 800 000 0000'}`}>
-                        {activeChat.contact?.phone || '+234 800 000 0000'}
-                      </a>
-                    </div>
-                    <div className="jiji-revealed-actions">
-                      <a 
-                        href={`tel:${activeChat.contact?.phone || '+234 800 000 0000'}`} 
-                        className="jiji-call-link"
-                      >
-                        Call Now
-                      </a>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Filters and Sorting Toolbar */}
-              <div className="jiji-filters-toolbar">
-                <div className="jiji-filter-chips-scroll">
-                  <button 
-                    type="button" 
-                    className={`jiji-filter-chip ${sellerFilterCondition === 'all' ? 'active' : ''}`}
-                    onClick={() => setSellerFilterCondition('all')}
-                  >
-                    All filters ▾
-                  </button>
-                  <button 
-                    type="button" 
-                    className={`jiji-filter-chip ${sellerSortOrder !== 'newest' ? 'active' : ''}`}
-                    onClick={() => setSellerSortOrder(prev => prev === 'price_low' ? 'price_high' : prev === 'price_high' ? 'newest' : 'price_low')}
-                  >
-                    Price, ₦ {sellerSortOrder === 'price_low' ? '↑' : sellerSortOrder === 'price_high' ? '↓' : '▾'}
-                  </button>
-                  <button 
-                    type="button" 
-                    className={`jiji-filter-chip ${sellerFilterCondition === 'brand new' ? 'active' : ''}`}
-                    onClick={() => setSellerFilterCondition(prev => prev === 'brand new' ? 'all' : 'brand new')}
-                  >
-                    Brand New
-                  </button>
-                  <button 
-                    type="button" 
-                    className={`jiji-filter-chip ${sellerFilterCondition === 'used' ? 'active' : ''}`}
-                    onClick={() => setSellerFilterCondition(prev => prev === 'used' ? 'all' : 'used')}
-                  >
-                    Condition ▾
-                  </button>
-                </div>
-
-                <div className="jiji-sort-and-view">
-                  <button 
-                    type="button" 
-                    className="jiji-sort-btn"
-                    onClick={() => setSellerSortOrder(prev => prev === 'newest' ? 'price_low' : 'newest')}
-                  >
-                    <SlidersHorizontal size={15} />
-                    <span>Sort ▾</span>
-                  </button>
-                  <button 
-                    type="button" 
-                    className="jiji-view-toggle-btn"
-                    onClick={() => setIsSellerGridView(prev => !prev)}
-                    title={isSellerGridView ? 'List view' : 'Grid view'}
-                  >
-                    {isSellerGridView ? <List size={16} /> : <Grid size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Adverts Grid / List */}
-              <div className={isSellerGridView ? "jiji-adverts-grid" : "jiji-adverts-list"}>
-                {filteredSellerAdverts.length === 0 ? (
-                  <div className="jiji-empty-adverts">
-                    <p>No listings matching your search.</p>
-                  </div>
-                ) : (
-                  filteredSellerAdverts.map((ad, idx) => {
-                    const adImg = ad.image || (Array.isArray(ad.images) ? ad.images[0] : null) || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400&q=80';
-                    const adPrice = Number(ad.price || 0);
-                    const adTitle = ad.name || ad.title || 'Marketplace Item';
-                    const adLocation = ad.location || activeChat.contact?.location || 'Lagos, Nigeria';
-                    const adCondition = ad.condition || 'Used';
-                    const isConditionNew = adCondition.toLowerCase().includes('new');
-
-                    return (
-                      <div 
-                        key={ad.id || idx} 
-                        className="jiji-ad-card"
-                        onClick={() => {
-                          if (ad.id) {
-                            setShowProfileModal(false);
-                            router.push(`/product/${ad.id}`);
-                          }
-                        }}
-                      >
-                        <div className="jiji-ad-img-wrapper">
-                          <img src={adImg} alt={adTitle} className="jiji-ad-img" loading="lazy" />
-                          <span className="jiji-ad-vip-tag">VIP</span>
-                          
-                          <div className="jiji-ad-img-badges">
-                            <span className="jiji-ad-subbadge">
-                              <ShieldCheck size={11} />
-                              Verified Seller
-                            </span>
-                            <span className="jiji-ad-subbadge">
-                              <User size={11} />
-                              5+ YEARS ON INFIBUY
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="jiji-ad-content">
-                          <span className="jiji-ad-price">
-                            ₦ {adPrice.toLocaleString('en-NG')}
-                          </span>
-                          <h4 className="jiji-ad-title" title={adTitle}>
-                            {adTitle}
-                          </h4>
-                          <span className="jiji-ad-location">
-                            <MapPin size={13} />
-                            {adLocation}
-                          </span>
-                          <div className="jiji-ad-footer-row">
-                            <span className={`jiji-ad-condition-pill ${isConditionNew ? 'condition-new' : 'condition-used'}`}>{adCondition}</span>
-                            <span className="jiji-ad-crown-icon" title="Featured VIP listing">
-                              <Crown size={15} />
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              {/* Follow Card CTA */}
-              <div className="jiji-follow-cta-card">
-                <h4 className="jiji-follow-cta-title">Want to know when this seller posts new items?</h4>
+              {/* Top Navigation Bar in InfiBuy Signature Warm Orange */}
+              <div className="jiji-nav-header">
                 <button 
                   type="button" 
-                  className={`jiji-follow-submit-btn ${isFollowingSeller(activeChat.contact?.name) ? 'following' : ''}`}
-                  onClick={() => toggleFollowSeller(activeChat.contact?.name)}
+                  className="jiji-back-btn" 
+                  onClick={handleCloseProfileModal}
+                  title="Back to conversation"
+                  aria-label="Back to conversation"
                 >
-                  <UserPlus size={16} />
-                  <span>{isFollowingSeller(activeChat.contact?.name) ? 'Following' : 'Follow Seller'}</span>
+                  <ArrowLeft size={22} />
                 </button>
-                <span className="jiji-follow-count-subtext">
-                  {isFollowingSeller(activeChat.contact?.name) ? '16 followers' : '15 followers'}
-                </span>
+
+                <div className="jiji-nav-search-wrap">
+                  <input 
+                    type="text"
+                    placeholder={`Search listings from ${activeChat.contact?.name || 'Seller'}...`}
+                    value={sellerSearchQuery}
+                    onChange={e => setSellerSearchQuery(e.target.value)}
+                    className="jiji-nav-search-input"
+                  />
+                  {sellerSearchQuery && (
+                    <button 
+                      type="button" 
+                      className="jiji-clear-search-btn"
+                      onClick={() => setSellerSearchQuery('')}
+                      title="Clear search"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+
+                <div className="jiji-advert-count-badge" title="Total active listings">
+                  <span>{filteredSellerAdverts.length}</span>
+                  <Tag size={15} />
+                </div>
+
+                <button
+                  type="button"
+                  className="jiji-share-header-btn"
+                  onClick={handleShareSellerProfile}
+                  title="Share seller profile"
+                  aria-label="Share seller profile"
+                >
+                  <Share2 size={18} />
+                </button>
               </div>
 
+              {/* Scrollable Content */}
+              <div className="jiji-modal-scroll-area">
+                
+                {/* Seller Identity Card */}
+                <div className="jiji-seller-card">
+                  <div className="jiji-seller-top-row">
+                    {/* Rounded avatar */}
+                    <div className="jiji-hex-avatar-wrap">
+                      {renderContactAvatar(activeChat.contact?.avatar, activeChat.contact?.name, "jiji-hex-avatar")}
+                    </div>
+
+                    <div className="jiji-seller-details">
+                      <h2 className="jiji-seller-name">{activeChat.contact?.name || 'Seller'}</h2>
+                      
+                      <div className="jiji-seller-badges-row">
+                        <span className="jiji-badge-pill" title={`Member for ${sellerYearsText}`}>
+                          <User size={13} />
+                          {sellerYearsText}
+                        </span>
+                        {isSellerVerified && (
+                          <span className="jiji-badge-pill jiji-badge-verified">
+                            <ShieldCheck size={13} />
+                            Verified Seller
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="jiji-last-seen-row">
+                        <span className={`jiji-last-seen-pill ${isChatUserOnline(activeChat) ? 'is-online' : ''}`}>
+                          {isChatUserOnline(activeChat) ? '● Online now' : (activeChat.contact?.lastSeen && activeChat.contact.lastSeen !== 'Online' ? activeChat.contact.lastSeen : 'Offline')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Feedback Row */}
+                  <div 
+                    className="jiji-feedback-row"
+                    onClick={() => {
+                      showToast(`Seller has ${Math.max(5, Math.round(sellerRatingVal * 2))} verified ratings`);
+                    }}
+                    title="View seller feedback summary"
+                  >
+                    <div className="jiji-feedback-left">
+                      <MessageCircle size={18} className="jiji-feedback-icon" />
+                      <span className="jiji-feedback-text">Feedback ({Math.max(5, Math.round(sellerRatingVal * 2))})</span>
+                      <span className="jiji-rating-stars">★★★★★</span>
+                    </div>
+                    <ChevronRight size={18} className="jiji-feedback-arrow" />
+                  </div>
+
+                  {/* Show Contact CTA Button / Revealed Contacts */}
+                  {!showSellerContact ? (
+                    <button 
+                      type="button" 
+                      className="jiji-show-contact-btn"
+                      onClick={() => setShowSellerContact(true)}
+                    >
+                      <Phone size={18} />
+                      <span>Show contact</span>
+                    </button>
+                  ) : (
+                    <div className="jiji-revealed-contact-box">
+                      <div className="jiji-revealed-phone-number">
+                        <Phone size={18} />
+                        <a href={`tel:${sellerPhoneNum}`}>
+                          {sellerPhoneNum}
+                        </a>
+                      </div>
+                      <div className="jiji-revealed-actions">
+                        <a 
+                          href={`tel:${sellerPhoneNum}`} 
+                          className="jiji-call-link"
+                          title="Call seller phone directly"
+                        >
+                          <Phone size={14} /> Call Now
+                        </a>
+                        {sellerWhatsAppNum && (
+                          <a 
+                            href={`https://wa.me/${String(sellerWhatsAppNum).replace(/[^\d]/g, '')}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="jiji-whatsapp-link"
+                            title="Chat with seller on WhatsApp"
+                          >
+                            WhatsApp
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          className="jiji-message-shortcut-btn"
+                          onClick={handleCloseProfileModal}
+                          title="Return to message this seller in chat"
+                        >
+                          <MessageSquareMore size={14} /> Message
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Clean Listings Section Header (price, brand new, condition, and sort filters removed per user request) */}
+                <div className="jiji-listings-header-clean">
+                  <div className="jiji-listings-count-wrap">
+                    <h3 className="jiji-listings-title">
+                      Listings ({filteredSellerAdverts.length})
+                    </h3>
+                    {sellerSearchQuery && (
+                      <span className="jiji-search-tag">
+                        "{sellerSearchQuery}"
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="jiji-view-toggle-wrap">
+                    <button 
+                      type="button" 
+                      className="jiji-view-toggle-btn"
+                      onClick={() => setIsSellerGridView(prev => !prev)}
+                      title={isSellerGridView ? 'Switch to list view' : 'Switch to grid view'}
+                      aria-label="Toggle list or grid view"
+                    >
+                      {isSellerGridView ? <List size={16} /> : <Grid size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Adverts Grid / List */}
+                <div className={isSellerGridView ? "jiji-adverts-grid" : "jiji-adverts-list"}>
+                  {filteredSellerAdverts.length === 0 ? (
+                    <div className="jiji-empty-adverts">
+                      <p>No listings matching your search.</p>
+                      {sellerSearchQuery && (
+                        <button 
+                          type="button" 
+                          className="jiji-clear-empty-search-btn"
+                          onClick={() => setSellerSearchQuery('')}
+                        >
+                          Clear search filter
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    filteredSellerAdverts.map((ad, idx) => {
+                      const adImg = ad.image || (Array.isArray(ad.images) ? ad.images[0] : null) || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400&q=80';
+                      const adPrice = Number(ad.price || 0);
+                      const adTitle = ad.name || ad.title || 'Marketplace Item';
+                      const adLocation = ad.location || sellerProfileMeta?.location || activeChat.contact?.location || 'Lagos, Nigeria';
+                      const adCondition = ad.condition || 'Used';
+                      const isConditionNew = adCondition.toLowerCase().includes('new');
+
+                      return (
+                        <div 
+                          key={ad.id || idx} 
+                          className="jiji-ad-card"
+                          onClick={() => {
+                            if (ad.id) {
+                              setShowProfileModal(false);
+                              router.push(`/product/${ad.id}?fromProfile=1&chatId=${activeChat.id}&sellerName=${encodeURIComponent(activeChat.contact?.name || '')}`);
+                            }
+                          }}
+                        >
+                          <div className="jiji-ad-img-wrapper">
+                            <img src={adImg} alt={adTitle} className="jiji-ad-img" loading="lazy" />
+                            <span className="jiji-ad-vip-tag">VIP</span>
+                            
+                            <div className="jiji-ad-img-badges">
+                              {isSellerVerified && (
+                                <span className="jiji-ad-subbadge">
+                                  <ShieldCheck size={11} />
+                                  Verified Seller
+                                </span>
+                              )}
+                              <span className="jiji-ad-subbadge">
+                                <User size={11} />
+                                {sellerYearsText.toUpperCase()}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="jiji-ad-content">
+                            <span className="jiji-ad-price">
+                              ₦ {adPrice.toLocaleString('en-NG')}
+                            </span>
+                            <h4 className="jiji-ad-title" title={adTitle}>
+                              {adTitle}
+                            </h4>
+                            <span className="jiji-ad-location">
+                              <MapPin size={13} />
+                              {adLocation}
+                            </span>
+                            <div className="jiji-ad-footer-row">
+                              <span className={`jiji-ad-condition-pill ${isConditionNew ? 'condition-new' : 'condition-used'}`}>{adCondition}</span>
+                              <span className="jiji-ad-crown-icon" title="Featured VIP listing">
+                                <Crown size={15} />
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Follow Card CTA */}
+                <div className="jiji-follow-cta-card">
+                  <h4 className="jiji-follow-cta-title">Want to know when this seller posts new items?</h4>
+                  <button 
+                    type="button" 
+                    className={`jiji-follow-submit-btn ${isFollowingSeller(activeChat.contact?.name) ? 'following' : ''}`}
+                    onClick={() => toggleFollowSeller(activeChat.contact?.name)}
+                  >
+                    <UserPlus size={16} />
+                    <span>{isFollowingSeller(activeChat.contact?.name) ? 'Following' : 'Follow Seller'}</span>
+                  </button>
+                  <span className="jiji-follow-count-subtext">
+                    {isFollowingSeller(activeChat.contact?.name) ? '16 followers' : '15 followers'}
+                  </span>
+                </div>
+
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
+
 
       {/* ── TOAST NOTIFICATION ── */}
       {toastMessage && (

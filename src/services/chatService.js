@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient.js';
 import { getGeneralProductPool } from '../utils/userSync';
+import { formatMemberSince } from '../utils/productUtils';
 
 /**
  * Shared realtime channel singleton.
@@ -311,7 +312,8 @@ export const normalizeConversation = (raw, currentUserId = null) => {
     lastSeen: raw.contact?.lastSeen || 'Recently',
     verified: raw.contact?.verified ?? false,
     rating: raw.contact?.rating || 5.0,
-    memberSince: raw.contact?.memberSince || '5+ years on InfiBuy',
+    created_at: raw.contact?.created_at || null,
+    memberSince: formatMemberSince(raw.contact?.memberSince, raw.contact?.created_at),
     listings: Array.isArray(raw.contact?.listings) ? raw.contact.listings : []
   };
 
@@ -461,11 +463,7 @@ export const fetchUserConversations = async (user) => {
         const profile = profileMap[String(counterpartId).toLowerCase()] || profileMap[counterpartId] || {};
         const prod = productMap[String(row.product_id)] || productMap[toValidUUID(row.product_id)] || {};
 
-        let memberDuration = '5+ years on BuyOh';
-        if (profile.created_at) {
-          const yrs = Math.max(1, Math.floor((Date.now() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24 * 365)));
-          memberDuration = `${yrs}+ year${yrs > 1 ? 's' : ''} on BuyOh`;
-        }
+        let memberDuration = formatMemberSince(null, profile.created_at);
 
         // Merge messages from DB and local cache
         const dbMsgs = messagesByConv[row.id] || [];
@@ -496,6 +494,7 @@ export const fetchUserConversations = async (user) => {
             lastSeen: formatLastSeen(profile.updated_at, false),
             verified: Boolean(profile.verified),
             rating: profile.rating || 5.0,
+            created_at: profile.created_at || null,
             memberSince: memberDuration,
             listings: Array.isArray(profile.my_listings) ? profile.my_listings : []
           },

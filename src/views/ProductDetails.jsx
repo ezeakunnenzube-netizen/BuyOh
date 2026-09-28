@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import NavLink from '../components/NavLink';
 import { 
   MapPin, MessageSquareMore, Heart, 
@@ -15,17 +15,22 @@ import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { supabase } from '../lib/supabaseClient';
 import { getSavedItemsForUser, saveItemsForUser, getAllPublicListings, getGeneralProductPool, getMyListingsForUser, saveMyListingsForUser, getUserProfileData } from '../utils/userSync';
-import { isConditionApplicable, shouldShowConditionBadge } from '../utils/productUtils';
+import { isConditionApplicable, shouldShowConditionBadge, formatMemberSince } from '../utils/productUtils';
 import { getOrCreateConversation, sendMessage as sendCloudMessage } from '../services/chatService';
 import './ProductDetails.css';
 
 export default function ProductDetails({ params: serverParams }) {
   const routerParams = useParams();
+  const searchParams = useSearchParams();
   const productId = serverParams?.productId || routerParams?.productId;
   const router = useRouter();
   const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
   const { user, loading, setIsAuthOpen } = useAuth();
   const { unreadCount } = useChat();
+
+  const fromProfile = searchParams?.get('fromProfile') === '1' || searchParams?.get('fromSellerProfile') === '1';
+  const profileChatId = searchParams?.get('chatId');
+  const profileSellerName = searchParams?.get('sellerName');
   
   const [product, setProduct] = useState(() => {
     if (!productId) return null;
@@ -146,7 +151,7 @@ export default function ProductDetails({ params: serverParams }) {
           try {
             const { data: sProfile, error } = await supabase
               .from('profiles')
-              .select('full_name, name, phone, whatsapp, avatar_url')
+              .select('full_name, name, phone, whatsapp, avatar_url, created_at, verified')
               .eq('id', found.sellerId)
               .maybeSingle();
 
@@ -158,7 +163,10 @@ export default function ProductDetails({ params: serverParams }) {
                   sellerName: sProfile.full_name || sProfile.name || prev.sellerName,
                   sellerWhatsApp: sProfile.whatsapp || sProfile.phone || prev.sellerWhatsApp,
                   sellerPhone: sProfile.phone || sProfile.whatsapp || prev.sellerPhone,
-                  sellerAvatar: sProfile.avatar_url || prev.sellerAvatar
+                  sellerAvatar: sProfile.avatar_url || prev.sellerAvatar,
+                  sellerVerified: sProfile.verified ?? prev.sellerVerified,
+                  sellerCreatedAt: sProfile.created_at || prev.sellerCreatedAt,
+                  sellerJoined: formatMemberSince(prev.sellerJoined, sProfile.created_at)
                 };
               });
             }
@@ -926,6 +934,10 @@ export default function ProductDetails({ params: serverParams }) {
     .slice(0, 4);
 
   const handleBack = () => {
+    if (fromProfile && profileChatId) {
+      navigate(`/messages?chatId=${profileChatId}&openProfile=true`);
+      return;
+    }
     if (window.history.state && window.history.state.idx > 0) {
       navigate(-1);
     } else {
@@ -1011,7 +1023,7 @@ export default function ProductDetails({ params: serverParams }) {
         {/* Mobile back button */}
         <div className="detail-mobile-header">
           <button onClick={handleBack} className="mobile-back-btn">
-            <ArrowLeft size={20} /> Back
+            <ArrowLeft size={20} /> {fromProfile ? (profileSellerName ? `Back to ${profileSellerName}` : 'Back to Seller Profile') : 'Back'}
           </button>
         </div>
 
@@ -1197,16 +1209,30 @@ export default function ProductDetails({ params: serverParams }) {
 
             {/* Seller details card */}
             <div className="detail-seller-card">
-              <div className="seller-profile-row">
+              <div 
+                className="seller-profile-row"
+                style={{ cursor: 'pointer' }}
+                onClick={() => {
+                  const sName = encodeURIComponent(product.sellerName || '');
+                  const sId = product.sellerId || product.userId || '';
+                  navigate(`/messages?productId=${product.id}&sellerId=${sId}&seller=${sName}&openProfile=true`);
+                }}
+                title="Click to view full seller profile & listings"
+              >
                 {product.sellerAvatar ? (
                   <img src={product.sellerAvatar} alt="Seller Avatar" className="seller-avatar-img" />
                 ) : (
                   <div className="seller-avatar-icon">{(product.sellerName || 'P')[0].toUpperCase()}</div>
                 )}
-                <div className="seller-name-info">
-                  <h4>{product.sellerName || 'PHONEMART'}</h4>
+                <div className="seller-name-info" style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <h4 style={{ margin: 0 }}>{product.sellerName || 'PHONEMART'}</h4>
+                    <span style={{ fontSize: '0.78rem', color: '#2563eb', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                      Profile <ChevronRight size={13} />
+                    </span>
+                  </div>
                   <div className="seller-badges">
-                    <span>👤 {product.sellerJoined || '5+ years on InfiBuy'}</span>
+                    <span>👤 {formatMemberSince(product.sellerJoined, product.sellerCreatedAt)}</span>
                     <span>🛡️ Verified Seller</span>
                   </div>
                   <span className="reply-rate-sub">⚡ Typically replies within a few minutes</span>

@@ -2822,6 +2822,27 @@ body {
   backdrop-filter: blur(4px);
 }
 
+.jiji-share-header-btn {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.jiji-share-header-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+
 /* Scroll Area */
 .jiji-modal-scroll-area {
   flex: 1;
@@ -3050,6 +3071,7 @@ body {
 .jiji-revealed-actions {
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 
 .jiji-call-link {
@@ -3064,6 +3086,10 @@ body {
   text-decoration: none;
   box-shadow: 0 3px 10px rgba(234, 88, 12, 0.25);
   transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .jiji-call-link:hover {
@@ -3072,94 +3098,103 @@ body {
   box-shadow: 0 5px 14px rgba(234, 88, 12, 0.35);
 }
 
-/* Filters & Sorting Toolbar */
-.jiji-filters-toolbar {
+.jiji-whatsapp-link {
+  flex: 1;
+  padding: 10px;
+  background: #25d366;
+  color: #ffffff;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 13.5px;
+  text-decoration: none;
+  box-shadow: 0 3px 10px rgba(37, 211, 102, 0.25);
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.jiji-whatsapp-link:hover {
+  background: #20ba5a;
+  transform: translateY(-1px);
+}
+
+.jiji-message-shortcut-btn {
+  flex: 1;
+  padding: 10px;
+  background: #ffffff;
+  color: #ea580c;
+  border: 1.5px solid #fed7aa;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.jiji-message-shortcut-btn:hover {
+  background: #fff7ed;
+  border-color: #ea580c;
+}
+
+/* Clean Listings Section Header */
+.jiji-listings-header-clean {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
+  padding: 4px 2px 2px;
+}
+
+.jiji-listings-count-wrap {
+  display: flex;
+  align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
-.jiji-filter-chips-scroll {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding: 2px 0;
+.jiji-listings-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
 }
 
-.jiji-filter-chips-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.jiji-filter-chip {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 7px 13px;
-  font-size: 12px;
+.jiji-search-tag {
+  background: #ffedd5;
+  color: #c2410c;
+  font-size: 11.5px;
   font-weight: 600;
-  font-family: inherit;
-  color: #334155;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  padding: 3px 9px;
+  border-radius: 9999px;
+  border: 1px solid #fed7aa;
 }
 
-.jiji-filter-chip:hover {
-  border-color: #f97316;
-  color: #ea580c;
-  background: #fff7ed;
-}
-
-.jiji-filter-chip.active {
-  background: linear-gradient(135deg, #ffa705 0%, #ea580c 100%);
-  border-color: #ea580c;
-  color: #ffffff;
-  box-shadow: 0 3px 8px rgba(234, 88, 12, 0.3);
-}
-
-.jiji-sort-and-view {
+.jiji-view-toggle-wrap {
   display: flex;
   align-items: center;
-  gap: 6px;
-}
-
-.jiji-sort-btn {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 7px 11px;
-  font-size: 12px;
-  font-weight: 600;
-  font-family: inherit;
-  color: #334155;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-}
-
-.jiji-sort-btn:hover {
-  border-color: #f97316;
-  color: #ea580c;
 }
 
 .jiji-view-toggle-btn {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
-  padding: 7px 9px;
-  color: #334155;
-  cursor: pointer;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #475569;
+  cursor: pointer;
   transition: all 0.15s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .jiji-view-toggle-btn:hover {
@@ -3167,6 +3202,26 @@ body {
   color: #ea580c;
   background: #fff7ed;
 }
+
+.jiji-clear-empty-search-btn {
+  margin-top: 10px;
+  background: linear-gradient(135deg, #ffa705 0%, #ea580c 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.25);
+  transition: all 0.15s ease;
+}
+
+.jiji-clear-empty-search-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.35);
+}
+
 
 /* Adverts Grid & List */
 .jiji-adverts-grid {
@@ -3396,15 +3451,67 @@ body {
   font-weight: 500;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .jiji-profile-backdrop {
     padding: 0;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    height: 100%;
+    height: 100dvh;
+    width: 100vw;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    position: fixed;
+    z-index: 99999;
   }
   .jiji-profile-container {
-    height: 100vh;
-    max-height: 100vh;
+    width: 100%;
+    height: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
     border-radius: 0;
     border: none;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin: 0;
+    box-sizing: border-box;
+  }
+  .jiji-nav-header {
+    height: auto;
+    min-height: calc(62px + env(safe-area-inset-top, 0px));
+    padding-top: max(14px, env(safe-area-inset-top, 14px));
+    padding-bottom: 12px;
+    padding-left: 14px;
+    padding-right: 14px;
+    gap: 10px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+  .jiji-back-btn,
+  .jiji-share-header-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+  .jiji-nav-search-input {
+    height: 38px;
+    font-size: 13px;
+    padding: 0 30px 0 12px;
+  }
+  .jiji-modal-scroll-area {
+    padding: 12px 14px 32px;
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .jiji-revealed-actions {
+    flex-direction: column;
   }
 }
 

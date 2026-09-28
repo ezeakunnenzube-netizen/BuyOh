@@ -14,6 +14,7 @@ import { useChat } from '../context/ChatContext';
 import { supabase } from '../lib/supabaseClient';
 import AvatarModal from '../components/AvatarModal';
 import { getSavedItemsForUser, getMyListingsForUser, getUserProfileData, saveUserProfileData, getFollowedSellersForUser, getNotificationsForUser, syncUserDataFromCloud } from '../utils/userSync';
+import { formatMemberSince } from '../utils/productUtils';
 import './Profile.css';
 
 export default function Profile() {
@@ -121,7 +122,8 @@ export default function Profile() {
               whatsapp: dbProfile.whatsapp || current.whatsapp,
               location: dbProfile.location || current.location,
               avatar: dbProfile.avatar_url && !dbProfile.avatar_url.includes('photo-1535713875002-d1d0cf377fde') ? dbProfile.avatar_url : '',
-              banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
+              banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)',
+              createdAt: dbProfile.created_at || user?.created_at || null
             };
             setUserData(freshData);
             if (!isEditing) {
@@ -377,7 +379,15 @@ export default function Profile() {
         <div className="profile-card">
           {/* Cover Banner */}
           <div className="profile-banner" style={{ background: userData.banner }}>
-            
+            <button 
+              type="button" 
+              onClick={() => navigate(-1)} 
+              className="profile-mobile-back-btn"
+              title="Go back"
+              aria-label="Go back"
+            >
+              <ArrowLeft size={20} />
+            </button>
             <h2 className="profile-page-title">My Account</h2>
           </div>
 
@@ -416,6 +426,7 @@ export default function Profile() {
               <div className="profile-title-badges">
                 <h3 className="profile-name-title">{userData.name}</h3>
                 <span className="profile-badge-tag"><ShieldCheck size={13} /> Verified User</span>
+                <span className="profile-badge-tag"><User size={13} /> {formatMemberSince(null, userData.createdAt || user?.created_at)}</span>
               </div>
               <p className="profile-email-sub">{userData.email}</p>
             </div>
