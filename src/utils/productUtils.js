@@ -113,3 +113,29 @@ export function formatMemberSince(rawMemberSince, createdAt) {
   return '1+ year on InfiBuy';
 }
 
+/**
+ * Formats when an advertisement was listed (e.g. "Just now", "2h ago", "3d ago", "2w ago").
+ * @param {string|Date|number|null} [createdAt]
+ * @returns {string}
+ */
+export function formatAdPostedTime(createdAt) {
+  if (!createdAt) return 'Recently listed';
+  try {
+    const date = new Date(createdAt);
+    if (isNaN(date.getTime())) return 'Recently listed';
+    const diffMs = Math.max(0, Date.now() - date.getTime());
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) return diffMins <= 2 ? 'Just now' : `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+    return `${Math.floor(diffDays / 30)}mo ago`;
+  } catch {
+    return 'Recently listed';
+  }
+}
+

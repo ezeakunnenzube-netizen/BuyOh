@@ -10,13 +10,13 @@ import {
   ChevronRight, ExternalLink, ChevronUp, ChevronDown, X, User, Flag, Trash2,
   Smile, Paperclip, Mic, Square, Play, Pause, Volume2, FileText,
   BellOff, Bell, Video, UserPlus, UserMinus, Star, SlidersHorizontal,
-  Grid, List, Crown, MessageCircle, MapPin, CornerUpLeft, Copy, Download, Share2
+  Grid, List, Crown, MessageCircle, MapPin, CornerUpLeft, Copy, Download, Share2, Clock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { supabase } from '../lib/supabaseClient';
 import { getFollowedSellersForUser, saveFollowedSellersForUser, getNotificationsForUser, saveNotificationsForUser, getUserProfileData } from '../utils/userSync';
-import { formatMemberSince } from '../utils/productUtils';
+import { formatMemberSince, formatAdPostedTime } from '../utils/productUtils';
 import { 
   fetchUserConversations, 
   getOrCreateConversation, 
@@ -1152,6 +1152,11 @@ export default function Messages() {
 
   const activeChat = conversations.find(c => c.id === activeChatId) || (conversations.length > 0 ? conversations[0] : null);
 
+  const isSellerInChat = Boolean(
+    activeChat?.type === 'selling' ||
+    (user?.id && activeChat?.seller_id && String(activeChat.seller_id).toLowerCase() === String(user.id).toLowerCase())
+  );
+
   // In-chat search matching messages
   const chatSearchMatches = React.useMemo(() => {
     if (!chatSearchQuery.trim() || !activeChat?.messages) return [];
@@ -1234,43 +1239,54 @@ export default function Messages() {
             .from('profiles')
             .select('id, name, full_name, avatar_url, my_listings, phone, whatsapp, location, verified, rating, created_at')
             .eq('id', counterpartId)
-            .single();
+            .maybeSingle();
 
           if (prof) {
             setSellerProfileMeta({
               created_at: prof.created_at,
-              verified: prof.verified,
-              rating: prof.rating,
-              phone: prof.phone,
-              whatsapp: prof.whatsapp,
-              location: prof.location
+              verified: Boolean(prof.verified),
+              rating: prof.rating || null,
+              phone: prof.phone || '',
+              whatsapp: prof.whatsapp || '',
+              location: prof.location || ''
             });
 
             if (prof.my_listings && Array.isArray(prof.my_listings) && prof.my_listings.length > 0) {
-              listings = prof.my_listings;
+              listings = prof.my_listings.filter(item => item && (item.name || item.title) && !item.archived && !item.deleted);
+            }
+          }
+        } catch (e) {
+          console.warn('[Messages] fetchSellerData error:', e);
+        }
+      }
+
+      // If user is viewing their own profile in chat or testing locally, check local user-scoped listings
+      if (listings.length === 0 && counterpartId) {
+        try {
+          if (typeof window !== 'undefined') {
+            const localRaw = localStorage.getItem(`buyoh_my_listings_${counterpartId}`);
+            if (localRaw) {
+              const parsed = JSON.parse(localRaw);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                listings = parsed.filter(item => item && (item.name || item.title) && !item.archived && !item.deleted);
+              }
             }
           }
         } catch (e) {}
       }
 
-      if (listings.length === 0) {
+      // If current authenticated user is this seller, sync with their live listings
+      if (listings.length === 0 && user?.id && counterpartId && String(user.id).toLowerCase() === String(counterpartId).toLowerCase()) {
         try {
-          const { getGeneralProductPool } = await import('../utils/userSync');
-          const pool = getGeneralProductPool(user);
-          const matched = pool.filter(p => 
-            (counterpartId && String(p.sellerId) === String(counterpartId)) ||
-            (activeChat.contact.name && String(p.sellerName).toLowerCase() === String(activeChat.contact.name).toLowerCase())
-          );
-          if (matched.length > 0) {
-            listings = matched;
+          const { getMyListingsForUser } = await import('../utils/userSync');
+          const myListings = getMyListingsForUser(user);
+          if (Array.isArray(myListings) && myListings.length > 0) {
+            listings = myListings.filter(item => item && (item.name || item.title) && !item.archived && !item.deleted);
           }
         } catch (e) {}
       }
 
-      if (listings.length === 0 && activeChat.product?.name) {
-        listings = [activeChat.product];
-      }
-
+      // Strictly real user listings — if seller has 0 active listings, remain empty (no fake data)
       setSellerAdverts(listings);
     };
 
@@ -1925,7 +1941,7 @@ export default function Messages() {
                   <div className="safety-alert-content">
                     <AlertCircle size={15} className="safety-icon" />
                     <span>
-                      {activeChat?.type === 'selling' ? (
+                      {isSellerInChat ? (
                         <><strong>Seller Safety Tip:</strong> Verify buyer identity before sharing your address. Always collect payment before handing over the item.</>
                       ) : (
                         <><strong>Buyer Safety Tip:</strong> Meet in a public place. Do not make advance payments before physical inspection of the item.</>
@@ -2132,35 +2148,117 @@ export default function Messages() {
                 </div>
               )}
 
-              {/* Quick Reply Chips */}
+              {/* Quick Reply Chips - Tailored for Seller vs Buyer */}
               <div className="quick-reply-bar">
-                {activeChat?.product?.price && (
-                  <button 
-                    type="button"
-                    className="quick-chip quick-chip-offer" 
-                    onClick={() => {
-                      setChatOfferAmount(activeChat.product.price ? String(Math.round(activeChat.product.price * 0.9)) : '');
-                      setShowInChatOfferModal(true);
-                    }}
-                  >
-                    🏷️ Make an Offer
-                  </button>
+                {isSellerInChat ? (
+                  <>
+                    {activeChat?.product?.price && (
+                      <button 
+                        type="button"
+                        className="quick-chip quick-chip-seller" 
+                        onClick={() => {
+                          setChatOfferAmount(activeChat.product.price ? String(Math.round(activeChat.product.price * 0.95)) : '');
+                          setShowInChatOfferModal(true);
+                        }}
+                        title="Propose a special discounted price to this buyer"
+                      >
+                        🏷️ Special Price
+                      </button>
+                    )}
+                    <button 
+                      type="button" 
+                      className="quick-chip quick-chip-affirmative" 
+                      onClick={() => handleSendMessage("Yes, it is still available and ready for inspection/pickup.")}
+                    >
+                      ✅ Yes, available
+                    </button>
+                    <button 
+                      type="button" 
+                      className="quick-chip" 
+                      onClick={() => handleSendMessage("I can do a slight discount for a serious buyer. What is your offer?")}
+                    >
+                      🤝 What's your offer?
+                    </button>
+                    <button 
+                      type="button" 
+                      className="quick-chip quick-chip-firm" 
+                      onClick={() => handleSendMessage("The price is fixed and very fair considering its condition.")}
+                    >
+                      🔒 Price is firm
+                    </button>
+                    <button 
+                      type="button" 
+                      className="quick-chip" 
+                      onClick={() => handleSendMessage("You are welcome to inspect and test it before paying. When are you free to meet?")}
+                    >
+                      📍 Ready for inspection
+                    </button>
+                    <button 
+                      type="button" 
+                      className="quick-chip" 
+                      onClick={() => handleSendMessage("Yes, delivery can be arranged. Where is your location?")}
+                    >
+                      🚚 Delivery available
+                    </button>
+                    <button 
+                      type="button" 
+                      className="quick-chip" 
+                      onClick={() => handleSendMessage("We can meet in a public, safe location for inspection. Where works for you?")}
+                    >
+                      📦 Suggest meeting spot
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {activeChat?.product?.price && (
+                      <button 
+                        type="button"
+                        className="quick-chip quick-chip-offer" 
+                        onClick={() => {
+                          setChatOfferAmount(activeChat.product.price ? String(Math.round(activeChat.product.price * 0.9)) : '');
+                          setShowInChatOfferModal(true);
+                        }}
+                      >
+                        🏷️ Make an Offer
+                      </button>
+                    )}
+                    <button 
+                      type="button" 
+                      className="quick-chip" 
+                      onClick={() => handleSendMessage("Is this still available?")}
+                    >
+                      Is this available?
+                    </button>
+                    <button 
+                      type="button" 
+                      className="quick-chip" 
+                      onClick={() => handleSendMessage("What is your best/last price for this?")}
+                    >
+                      What's last price?
+                    </button>
+                    <button 
+                      type="button" 
+                      className="quick-chip" 
+                      onClick={() => handleSendMessage("Can I come inspect and test it today?")}
+                    >
+                      Can I inspect today?
+                    </button>
+                    <button 
+                      type="button" 
+                      className="quick-chip" 
+                      onClick={() => handleSendMessage("Can you deliver to my location?")}
+                    >
+                      Delivery options?
+                    </button>
+                    <button 
+                      type="button" 
+                      className="quick-chip" 
+                      onClick={() => handleSendMessage("Where is a safe, public spot for us to meet?")}
+                    >
+                      Suggest meeting spot
+                    </button>
+                  </>
                 )}
-                <button type="button" className="quick-chip" onClick={() => handleSendMessage("Is this still available?")}>
-                  Is this available?
-                </button>
-                <button type="button" className="quick-chip" onClick={() => handleSendMessage("What's your last price?")}>
-                  What's last price?
-                </button>
-                <button type="button" className="quick-chip" onClick={() => handleSendMessage("Can I inspect it today?")}>
-                  Can I inspect today?
-                </button>
-                <button type="button" className="quick-chip" onClick={() => handleSendMessage("Can you deliver to my location?")}>
-                  Delivery options?
-                </button>
-                <button type="button" className="quick-chip" onClick={() => handleSendMessage("Where is the best meeting spot?")}>
-                  Suggest meeting spot
-                </button>
               </div>
 
               {/* Attachment Preview Bar */}
@@ -2391,10 +2489,10 @@ export default function Messages() {
           activeChat.contact?.memberSince, 
           sellerProfileMeta?.created_at || activeChat.contact?.created_at
         );
-        const sellerPhoneNum = sellerProfileMeta?.phone || activeChat.contact?.phone || '+234 800 000 0000';
+        const sellerPhoneNum = sellerProfileMeta?.phone || activeChat.contact?.phone || '';
         const sellerWhatsAppNum = sellerProfileMeta?.whatsapp || activeChat.contact?.whatsapp || sellerPhoneNum;
-        const isSellerVerified = sellerProfileMeta?.verified ?? activeChat.contact?.verified;
-        const sellerRatingVal = sellerProfileMeta?.rating || activeChat.contact?.rating || 5.0;
+        const isSellerVerified = Boolean(sellerProfileMeta?.verified ?? activeChat.contact?.verified);
+        const sellerRatingVal = sellerProfileMeta?.rating || activeChat.contact?.rating || null;
 
         return (
           <div className="jiji-profile-backdrop" onClick={handleCloseProfileModal}>
@@ -2483,22 +2581,6 @@ export default function Messages() {
                     </div>
                   </div>
 
-                  {/* Feedback Row */}
-                  <div 
-                    className="jiji-feedback-row"
-                    onClick={() => {
-                      showToast(`Seller has ${Math.max(5, Math.round(sellerRatingVal * 2))} verified ratings`);
-                    }}
-                    title="View seller feedback summary"
-                  >
-                    <div className="jiji-feedback-left">
-                      <MessageCircle size={18} className="jiji-feedback-icon" />
-                      <span className="jiji-feedback-text">Feedback ({Math.max(5, Math.round(sellerRatingVal * 2))})</span>
-                      <span className="jiji-rating-stars">★★★★★</span>
-                    </div>
-                    <ChevronRight size={18} className="jiji-feedback-arrow" />
-                  </div>
-
                   {/* Show Contact CTA Button / Revealed Contacts */}
                   {!showSellerContact ? (
                     <button 
@@ -2511,40 +2593,58 @@ export default function Messages() {
                     </button>
                   ) : (
                     <div className="jiji-revealed-contact-box">
-                      <div className="jiji-revealed-phone-number">
-                        <Phone size={18} />
-                        <a href={`tel:${sellerPhoneNum}`}>
-                          {sellerPhoneNum}
-                        </a>
-                      </div>
-                      <div className="jiji-revealed-actions">
-                        <a 
-                          href={`tel:${sellerPhoneNum}`} 
-                          className="jiji-call-link"
-                          title="Call seller phone directly"
-                        >
-                          <Phone size={14} /> Call Now
-                        </a>
-                        {sellerWhatsAppNum && (
-                          <a 
-                            href={`https://wa.me/${String(sellerWhatsAppNum).replace(/[^\d]/g, '')}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="jiji-whatsapp-link"
-                            title="Chat with seller on WhatsApp"
+                      {sellerPhoneNum ? (
+                        <>
+                          <div className="jiji-revealed-phone-number">
+                            <Phone size={18} />
+                            <a href={`tel:${sellerPhoneNum}`}>
+                              {sellerPhoneNum}
+                            </a>
+                          </div>
+                          <div className="jiji-revealed-actions">
+                            <a 
+                              href={`tel:${sellerPhoneNum}`} 
+                              className="jiji-call-link"
+                              title="Call seller phone directly"
+                            >
+                              <Phone size={14} /> Call Now
+                            </a>
+                            {sellerWhatsAppNum && (
+                              <a 
+                                href={`https://wa.me/${String(sellerWhatsAppNum).replace(/[^\d]/g, '')}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="jiji-whatsapp-link"
+                                title="Chat with seller on WhatsApp"
+                              >
+                                WhatsApp
+                              </a>
+                            )}
+                            <button
+                              type="button"
+                              className="jiji-message-shortcut-btn"
+                              onClick={handleCloseProfileModal}
+                              title="Return to message this seller in chat"
+                            >
+                              <MessageSquareMore size={14} /> Message
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ textAlign: 'center', padding: '12px 8px' }}>
+                          <p style={{ margin: '0 0 10px 0', fontSize: '0.86rem', color: '#64748b' }}>
+                            No phone number published by this seller.
+                          </p>
+                          <button
+                            type="button"
+                            className="jiji-message-shortcut-btn"
+                            onClick={handleCloseProfileModal}
+                            style={{ width: '100%', justifyContent: 'center' }}
                           >
-                            WhatsApp
-                          </a>
-                        )}
-                        <button
-                          type="button"
-                          className="jiji-message-shortcut-btn"
-                          onClick={handleCloseProfileModal}
-                          title="Return to message this seller in chat"
-                        >
-                          <MessageSquareMore size={14} /> Message
-                        </button>
-                      </div>
+                            <MessageSquareMore size={15} /> Message in InfiBuy Chat
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -2579,7 +2679,11 @@ export default function Messages() {
                 <div className={isSellerGridView ? "jiji-adverts-grid" : "jiji-adverts-list"}>
                   {filteredSellerAdverts.length === 0 ? (
                     <div className="jiji-empty-adverts">
-                      <p>No listings matching your search.</p>
+                      <p>
+                        {sellerSearchQuery 
+                          ? `No listings matching "${sellerSearchQuery}".` 
+                          : 'This user has no active listings.'}
+                      </p>
                       {sellerSearchQuery && (
                         <button 
                           type="button" 
@@ -2621,9 +2725,9 @@ export default function Messages() {
                                   Verified Seller
                                 </span>
                               )}
-                              <span className="jiji-ad-subbadge">
+                              <span className="jiji-ad-subbadge" title="Seller account tenure on InfiBuy">
                                 <User size={11} />
-                                {sellerYearsText.toUpperCase()}
+                                SELLER: {sellerYearsText.toUpperCase()}
                               </span>
                             </div>
                           </div>
@@ -2635,9 +2739,15 @@ export default function Messages() {
                             <h4 className="jiji-ad-title" title={adTitle}>
                               {adTitle}
                             </h4>
-                            <span className="jiji-ad-location">
-                              <MapPin size={13} />
-                              {adLocation}
+                            <span className="jiji-ad-location" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <MapPin size={13} />
+                                {adLocation}
+                              </span>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.72rem', color: '#94a3b8', flexShrink: 0 }}>
+                                <Clock size={11} />
+                                {formatAdPostedTime(ad.created_at || ad.createdAt || ad.timestamp || ad.date)}
+                              </span>
                             </span>
                             <div className="jiji-ad-footer-row">
                               <span className={`jiji-ad-condition-pill ${isConditionNew ? 'condition-new' : 'condition-used'}`}>{adCondition}</span>
@@ -2663,9 +2773,6 @@ export default function Messages() {
                     <UserPlus size={16} />
                     <span>{isFollowingSeller(activeChat.contact?.name) ? 'Following' : 'Follow Seller'}</span>
                   </button>
-                  <span className="jiji-follow-count-subtext">
-                    {isFollowingSeller(activeChat.contact?.name) ? '16 followers' : '15 followers'}
-                  </span>
                 </div>
 
               </div>
@@ -2713,7 +2820,9 @@ export default function Messages() {
         <div className="chat-modal-backdrop" onClick={() => setShowInChatOfferModal(false)}>
           <div className="chat-modal-card" onClick={e => e.stopPropagation()}>
             <div className="chat-modal-header">
-              <h3 className="chat-modal-title">Make an Offer</h3>
+              <h3 className="chat-modal-title">
+                {isSellerInChat ? 'Offer Special Price' : 'Make an Offer'}
+              </h3>
               <button 
                 type="button" 
                 className="chat-modal-close" 
@@ -2738,7 +2847,9 @@ export default function Messages() {
 
             {Boolean(activeChat.product?.price) && (
               <div className="chat-preset-discounts">
-                <span className="preset-label">Quick discount offers:</span>
+                <span className="preset-label">
+                  {isSellerInChat ? 'Quick discount options:' : 'Quick discount offers:'}
+                </span>
                 <div className="preset-chips-row">
                   {[-5, -10, -15, -20].map(pct => {
                     const discounted = Math.round(activeChat.product.price * (1 + pct / 100));
@@ -2758,11 +2869,13 @@ export default function Messages() {
             )}
 
             <div className="chat-modal-input-wrap">
-              <label className="chat-modal-label">Your Offer Amount (₦)</label>
+              <label className="chat-modal-label">
+                {isSellerInChat ? 'Special Price for Buyer (₦)' : 'Your Offer Amount (₦)'}
+              </label>
               <input
                 type="number"
                 className="chat-modal-input"
-                placeholder="Enter offer in ₦ e.g. 45000"
+                placeholder={isSellerInChat ? "Enter special price in ₦" : "Enter offer in ₦ e.g. 45000"}
                 value={chatOfferAmount}
                 onChange={e => setChatOfferAmount(e.target.value)}
                 autoFocus
@@ -2784,14 +2897,15 @@ export default function Messages() {
                 onClick={() => {
                   const val = Number(chatOfferAmount);
                   if (val > 0) {
-                    handleSendMessage(`🏷️ Proposed Offer: ₦${val.toLocaleString('en-NG')}`, true, val);
+                    const msgPrefix = isSellerInChat ? '🏷️ Seller Special Price:' : '🏷️ Proposed Offer:';
+                    handleSendMessage(`${msgPrefix} ₦${val.toLocaleString('en-NG')}`, true, val);
                     setShowInChatOfferModal(false);
                     setChatOfferAmount('');
-                    showToast(`Offer of ₦${val.toLocaleString('en-NG')} sent!`);
+                    showToast(isSellerInChat ? `Special price of ₦${val.toLocaleString('en-NG')} sent!` : `Offer of ₦${val.toLocaleString('en-NG')} sent!`);
                   }
                 }}
               >
-                Send Offer
+                {isSellerInChat ? 'Send Special Price' : 'Send Offer'}
               </button>
             </div>
           </div>

@@ -3572,6 +3572,42 @@ body {
   color: #ffffff;
 }
 
+.quick-chip-seller {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #fcd34d;
+  color: #92400e;
+  font-weight: 600;
+}
+.quick-chip-seller:hover {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #ffffff;
+}
+
+.quick-chip-affirmative {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #15803d;
+  font-weight: 600;
+}
+.quick-chip-affirmative:hover {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #ffffff;
+}
+
+.quick-chip-firm {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #c2410c;
+  font-weight: 500;
+}
+.quick-chip-firm:hover {
+  background: #ea580c;
+  border-color: #ea580c;
+  color: #ffffff;
+}
+
 /* ── HEADER WHATSAPP BUTTON ── */
 .header-whatsapp-btn {
   display: inline-flex;

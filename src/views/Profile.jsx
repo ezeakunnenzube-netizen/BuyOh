@@ -441,9 +441,9 @@ export default function Profile() {
                 <span className="p-stat-val">{followingCount}</span>
                 <span className="p-stat-label">Sellers Followed</span>
               </div>
-              <div className="p-stat-box">
-                <span className="p-stat-val">4.9 ★</span>
-                <span className="p-stat-label">User Rating</span>
+              <div className="p-stat-box" style={{ cursor: 'pointer' }} onClick={() => navigate('/saved')}>
+                <span className="p-stat-val">{savedCount}</span>
+                <span className="p-stat-label">Saved Items</span>
               </div>
             </div>
           </div>
