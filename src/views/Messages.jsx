@@ -10,7 +10,7 @@ import {
   ChevronRight, ExternalLink, ChevronUp, ChevronDown, X, User, Flag, Trash2,
   Smile, Paperclip, Mic, Square, Play, Pause, Volume2, FileText,
   BellOff, Bell, Video, UserPlus, UserMinus, Star, SlidersHorizontal,
-  Grid, List, Crown, MessageCircle, MapPin, CornerUpLeft, Copy, Download, Share2, Clock
+  Grid, List, MessageCircle, MapPin, CornerUpLeft, Copy, Download, Share2, Clock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
@@ -327,9 +327,9 @@ export default function Messages() {
                 name: paramSellerName ? decodeURIComponent(paramSellerName) : 'Seller',
                 avatar: '',
                 isOnline: false,
-                verified: true,
-                phone: '+234 800 000 0000',
-                location: 'Nigeria'
+                verified: false,
+                phone: '',
+                location: ''
               },
               product: {
                 id: paramProductId || '',
@@ -475,9 +475,9 @@ export default function Messages() {
                   name: counterpartDisplayName,
                   avatar: newMsg.sender_avatar || '',
                   isOnline: newMsg.sender_id ? onlineUserIds.has(String(newMsg.sender_id).toLowerCase()) : false,
-                  verified: true,
-                  phone: '+234 800 000 0000',
-                  location: 'Nigeria'
+                  verified: false,
+                  phone: '',
+                  location: ''
                 },
                 product: {
                   id: pInfo.id,
@@ -1076,9 +1076,9 @@ export default function Messages() {
                 name: sellerName !== 'Marketplace Seller' ? sellerName : (poolItem?.sellerName || 'Marketplace Seller'),
                 avatar: poolItem?.sellerAvatar || '',
                 isOnline: targetSellerUid ? onlineUserIds.has(String(targetSellerUid).toLowerCase()) : false,
-                verified: true,
-                phone: poolItem?.sellerPhone || poolItem?.phone || '+234 800 000 0000',
-                location: poolItem?.location || 'Nigeria'
+                verified: Boolean(poolItem?.sellerVerified || poolItem?.verified),
+                phone: poolItem?.sellerPhone || poolItem?.phone || '',
+                location: poolItem?.location || poolItem?.sellerLocation || ''
               },
               product: {
                 id: prodId,
@@ -2716,7 +2716,6 @@ export default function Messages() {
                         >
                           <div className="jiji-ad-img-wrapper">
                             <img src={adImg} alt={adTitle} className="jiji-ad-img" loading="lazy" />
-                            <span className="jiji-ad-vip-tag">VIP</span>
                             
                             <div className="jiji-ad-img-badges">
                               {isSellerVerified && (
@@ -2751,9 +2750,6 @@ export default function Messages() {
                             </span>
                             <div className="jiji-ad-footer-row">
                               <span className={`jiji-ad-condition-pill ${isConditionNew ? 'condition-new' : 'condition-used'}`}>{adCondition}</span>
-                              <span className="jiji-ad-crown-icon" title="Featured VIP listing">
-                                <Crown size={15} />
-                              </span>
                             </div>
                           </div>
                         </div>

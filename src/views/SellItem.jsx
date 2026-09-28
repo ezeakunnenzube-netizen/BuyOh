@@ -491,11 +491,11 @@ export default function SellItem() {
       sellerId: user.id,
       sellerName: userProfile.name,
       sellerEmail: user.email,
-      sellerPhone: contactPhone || userProfile.phone || '+234 809 123 4567',
-      sellerWhatsApp: contactWhatsApp || userProfile.whatsapp || '2348091234567',
-      sellerLocation: location || userProfile.location || 'Lagos, Nigeria',
-      sellerAvatar: userProfile.avatar,
-      sellerJoined: 'Joined August 2026',
+      sellerPhone: contactPhone || userProfile.phone || '',
+      sellerWhatsApp: contactWhatsApp || userProfile.whatsapp || '',
+      sellerLocation: location || userProfile.location || '',
+      sellerAvatar: userProfile.avatar || '',
+      sellerJoined: user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '',
       status: 'active'
     };
 

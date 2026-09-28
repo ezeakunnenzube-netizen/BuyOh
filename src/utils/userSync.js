@@ -217,9 +217,9 @@ export const getUserProfileData = (user) => {
 
   const name = localProfile?.name || cachedUserName || meta.full_name || meta.name || activeUser.email?.split('@')[0] || '';
   const email = activeUser.email || 'no-email@buyoh.com';
-  const phone = localProfile?.phone || meta.phone || activeUser.phone || '+234 812 345 6789';
-  const whatsapp = localProfile?.whatsapp || meta.whatsapp || meta.phone || phone;
-  const location = localProfile?.location || meta.location || 'Lagos, Nigeria';
+  const phone = localProfile?.phone || meta.phone || activeUser.phone || '';
+  const whatsapp = localProfile?.whatsapp || meta.whatsapp || meta.phone || phone || '';
+  const location = localProfile?.location || meta.location || '';
 
   // Cache back to local storage
   if (typeof window !== 'undefined') {

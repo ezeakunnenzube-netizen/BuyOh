@@ -224,9 +224,11 @@ export default function MyAdverts() {
                   <span className="adverts-pill-badge">
                     <Sparkles size={11} /> Seller Dashboard
                   </span>
-                  <span className="adverts-pill-badge badge-verified">
-                    <ShieldCheck size={11} /> Verified Seller
-                  </span>
+                  {Boolean(user?.email_confirmed_at || user?.user_metadata?.verified) && (
+                    <span className="adverts-pill-badge badge-verified">
+                      <ShieldCheck size={11} /> Verified Seller
+                    </span>
+                  )}
                 </div>
                 <h1 className="adverts-hero-main-title">
                   My Active Adverts <span className="adverts-hero-count">({myAdverts.length})</span>

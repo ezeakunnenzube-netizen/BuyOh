@@ -151,9 +151,9 @@ export default function Profile() {
             const freshData = {
               name: payload.new.full_name || payload.new.name || 'Marketplace User',
               email: payload.new.email || user.email,
-              phone: payload.new.phone || '+234 812 345 6789',
-              whatsapp: payload.new.whatsapp || payload.new.phone || '+234 812 345 6789',
-              location: payload.new.location || 'Lagos, Nigeria',
+              phone: payload.new.phone || '',
+              whatsapp: payload.new.whatsapp || payload.new.phone || '',
+              location: payload.new.location || '',
               avatar: payload.new.avatar_url && !payload.new.avatar_url.includes('photo-1535713875002-d1d0cf377fde') ? payload.new.avatar_url : '',
               banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
             };
@@ -425,7 +425,9 @@ export default function Profile() {
             <div className="profile-identity-info">
               <div className="profile-title-badges">
                 <h3 className="profile-name-title">{userData.name}</h3>
-                <span className="profile-badge-tag"><ShieldCheck size={13} /> Verified User</span>
+                {Boolean(user?.email_confirmed_at || user?.user_metadata?.verified || userData?.verified) && (
+                  <span className="profile-badge-tag"><ShieldCheck size={13} /> Verified User</span>
+                )}
                 <span className="profile-badge-tag"><User size={13} /> {formatMemberSince(null, userData.createdAt || user?.created_at)}</span>
               </div>
               <p className="profile-email-sub">{userData.email}</p>

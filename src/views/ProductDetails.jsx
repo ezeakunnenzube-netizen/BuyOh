@@ -1222,52 +1222,54 @@ export default function ProductDetails({ params: serverParams }) {
                 {product.sellerAvatar ? (
                   <img src={product.sellerAvatar} alt="Seller Avatar" className="seller-avatar-img" />
                 ) : (
-                  <div className="seller-avatar-icon">{(product.sellerName || 'P')[0].toUpperCase()}</div>
+                  <div className="seller-avatar-icon">{(product.sellerName || 'S')[0].toUpperCase()}</div>
                 )}
                 <div className="seller-name-info" style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                    <h4 style={{ margin: 0 }}>{product.sellerName || 'PHONEMART'}</h4>
+                    <h4 style={{ margin: 0 }}>{product.sellerName || 'Seller'}</h4>
                     <span style={{ fontSize: '0.78rem', color: '#2563eb', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
                       Profile <ChevronRight size={13} />
                     </span>
                   </div>
                   <div className="seller-badges">
                     <span>👤 {formatMemberSince(product.sellerJoined, product.sellerCreatedAt)}</span>
-                    <span>🛡️ Verified Seller</span>
+                    {Boolean(product.sellerVerified) && <span>🛡️ Verified Seller</span>}
                   </div>
-                  <span className="reply-rate-sub">⚡ Typically replies within a few minutes</span>
                 </div>
               </div>
 
               <div className="seller-action-buttons">
-                {showContactNumber ? (
-                  <a 
-                    href={`tel:${String(product.sellerPhone || product.contactPhone || product.phone || '+2348091234567').replace(/[^\d+]/g, '')}`}
-                    className="btn-primary-action contact-revealed-btn"
-                    title="Click to call seller directly"
-                    style={{ textDecoration: 'none' }}
-                  >
-                    <Phone size={16} /> 
-                    {product.sellerPhone || product.contactPhone || product.phone || '+234 809 123 4567'}
-                  </a>
-                ) : (
-                  <button 
-                    className="btn-primary-action"
-                    onClick={() => {
-                      setShowContactNumber(true);
-                      showToast(`Contact revealed: ${product.sellerPhone || product.contactPhone || product.phone || '+234 809 123 4567'}. Click to call.`);
-                    }}
-                    title="Click to view seller contact number"
-                  >
-                    <Phone size={16} /> 
-                    Show contact
-                  </button>
-                )}
+                {(product.sellerPhone || product.contactPhone || product.phone) ? (
+                  showContactNumber ? (
+                    <a 
+                      href={`tel:${String(product.sellerPhone || product.contactPhone || product.phone).replace(/[^\d+]/g, '')}`}
+                      className="btn-primary-action contact-revealed-btn"
+                      title="Click to call seller directly"
+                      style={{ textDecoration: 'none' }}
+                    >
+                      <Phone size={16} /> 
+                      {product.sellerPhone || product.contactPhone || product.phone}
+                    </a>
+                  ) : (
+                    <button 
+                      className="btn-primary-action"
+                      onClick={() => {
+                        setShowContactNumber(true);
+                        showToast(`Contact revealed: ${product.sellerPhone || product.contactPhone || product.phone}. Click to call.`);
+                      }}
+                      title="Click to view seller contact number"
+                    >
+                      <Phone size={16} /> 
+                      Show contact
+                    </button>
+                  )
+                ) : null}
                 
                 {user ? (
                   <NavLink 
                     to={`/messages?productId=${product.id}&sellerId=${product.sellerId || product.userId || ''}&seller=${encodeURIComponent(product.sellerName || '')}&prodName=${encodeURIComponent(product.name || '')}&prodPrice=${product.price || 0}`}
                     className="start-chat-link-btn"
+                    style={{ flex: (product.sellerPhone || product.contactPhone || product.phone) ? 1 : '1 1 100%' }}
                   >
                     <MessageSquareMore size={16} /> Start chat
                   </NavLink>
@@ -1275,6 +1277,7 @@ export default function ProductDetails({ params: serverParams }) {
                   <button 
                     className="start-chat-link-btn"
                     onClick={() => setIsAuthOpen(true)}
+                    style={{ flex: (product.sellerPhone || product.contactPhone || product.phone) ? 1 : '1 1 100%' }}
                   >
                     <MessageSquareMore size={16} /> Start chat
                   </button>
@@ -1291,8 +1294,17 @@ export default function ProductDetails({ params: serverParams }) {
               style={{ cursor: 'pointer' }}
             >
               <div className="feedback-left">
-                <Star size={16} fill="#f59e0b" color="#f59e0b" />
-                <span>{averageRating} Rating ({reviews.length} Feedback)</span>
+                {reviews.length > 0 ? (
+                  <>
+                    <Star size={16} fill="#f59e0b" color="#f59e0b" />
+                    <span>{averageRating} Rating ({reviews.length} {reviews.length === 1 ? 'Review' : 'Reviews'})</span>
+                  </>
+                ) : (
+                  <>
+                    <Star size={16} color="#94a3b8" />
+                    <span>No reviews yet</span>
+                  </>
+                )}
               </div>
               <button className="view-all-feedback-link">
                 view all <ChevronRight size={12} />
@@ -1344,18 +1356,20 @@ export default function ProductDetails({ params: serverParams }) {
           
           <div className="reviews-summary-row">
             <div className="summary-score-box">
-              <span className="summary-big-score">{averageRating}</span>
+              <span className="summary-big-score">{reviews.length > 0 ? averageRating : '—'}</span>
               <div className="stars-row-generic">
                 {[1, 2, 3, 4, 5].map(star => (
                   <Star 
                     key={star} 
                     size={14} 
-                    fill={star <= Math.round(Number(averageRating)) ? '#f59e0b' : 'none'} 
-                    color={star <= Math.round(Number(averageRating)) ? '#f59e0b' : '#cbd5e1'} 
+                    fill={reviews.length > 0 && star <= Math.round(Number(averageRating)) ? '#f59e0b' : 'none'} 
+                    color={reviews.length > 0 && star <= Math.round(Number(averageRating)) ? '#f59e0b' : '#cbd5e1'} 
                   />
                 ))}
               </div>
-              <span className="summary-count-label">Based on {reviews.length} reviews</span>
+              <span className="summary-count-label">
+                {reviews.length > 0 ? `Based on ${reviews.length} ${reviews.length === 1 ? 'review' : 'reviews'}` : 'No reviews yet'}
+              </span>
             </div>
 
             {/* Submit review form */}
@@ -1418,7 +1432,7 @@ export default function ProductDetails({ params: serverParams }) {
             {reviews.length === 0 ? (
               <div className="no-reviews-box">
                 <Star size={32} color="#cbd5e1" />
-                <p className="no-reviews-text">No ratings or reviews yet for this listing (0.0 Rating). Be the first to leave feedback!</p>
+                <p className="no-reviews-text">No reviews yet for this listing. Be the first to leave feedback!</p>
               </div>
             ) : (
               reviews.map(r => (

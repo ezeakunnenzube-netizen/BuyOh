@@ -305,13 +305,13 @@ export const normalizeConversation = (raw, currentUserId = null) => {
     id: counterpartId,
     name: raw.contact?.name || raw.sellerName || raw.buyerName || (isSelling ? 'Interested Buyer' : 'Marketplace Seller'),
     avatar: raw.contact?.avatar || raw.sellerAvatar || raw.buyerAvatar || '',
-    phone: raw.contact?.phone || raw.sellerPhone || raw.buyerPhone || '+234 800 000 0000',
+    phone: raw.contact?.phone || raw.sellerPhone || raw.buyerPhone || '',
     whatsapp: raw.contact?.whatsapp || raw.sellerWhatsApp || raw.buyerWhatsApp || '',
-    location: raw.contact?.location || raw.sellerLocation || raw.buyerLocation || 'Nigeria',
+    location: raw.contact?.location || raw.sellerLocation || raw.buyerLocation || '',
     isOnline: raw.contact?.isOnline ?? false,
     lastSeen: raw.contact?.lastSeen || 'Recently',
     verified: raw.contact?.verified ?? false,
-    rating: raw.contact?.rating || 5.0,
+    rating: raw.contact?.rating || null,
     created_at: raw.contact?.created_at || null,
     memberSince: formatMemberSince(raw.contact?.memberSince, raw.contact?.created_at),
     listings: Array.isArray(raw.contact?.listings) ? raw.contact.listings : []
@@ -487,13 +487,13 @@ export const fetchUserConversations = async (user) => {
             id: counterpartId,
             name: profile.full_name || profile.name || localMatch?.contact?.name || (isBuyer ? 'Marketplace Seller' : 'Interested Buyer'),
             avatar: profile.avatar_url || localMatch?.contact?.avatar || '',
-            phone: profile.phone || localMatch?.contact?.phone || '+234 800 000 0000',
+            phone: profile.phone || localMatch?.contact?.phone || '',
             whatsapp: profile.whatsapp || profile.phone || localMatch?.contact?.whatsapp || '',
-            location: profile.location || localMatch?.contact?.location || 'Nigeria',
+            location: profile.location || localMatch?.contact?.location || '',
             isOnline: false,
             lastSeen: formatLastSeen(profile.updated_at, false),
             verified: Boolean(profile.verified),
-            rating: profile.rating || 5.0,
+            rating: profile.rating || null,
             created_at: profile.created_at || null,
             memberSince: memberDuration,
             listings: Array.isArray(profile.my_listings) ? profile.my_listings : []
@@ -901,7 +901,7 @@ const _dispatchIncomingMessage = (payload) => {
           name: payload.sender_name || 'Counterpart',
           avatar: payload.sender_avatar || '',
           isOnline: false,
-          verified: true
+          verified: Boolean(payload.sender_verified)
         },
         product: payload.product_info || { name: 'Marketplace Item' }
       });
