@@ -2719,6 +2719,11 @@ body {
   to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
+@keyframes buyohSkeletonPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
 /* BuyOh Signature Warm Orange Top Nav Bar */
 .jiji-nav-header {
   background: linear-gradient(135deg, #ffa705 0%, #ea580c 100%);

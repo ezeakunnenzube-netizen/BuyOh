@@ -15,7 +15,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { supabase } from '../lib/supabaseClient';
-import { getFollowedSellersForUser, saveFollowedSellersForUser, getNotificationsForUser, saveNotificationsForUser, getUserProfileData } from '../utils/userSync';
+import { getFollowedSellersForUser, saveFollowedSellersForUser, getNotificationsForUser, saveNotificationsForUser, getUserProfileData, getMyListingsForUser } from '../utils/userSync';
 import { formatMemberSince, formatAdPostedTime } from '../utils/productUtils';
 import { 
   fetchUserConversations, 
@@ -244,9 +244,38 @@ export default function Messages() {
   const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
   const { user, loading: authLoading } = useAuth();
   const { unreadCount, unreadNotifsCount, playSentSound } = useChat();
-  const [conversations, setConversations] = useState([]);
-  const [isLoadingConvs, setIsLoadingConvs] = useState(true);
-  const [activeChatId, setActiveChatId] = useState(null);
+  const [conversations, setConversations] = useState(() => {
+    if (typeof window !== 'undefined' && user?.id) {
+      try {
+        const cached = getCachedConversations(user.id);
+        if (Array.isArray(cached) && cached.length > 0) return cached;
+      } catch (e) {}
+    }
+    return [];
+  });
+  const [isLoadingConvs, setIsLoadingConvs] = useState(() => {
+    if (typeof window !== 'undefined' && user?.id) {
+      try {
+        const cached = getCachedConversations(user.id);
+        if (Array.isArray(cached) && cached.length > 0) return false;
+      } catch (e) {}
+    }
+    return true;
+  });
+  const [activeChatId, setActiveChatId] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const sp = new URLSearchParams(window.location.search);
+        const paramChatId = sp.get('chatId');
+        if (paramChatId) return paramChatId;
+        if (user?.id) {
+          const cached = getCachedConversations(user.id);
+          if (Array.isArray(cached) && cached.length > 0) return cached[0].id;
+        }
+      } catch (e) {}
+    }
+    return null;
+  });
   const [onlineUserIds, setOnlineUserIds] = useState(new Set());
 
   // Typing indicator state — maps conversation IDs to typing user info
@@ -589,7 +618,13 @@ export default function Messages() {
   const [filterTab, setFilterTab] = useState('all'); // all, unread, buying, selling
   const [searchQuery, setSearchQuery] = useState('');
   const [inputMessage, setInputMessage] = useState('');
-  const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
+  const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      return Boolean(sp.get('chatId') || sp.get('productId') || sp.get('sellerId') || sp.get('openProfile') === 'true');
+    }
+    return false;
+  });
   
   // In-chat message search state
   const [isChatSearchOpen, setIsChatSearchOpen] = useState(false);
@@ -603,9 +638,17 @@ export default function Messages() {
 
   // Dropdown 3-dots menu & Jiji Profile modal state
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      return sp.get('openProfile') === 'true';
+    }
+    return false;
+  });
   const [sellerProfileMeta, setSellerProfileMeta] = useState(null);
   const [sellerAdverts, setSellerAdverts] = useState([]);
+  const [isLoadingSellerData, setIsLoadingSellerData] = useState(false);
+  const [loadedSellerContactId, setLoadedSellerContactId] = useState(null);
   const [sellerSearchQuery, setSellerSearchQuery] = useState('');
   const [showSellerContact, setShowSellerContact] = useState(false);
   const [isSellerGridView, setIsSellerGridView] = useState(true);
@@ -1224,14 +1267,54 @@ export default function Messages() {
     showToast('Message deleted');
   };
 
-  // Fetch seller adverts for Jiji-style profile page
+  // Fetch seller adverts for Jiji-style profile page without stale flashes
   useEffect(() => {
     if (!showProfileModal || !activeChat?.contact) return;
     setShowSellerContact(false);
     setSellerSearchQuery('');
 
+    const counterpartId = activeChat.contact.id;
+
+    // Immediately pre-populate data synchronously for the active seller
+    if (loadedSellerContactId !== counterpartId) {
+      setLoadedSellerContactId(counterpartId);
+      setSellerProfileMeta({
+        created_at: activeChat.contact.created_at || null,
+        verified: Boolean(activeChat.contact.verified),
+        rating: activeChat.contact.rating || null,
+        phone: activeChat.contact.phone || '',
+        whatsapp: activeChat.contact.whatsapp || activeChat.contact.phone || '',
+        location: activeChat.contact.location || ''
+      });
+
+      let initialListings = [];
+      if (counterpartId && typeof window !== 'undefined') {
+        try {
+          const localRaw = localStorage.getItem(`buyoh_my_listings_${counterpartId}`);
+          if (localRaw) {
+            const parsed = JSON.parse(localRaw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              initialListings = parsed.filter(item => item && (item.name || item.title) && !item.archived && !item.deleted);
+            }
+          }
+        } catch (e) {}
+      }
+
+      if (initialListings.length === 0 && user?.id && counterpartId && String(user.id).toLowerCase() === String(counterpartId).toLowerCase()) {
+        try {
+          const myListings = getMyListingsForUser(user);
+          if (Array.isArray(myListings) && myListings.length > 0) {
+            initialListings = myListings.filter(item => item && (item.name || item.title) && !item.archived && !item.deleted);
+          }
+        } catch (e) {}
+      }
+
+      setSellerAdverts(initialListings);
+      setIsLoadingSellerData(initialListings.length === 0);
+    }
+
+    let isCurrent = true;
     const fetchSellerData = async () => {
-      const counterpartId = activeChat.contact.id;
       let listings = [];
       if (counterpartId) {
         try {
@@ -1241,7 +1324,7 @@ export default function Messages() {
             .eq('id', counterpartId)
             .maybeSingle();
 
-          if (prof) {
+          if (prof && isCurrent) {
             setSellerProfileMeta({
               created_at: prof.created_at,
               verified: Boolean(prof.verified),
@@ -1278,7 +1361,6 @@ export default function Messages() {
       // If current authenticated user is this seller, sync with their live listings
       if (listings.length === 0 && user?.id && counterpartId && String(user.id).toLowerCase() === String(counterpartId).toLowerCase()) {
         try {
-          const { getMyListingsForUser } = await import('../utils/userSync');
           const myListings = getMyListingsForUser(user);
           if (Array.isArray(myListings) && myListings.length > 0) {
             listings = myListings.filter(item => item && (item.name || item.title) && !item.archived && !item.deleted);
@@ -1286,12 +1368,18 @@ export default function Messages() {
         } catch (e) {}
       }
 
-      // Strictly real user listings — if seller has 0 active listings, remain empty (no fake data)
-      setSellerAdverts(listings);
+      if (isCurrent) {
+        setSellerAdverts(listings);
+        setIsLoadingSellerData(false);
+      }
     };
 
     fetchSellerData();
-  }, [showProfileModal, activeChat]);
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [showProfileModal, activeChat, loadedSellerContactId]);
 
   // Memoized filtered adverts for seller modal (filtered by real-time search)
   const filteredSellerAdverts = React.useMemo(() => {
@@ -1732,9 +1820,6 @@ export default function Messages() {
                   <div className="header-contact-meta">
                     <div className="contact-name-row">
                       <h3 className="contact-heading">{activeChat?.contact?.name || 'User'}</h3>
-                      {activeChat?.contact?.verified && (
-                        <ShieldCheck size={14} className="verified-badge-icon" title="Verified Seller" />
-                      )}
                     </div>
                     <p className="contact-status-text">
                       {isTyping ? (
@@ -2677,7 +2762,13 @@ export default function Messages() {
 
                 {/* Adverts Grid / List */}
                 <div className={isSellerGridView ? "jiji-adverts-grid" : "jiji-adverts-list"}>
-                  {filteredSellerAdverts.length === 0 ? (
+                  {isLoadingSellerData && sellerAdverts.length === 0 ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px', width: '100%', padding: '12px 0' }}>
+                      {[1, 2, 3, 4].map(n => (
+                        <div key={n} style={{ height: '220px', borderRadius: '14px', background: '#f1f5f9', animation: 'buyohSkeletonPulse 1.5s infinite', border: '1px solid #e2e8f0' }} />
+                      ))}
+                    </div>
+                  ) : filteredSellerAdverts.length === 0 ? (
                     <div className="jiji-empty-adverts">
                       <p>
                         {sellerSearchQuery 

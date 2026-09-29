@@ -66,11 +66,7 @@ export default function Profile() {
     };
   }, [user]);
 
-  // Mounted state to eliminate Next.js SSR hydration flash
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+
 
   // User Profile Data State (Authoritative Cloud Source of Truth)
   const [userData, setUserData] = useState(() => getUserProfileData(user));
@@ -318,10 +314,7 @@ export default function Profile() {
     }
   };
 
-  // Render a completely blank screen while mounting or loading auth session
-  if (loading || !mounted) {
-    return <div style={{ minHeight: '100vh', width: '100%', backgroundColor: '#f8fafc' }} />;
-  }
+
 
   return (
     <div className="profile-page-wrapper">
@@ -394,9 +387,7 @@ export default function Profile() {
           {/* User Profile Card Summary */}
           <div className="profile-summary-section">
             <div className="avatar-holder">
-              {!mounted ? (
-                <div className="profile-avatar-large profile-avatar-skeleton" />
-              ) : userData.avatar && !userData.avatar.includes('photo-1535713875002-d1d0cf377fde') ? (
+              {userData.avatar && !userData.avatar.includes('photo-1535713875002-d1d0cf377fde') ? (
                 <img 
                   src={userData.avatar} 
                   alt="User Avatar" 

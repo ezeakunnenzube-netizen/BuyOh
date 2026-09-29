@@ -27,7 +27,7 @@ function FooterContent() {
   }
 
   // Hide tabs on mobile when not logged in (same as bigger screens)
-  if (loading || !user) {
+  if (!user) {
     return null;
   }
 

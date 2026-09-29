@@ -135,9 +135,7 @@ export default function MyAdverts() {
     );
   }, [myAdverts, searchQuery]);
 
-  if (loading) {
-    return <div style={{ minHeight: '100vh', width: '100%', backgroundColor: '#f8fafc' }} />;
-  }
+
 
   if (!user) {
     return (

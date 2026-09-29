@@ -542,9 +542,7 @@ export default function SellItem() {
     }
   };
 
-  if (loading) {
-    return <div style={{ minHeight: '100vh', width: '100%', backgroundColor: '#f8fafc' }} />;
-  }
+
 
   // If not logged in, show auth prompt
   if (!user) {

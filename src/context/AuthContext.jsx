@@ -40,7 +40,7 @@ function getCachedUser() {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => getCachedUser());
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   // Track the cleanup function returned by initUserRealtimeSync
   const realtimeCleanupRef = useRef(null);
@@ -152,22 +152,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // On page reload, show a completely blank screen while resolving user session
-  // to avoid flashing default/placeholder pre-page states
-  if (loading) {
-    return (
-      <AuthContext.Provider value={{ user, loading, isAuthOpen, setIsAuthOpen, logout }}>
-        <div 
-          id="app-blank-screen" 
-          style={{ 
-            minHeight: '100vh', 
-            width: '100%', 
-            backgroundColor: '#f8fafc' 
-          }} 
-        />
-      </AuthContext.Provider>
-    );
-  }
+
 
   return (
     <AuthContext.Provider value={{ user, loading, isAuthOpen, setIsAuthOpen, logout }}>
