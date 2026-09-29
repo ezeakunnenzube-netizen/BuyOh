@@ -681,6 +681,48 @@ export default function Messages() {
     }
   }, [showProfileModal]);
 
+  const handleOpenProfileModal = (chat = activeChat) => {
+    if (!chat?.contact) return;
+    const counterpartId = chat.contact.id;
+    setLoadedSellerContactId(counterpartId);
+    setSellerProfileMeta({
+      created_at: chat.contact.created_at || null,
+      verified: Boolean(chat.contact.verified),
+      rating: chat.contact.rating || null,
+      phone: chat.contact.phone || '',
+      whatsapp: chat.contact.whatsapp || chat.contact.phone || '',
+      location: chat.contact.location || ''
+    });
+
+    let initialListings = [];
+    if (counterpartId && typeof window !== 'undefined') {
+      try {
+        const localRaw = localStorage.getItem(`buyoh_my_listings_${counterpartId}`);
+        if (localRaw) {
+          const parsed = JSON.parse(localRaw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            initialListings = parsed.filter(item => item && (item.name || item.title) && !item.archived && !item.deleted);
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (initialListings.length === 0 && user?.id && counterpartId && String(user.id).toLowerCase() === String(counterpartId).toLowerCase()) {
+      try {
+        const myListings = getMyListingsForUser(user);
+        if (Array.isArray(myListings) && myListings.length > 0) {
+          initialListings = myListings.filter(item => item && (item.name || item.title) && !item.archived && !item.deleted);
+        }
+      } catch (e) {}
+    }
+
+    setSellerAdverts(initialListings);
+    setIsLoadingSellerData(initialListings.length === 0);
+    setShowSellerContact(false);
+    setSellerSearchQuery('');
+    setShowProfileModal(true);
+  };
+
   const handleCloseProfileModal = () => {
     if (typeof window !== 'undefined' && window.history.state?.sellerProfileOpen) {
       window.history.back();
@@ -1383,6 +1425,7 @@ export default function Messages() {
 
   // Memoized filtered adverts for seller modal (filtered by real-time search)
   const filteredSellerAdverts = React.useMemo(() => {
+    if (loadedSellerContactId !== activeChat?.contact?.id) return [];
     let list = [...sellerAdverts];
     const q = sellerSearchQuery.trim().toLowerCase();
     if (q) {
@@ -1394,7 +1437,7 @@ export default function Messages() {
       );
     }
     return list;
-  }, [sellerAdverts, sellerSearchQuery]);
+  }, [sellerAdverts, sellerSearchQuery, loadedSellerContactId, activeChat?.contact?.id]);
 
   // Filtering conversations with safe optional chaining
   const filteredConversations = (conversations || []).filter(c => {
@@ -1808,7 +1851,7 @@ export default function Messages() {
 
                   <button
                     className="header-avatar-btn"
-                    onClick={() => setShowProfileModal(true)}
+                    onClick={() => handleOpenProfileModal()}
                     title="View profile"
                   >
                     <div className="contact-avatar-wrap">
@@ -1868,7 +1911,7 @@ export default function Messages() {
                           className="dropdown-item"
                           onClick={() => {
                             setIsMenuOpen(false);
-                            setShowProfileModal(true);
+                            handleOpenProfileModal();
                           }}
                         >
                           <User size={17} className="dropdown-icon" />
@@ -2570,14 +2613,16 @@ export default function Messages() {
 
       {/* ── SELLER PROFILE PAGE MODAL ── */}
       {showProfileModal && activeChat && (() => {
+        const isMetaMatchingActiveChat = loadedSellerContactId === activeChat.contact?.id;
+        const metaToUse = isMetaMatchingActiveChat ? sellerProfileMeta : null;
         const sellerYearsText = formatMemberSince(
           activeChat.contact?.memberSince, 
-          sellerProfileMeta?.created_at || activeChat.contact?.created_at
+          metaToUse?.created_at || activeChat.contact?.created_at
         );
-        const sellerPhoneNum = sellerProfileMeta?.phone || activeChat.contact?.phone || '';
-        const sellerWhatsAppNum = sellerProfileMeta?.whatsapp || activeChat.contact?.whatsapp || sellerPhoneNum;
-        const isSellerVerified = Boolean(sellerProfileMeta?.verified ?? activeChat.contact?.verified);
-        const sellerRatingVal = sellerProfileMeta?.rating || activeChat.contact?.rating || null;
+        const sellerPhoneNum = metaToUse?.phone || activeChat.contact?.phone || '';
+        const sellerWhatsAppNum = metaToUse?.whatsapp || activeChat.contact?.whatsapp || sellerPhoneNum;
+        const isSellerVerified = Boolean(metaToUse?.verified ?? activeChat.contact?.verified);
+        const sellerRatingVal = metaToUse?.rating || activeChat.contact?.rating || null;
 
         return (
           <div className="jiji-profile-backdrop" onClick={handleCloseProfileModal}>

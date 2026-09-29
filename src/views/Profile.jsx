@@ -13,7 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { supabase } from '../lib/supabaseClient';
 import AvatarModal from '../components/AvatarModal';
-import { getSavedItemsForUser, getMyListingsForUser, getUserProfileData, saveUserProfileData, getFollowedSellersForUser, getNotificationsForUser, syncUserDataFromCloud } from '../utils/userSync';
+import { getSavedItemsForUser, getMyListingsForUser, getUserProfileData, saveUserProfileData, getFollowedSellersForUser, getNotificationsForUser, syncUserDataFromCloud, getCachedUserSync } from '../utils/userSync';
 import { formatMemberSince } from '../utils/productUtils';
 import './Profile.css';
 
@@ -21,14 +21,29 @@ export default function Profile() {
   const router = useRouter();
   const navigate = (to) => (typeof to === 'number' ? router.back() : router.push(to));
 
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, setIsAuthOpen } = useAuth();
   const { unreadCount } = useChat();
   
-  // Load followed sellers count & unread notifications count
-  const [followingCount, setFollowingCount] = useState(0);
-  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
-  const [myListingsCount, setMyListingsCount] = useState(0);
-  const [savedCount, setSavedCount] = useState(0);
+  // Load followed sellers count & unread notifications count synchronously from user-scoped storage
+  const [followingCount, setFollowingCount] = useState(() => {
+    try { return getFollowedSellersForUser(user).length; } catch { return 0; }
+  });
+  const [unreadNotifCount, setUnreadNotifCount] = useState(() => {
+    try { return getNotificationsForUser(user).filter(n => n.unread || n.read === false).length; } catch { return 0; }
+  });
+  const [myListingsCount, setMyListingsCount] = useState(() => {
+    try { return getMyListingsForUser(user).length; } catch { return 0; }
+  });
+  const [savedCount, setSavedCount] = useState(() => {
+    try { return getSavedItemsForUser(user).length; } catch { return 0; }
+  });
+
+  const [isCloudLoading, setIsCloudLoading] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const active = user || getCachedUserSync();
+    if (!active?.id) return false;
+    return !localStorage.getItem(`buyoh_user_profile_${active.id}`);
+  });
 
   useEffect(() => {
     const loadCounts = () => {
@@ -112,25 +127,38 @@ export default function Profile() {
 
           if (dbProfile && !error) {
             const freshData = {
-              name: dbProfile.full_name || dbProfile.name || current.name,
+              name: dbProfile.full_name || dbProfile.name || current.name || user.email?.split('@')[0] || 'Marketplace User',
               email: dbProfile.email || user.email,
-              phone: dbProfile.phone || current.phone,
-              whatsapp: dbProfile.whatsapp || current.whatsapp,
-              location: dbProfile.location || current.location,
+              phone: dbProfile.phone || current.phone || '',
+              whatsapp: dbProfile.whatsapp || current.whatsapp || dbProfile.phone || '',
+              location: dbProfile.location || current.location || '',
               avatar: dbProfile.avatar_url && !dbProfile.avatar_url.includes('photo-1535713875002-d1d0cf377fde') ? dbProfile.avatar_url : '',
               banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)',
-              createdAt: dbProfile.created_at || user?.created_at || null
+              createdAt: dbProfile.created_at || user?.created_at || null,
+              verified: Boolean(dbProfile.verified ?? (user?.email_confirmed_at || user?.user_metadata?.verified))
             };
+            try {
+              localStorage.setItem(`buyoh_user_profile_${user.id}`, JSON.stringify(freshData));
+              if (freshData.name) localStorage.setItem(`buyoh_user_name_${user.id}`, freshData.name);
+              if (freshData.phone) localStorage.setItem(`buyoh_user_phone_${user.id}`, freshData.phone);
+              if (freshData.whatsapp) localStorage.setItem(`buyoh_user_whatsapp_${user.id}`, freshData.whatsapp);
+              if (freshData.location) localStorage.setItem(`buyoh_user_location_${user.id}`, freshData.location);
+              if (freshData.avatar) localStorage.setItem(`buyoh_user_avatar_${user.id}`, freshData.avatar);
+            } catch (e) {}
             setUserData(freshData);
+            setIsCloudLoading(false);
             if (!isEditing) {
               setEditedName(freshData.name);
               setEditedPhone(freshData.phone);
               setEditedWhatsapp(freshData.whatsapp);
               setEditedLocation(freshData.location);
             }
+          } else {
+            setIsCloudLoading(false);
           }
         } catch (err) {
           console.warn("Profile cloud fetch notice:", err);
+          setIsCloudLoading(false);
         }
       })();
 
@@ -151,9 +179,20 @@ export default function Profile() {
               whatsapp: payload.new.whatsapp || payload.new.phone || '',
               location: payload.new.location || '',
               avatar: payload.new.avatar_url && !payload.new.avatar_url.includes('photo-1535713875002-d1d0cf377fde') ? payload.new.avatar_url : '',
-              banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
+              banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)',
+              createdAt: payload.new.created_at || user?.created_at || null,
+              verified: Boolean(payload.new.verified ?? (user?.email_confirmed_at || user?.user_metadata?.verified))
             };
+            try {
+              localStorage.setItem(`buyoh_user_profile_${user.id}`, JSON.stringify(freshData));
+              if (freshData.name) localStorage.setItem(`buyoh_user_name_${user.id}`, freshData.name);
+              if (freshData.phone) localStorage.setItem(`buyoh_user_phone_${user.id}`, freshData.phone);
+              if (freshData.whatsapp) localStorage.setItem(`buyoh_user_whatsapp_${user.id}`, freshData.whatsapp);
+              if (freshData.location) localStorage.setItem(`buyoh_user_location_${user.id}`, freshData.location);
+              if (freshData.avatar) localStorage.setItem(`buyoh_user_avatar_${user.id}`, freshData.avatar);
+            } catch (e) {}
             setUserData(freshData);
+            setIsCloudLoading(false);
             if (!isEditing) {
               setEditedName(freshData.name);
               setEditedPhone(freshData.phone);
@@ -314,6 +353,42 @@ export default function Profile() {
     }
   };
 
+  // Auth guard: show clean sign-in prompt when not logged in
+  if (!user && !loading) {
+    return (
+      <div className="profile-page-wrapper">
+        <header className="home-nav-row profile-desktop-nav">
+          <NavLink to="/" replace className="home-nav-brand">
+            <span className="logo-infi">Infi</span><span className="logo-buy">Buy</span>
+          </NavLink>
+        </header>
+        <div className="profile-container">
+          <div className="profile-auth-prompt-container">
+            <div className="profile-auth-card">
+              <div className="profile-auth-icon-circle">
+                <User size={34} />
+              </div>
+              <h2 className="profile-auth-title">Sign in to your Profile</h2>
+              <p className="profile-auth-subtitle">
+                Access your account settings, posted adverts, saved items, and notifications.
+              </p>
+              <button 
+                type="button" 
+                className="profile-signin-btn"
+                onClick={() => setIsAuthOpen && setIsAuthOpen(true)}
+              >
+                Sign In / Register
+              </button>
+              <NavLink to="/" replace className="profile-auth-home-link" style={{ marginTop: '0.5rem', color: '#64748b', fontSize: '0.88rem', textDecoration: 'none' }}>
+                Return to Marketplace
+              </NavLink>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
 
 
   return (
@@ -387,7 +462,9 @@ export default function Profile() {
           {/* User Profile Card Summary */}
           <div className="profile-summary-section">
             <div className="avatar-holder">
-              {userData.avatar && !userData.avatar.includes('photo-1535713875002-d1d0cf377fde') ? (
+              {isCloudLoading && !userData.avatar && !userData.name ? (
+                <div className="profile-avatar-large profile-avatar-skeleton" />
+              ) : userData.avatar && !userData.avatar.includes('photo-1535713875002-d1d0cf377fde') ? (
                 <img 
                   src={userData.avatar} 
                   alt="User Avatar" 
@@ -401,7 +478,7 @@ export default function Profile() {
                   onClick={() => setIsAvatarModalOpen(true)}
                   title="Click to upload profile photo"
                 >
-                  {(userData.name || 'U').trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase()}
+                  {(userData.name || user?.email?.split('@')[0] || 'U').trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase()}
                 </div>
               )}
               <button 
@@ -415,13 +492,21 @@ export default function Profile() {
             
             <div className="profile-identity-info">
               <div className="profile-title-badges">
-                <h3 className="profile-name-title">{userData.name}</h3>
+                {isCloudLoading && !userData.name ? (
+                  <div className="profile-skeleton-bar profile-skeleton-name" />
+                ) : (
+                  <h3 className="profile-name-title">{userData.name || 'Marketplace User'}</h3>
+                )}
                 {Boolean(user?.email_confirmed_at || user?.user_metadata?.verified || userData?.verified) && (
                   <span className="profile-badge-tag"><ShieldCheck size={13} /> Verified User</span>
                 )}
                 <span className="profile-badge-tag"><User size={13} /> {formatMemberSince(null, userData.createdAt || user?.created_at)}</span>
               </div>
-              <p className="profile-email-sub">{userData.email}</p>
+              {isCloudLoading && !userData.email && !user?.email ? (
+                <div className="profile-skeleton-bar profile-skeleton-email" />
+              ) : (
+                <p className="profile-email-sub">{userData.email || user?.email}</p>
+              )}
             </div>
 
             {/* Profile Statistics Grid */}
@@ -502,19 +587,43 @@ export default function Profile() {
                   <div className="readonly-details">
                     <div className="info-row">
                       <span className="info-label">Full Name</span>
-                      <span className="info-val">{userData.name}</span>
+                      <span className="info-val">
+                        {isCloudLoading && !userData.name ? (
+                          <div className="profile-skeleton-bar profile-skeleton-info" />
+                        ) : (
+                          userData.name || 'User'
+                        )}
+                      </span>
                     </div>
                     <div className="info-row">
                       <span className="info-label">Phone Number</span>
-                      <span className="info-val">{userData.phone}</span>
+                      <span className="info-val">
+                        {isCloudLoading && !userData.phone ? (
+                          <div className="profile-skeleton-bar profile-skeleton-info" />
+                        ) : (
+                          userData.phone || 'Not provided'
+                        )}
+                      </span>
                     </div>
                     <div className="info-row">
                       <span className="info-label">WhatsApp Number</span>
-                      <span className="info-val">{userData.whatsapp || 'Not provided'}</span>
+                      <span className="info-val">
+                        {isCloudLoading && !userData.whatsapp ? (
+                          <div className="profile-skeleton-bar profile-skeleton-info" />
+                        ) : (
+                          userData.whatsapp || 'Not provided'
+                        )}
+                      </span>
                     </div>
                     <div className="info-row">
                       <span className="info-label">Location</span>
-                      <span className="info-val">{userData.location}</span>
+                      <span className="info-val">
+                        {isCloudLoading && !userData.location ? (
+                          <div className="profile-skeleton-bar profile-skeleton-info" />
+                        ) : (
+                          userData.location || 'Not provided'
+                        )}
+                      </span>
                     </div>
                     <button className="edit-details-btn" onClick={() => setIsEditing(true)}>
                       Edit Profile Details

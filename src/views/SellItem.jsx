@@ -103,8 +103,8 @@ export default function SellItem() {
         return prof.phone;
       }
       if (targetUser?.user_metadata?.phone) return targetUser.user_metadata.phone;
-      if (typeof window !== 'undefined') {
-        const saved = (targetUser?.id && localStorage.getItem(`buyoh_user_phone_${targetUser.id}`)) || localStorage.getItem('buyoh_user_phone_v1');
+      if (typeof window !== 'undefined' && targetUser?.id) {
+        const saved = localStorage.getItem(`buyoh_user_phone_${targetUser.id}`);
         if (saved && saved !== 'Not provided') return saved;
       }
     } catch (e) {}
@@ -118,8 +118,8 @@ export default function SellItem() {
         return prof.whatsapp;
       }
       if (targetUser?.user_metadata?.whatsapp) return targetUser.user_metadata.whatsapp;
-      if (typeof window !== 'undefined') {
-        const saved = (targetUser?.id && localStorage.getItem(`buyoh_user_whatsapp_${targetUser.id}`)) || localStorage.getItem('buyoh_user_whatsapp_v1');
+      if (typeof window !== 'undefined' && targetUser?.id) {
+        const saved = localStorage.getItem(`buyoh_user_whatsapp_${targetUser.id}`);
         if (saved && saved !== 'Not provided') return saved;
       }
     } catch (e) {}

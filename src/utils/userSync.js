@@ -162,36 +162,21 @@ const isValidAvatarUrl = (url) => {
 export const getUserProfileData = (user) => {
   const activeUser = user || (typeof window !== 'undefined' ? getCachedUserSync() : null);
 
-  if (!activeUser) {
-    if (typeof window === 'undefined') {
-      return {
-        name: '',
-        email: '',
-        phone: '',
-        whatsapp: '',
-        location: '',
-        avatar: '',
-        banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
-      };
-    }
-    const savedName = localStorage.getItem('buyoh_user_name_v1');
-    const savedPhone = localStorage.getItem('buyoh_user_phone_v1');
-    const savedWhatsapp = localStorage.getItem('buyoh_user_whatsapp_v1');
-    const savedLocation = localStorage.getItem('buyoh_user_location_v1');
-    const savedAvatar = localStorage.getItem('buyoh_user_avatar_v1');
-
+  if (!activeUser || !activeUser.id) {
     return {
-      name: savedName || '',
+      name: '',
       email: '',
-      phone: savedPhone || '',
-      whatsapp: savedWhatsapp || '',
-      location: savedLocation || '',
-      avatar: isValidAvatarUrl(savedAvatar) ? savedAvatar : '',
-      banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
+      phone: '',
+      whatsapp: '',
+      location: '',
+      avatar: '',
+      banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)',
+      createdAt: null,
+      verified: false
     };
   }
 
-  // When activeUser is logged in (or cached in local session):
+  // When activeUser is logged in:
   const meta = activeUser.user_metadata || {};
   let localProfile = null;
   let cachedUserAvatar = null;
@@ -199,11 +184,15 @@ export const getUserProfileData = (user) => {
 
   if (typeof window !== 'undefined') {
     localProfile = safeJsonParse(localStorage.getItem(`buyoh_user_profile_${activeUser.id}`), null);
-    cachedUserAvatar = localStorage.getItem(`buyoh_user_avatar_${activeUser.id}`) || localStorage.getItem('buyoh_user_avatar_v1');
-    cachedUserName = localStorage.getItem(`buyoh_user_name_${activeUser.id}`) || localStorage.getItem('buyoh_user_name_v1');
+    cachedUserAvatar = localStorage.getItem(`buyoh_user_avatar_${activeUser.id}`);
+    cachedUserName = localStorage.getItem(`buyoh_user_name_${activeUser.id}`);
   }
 
-  // Choose the best avatar synchronously
+  const cachedUserPhone = typeof window !== 'undefined' ? localStorage.getItem(`buyoh_user_phone_${activeUser.id}`) : null;
+  const cachedUserWhatsapp = typeof window !== 'undefined' ? localStorage.getItem(`buyoh_user_whatsapp_${activeUser.id}`) : null;
+  const cachedUserLocation = typeof window !== 'undefined' ? localStorage.getItem(`buyoh_user_location_${activeUser.id}`) : null;
+
+  // Choose the best avatar synchronously (strictly user-scoped)
   let chosenAvatar = '';
   if (isValidAvatarUrl(localProfile?.avatar)) {
     chosenAvatar = localProfile.avatar;
@@ -215,23 +204,13 @@ export const getUserProfileData = (user) => {
     chosenAvatar = meta.picture;
   }
 
-  const name = localProfile?.name || cachedUserName || meta.full_name || meta.name || activeUser.email?.split('@')[0] || '';
-  const email = activeUser.email || 'no-email@buyoh.com';
-  const phone = localProfile?.phone || meta.phone || activeUser.phone || '';
-  const whatsapp = localProfile?.whatsapp || meta.whatsapp || meta.phone || phone || '';
-  const location = localProfile?.location || meta.location || '';
-
-  // Cache back to local storage
-  if (typeof window !== 'undefined') {
-    try {
-      if (chosenAvatar) {
-        localStorage.setItem(`buyoh_user_avatar_${activeUser.id}`, chosenAvatar);
-        localStorage.setItem('buyoh_user_avatar_v1', chosenAvatar);
-      }
-      localStorage.setItem(`buyoh_user_name_${activeUser.id}`, name);
-      localStorage.setItem('buyoh_user_name_v1', name);
-    } catch (e) {}
-  }
+  const name = localProfile?.name || localProfile?.full_name || cachedUserName || meta.full_name || meta.name || '';
+  const email = localProfile?.email || activeUser.email || '';
+  const phone = localProfile?.phone || cachedUserPhone || meta.phone || activeUser.phone || '';
+  const whatsapp = localProfile?.whatsapp || cachedUserWhatsapp || meta.whatsapp || meta.phone || phone || '';
+  const location = localProfile?.location || cachedUserLocation || meta.location || '';
+  const createdAt = localProfile?.createdAt || localProfile?.created_at || activeUser.created_at || null;
+  const verified = Boolean(localProfile?.verified ?? (activeUser.email_confirmed_at || meta.verified));
 
   return {
     name,
@@ -240,35 +219,32 @@ export const getUserProfileData = (user) => {
     whatsapp,
     location,
     avatar: chosenAvatar,
-    banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
+    banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)',
+    createdAt,
+    verified
   };
 };
 
 export const saveUserProfileData = async (user, profileData) => {
-  if (typeof window === 'undefined') return;
-  const userKey = user?.id ? `buyoh_user_profile_${user.id}` : 'buyoh_user_profile_v1';
+  if (typeof window === 'undefined' || !user?.id) return;
+  const userKey = `buyoh_user_profile_${user.id}`;
   
   try {
     localStorage.setItem(userKey, JSON.stringify(profileData));
     if (profileData.avatar) {
-      localStorage.setItem('buyoh_user_avatar_v1', profileData.avatar);
-      if (user?.id) localStorage.setItem(`buyoh_user_avatar_${user.id}`, profileData.avatar);
+      localStorage.setItem(`buyoh_user_avatar_${user.id}`, profileData.avatar);
     }
     if (profileData.name) {
-      localStorage.setItem('buyoh_user_name_v1', profileData.name);
-      if (user?.id) localStorage.setItem(`buyoh_user_name_${user.id}`, profileData.name);
+      localStorage.setItem(`buyoh_user_name_${user.id}`, profileData.name);
     }
     if (profileData.phone) {
-      localStorage.setItem('buyoh_user_phone_v1', profileData.phone);
-      if (user?.id) localStorage.setItem(`buyoh_user_phone_${user.id}`, profileData.phone);
+      localStorage.setItem(`buyoh_user_phone_${user.id}`, profileData.phone);
     }
     if (profileData.whatsapp) {
-      localStorage.setItem('buyoh_user_whatsapp_v1', profileData.whatsapp);
-      if (user?.id) localStorage.setItem(`buyoh_user_whatsapp_${user.id}`, profileData.whatsapp);
+      localStorage.setItem(`buyoh_user_whatsapp_${user.id}`, profileData.whatsapp);
     }
     if (profileData.location) {
-      localStorage.setItem('buyoh_user_location_v1', profileData.location);
-      if (user?.id) localStorage.setItem(`buyoh_user_location_${user.id}`, profileData.location);
+      localStorage.setItem(`buyoh_user_location_${user.id}`, profileData.location);
     }
 
     if (user && user.id) {
@@ -319,47 +295,27 @@ export const saveUserProfileData = async (user, profileData) => {
 // --- SAVED ADVERTS SYNC ---
 
 export const getSavedItemsForUser = (user) => {
-  if (typeof window === 'undefined') return [];
-  if (!user) {
-    try {
-      return safeJsonParse(localStorage.getItem('buyoh_saved_items_v1'), []);
-    } catch (e) {
-      return [];
-    }
-  }
+  if (typeof window === 'undefined' || !user?.id) return [];
 
-  // 1. Check local user-scoped storage key
+  // Check local user-scoped storage key
   try {
     const local = localStorage.getItem(`buyoh_saved_items_${user.id}`);
     if (local !== null && local !== undefined) {
       const parsed = safeJsonParse(local, null);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
   } catch (e) {}
 
-  // 2. Fallback to Supabase cloud user_metadata
+  // Fallback to Supabase cloud user_metadata
   const cloudSaved = user.user_metadata?.saved_items;
   if (Array.isArray(cloudSaved) && cloudSaved.length > 0) {
     try {
       localStorage.setItem(`buyoh_saved_items_${user.id}`, JSON.stringify(cloudSaved));
-      localStorage.setItem('buyoh_saved_items_v1', JSON.stringify(cloudSaved));
     } catch (e) {}
     return cloudSaved;
   }
-
-  // 3. Fallback to legacy un-scoped local storage key
-  try {
-    const legacy = localStorage.getItem('buyoh_saved_items_v1');
-    if (legacy !== null && legacy !== undefined) {
-      const parsedLegacy = safeJsonParse(legacy, null);
-      if (Array.isArray(parsedLegacy)) {
-        localStorage.setItem(`buyoh_saved_items_${user.id}`, JSON.stringify(parsedLegacy));
-        return parsedLegacy;
-      }
-    }
-  } catch (e) {}
 
   return [];
 };
@@ -372,7 +328,6 @@ export const saveItemsForUser = async (user, items) => {
     const userKey = `buyoh_saved_items_${user.id}`;
     try {
       localStorage.setItem(userKey, JSON.stringify(sanitizedItems));
-      localStorage.setItem('buyoh_saved_items_v1', JSON.stringify(sanitizedItems));
       window.dispatchEvent(new CustomEvent('buyoh_saved_updated'));
       await syncSavedItemsToCloud(user, sanitizedItems);
     } catch (e) {
@@ -401,47 +356,28 @@ export const syncSavedItemsToCloud = async (user, items) => {
 // --- MY LISTINGS SYNC ---
 
 export const getMyListingsForUser = (user) => {
-  if (typeof window === 'undefined') return [];
-  if (!user) {
-    try {
-      return safeJsonParse(localStorage.getItem('buyoh_my_listings_v1'), []);
-    } catch (e) {
-      return [];
-    }
-  }
+  if (typeof window === 'undefined' || !user?.id) return [];
 
-  // 1. Check local user-scoped storage key
+  // Check local user-scoped storage key
   try {
     const local = localStorage.getItem(`buyoh_my_listings_${user.id}`);
     if (local !== null && local !== undefined) {
       const parsed = safeJsonParse(local, []);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
   } catch (e) {}
 
-  // 2. Fallback to cloud user_metadata on first login/new device
+  // Fallback to cloud user_metadata on first login/new device
   const cloudListings = user.user_metadata?.my_listings;
   if (Array.isArray(cloudListings) && cloudListings.length > 0) {
     try {
       localStorage.setItem(`buyoh_my_listings_${user.id}`, JSON.stringify(cloudListings));
-      localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(cloudListings));
     } catch (e) {}
     return cloudListings;
   }
 
-  try {
-    const legacy = localStorage.getItem('buyoh_my_listings_v1');
-    if (legacy) {
-      const parsed = safeJsonParse(legacy, []);
-      const userListings = parsed.filter(ad => !ad.sellerId || ad.sellerId === user.id);
-      if (userListings.length > 0) {
-        localStorage.setItem(`buyoh_my_listings_${user.id}`, JSON.stringify(userListings));
-        return userListings;
-      }
-    }
-  } catch (e) {}
   return [];
 };
 
@@ -452,7 +388,6 @@ export const saveMyListingsForUser = async (user, listings) => {
     const userKey = `buyoh_my_listings_${user.id}`;
     try {
       localStorage.setItem(userKey, JSON.stringify(sanitizedListings));
-      localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(sanitizedListings));
       
       // Update public pool
       try {
@@ -532,9 +467,9 @@ export const saveMyListingsForUser = async (user, listings) => {
 // --- NOTIFICATIONS SYNC ---
 
 export const getNotificationsForUser = (user, fallbackInitial = []) => {
-  if (typeof window === 'undefined') return fallbackInitial;
+  if (typeof window === 'undefined' || !user?.id) return fallbackInitial;
 
-  const localKey = user?.id ? `buyoh_notifications_${user.id}` : 'buyoh_notifications_v1';
+  const localKey = `buyoh_notifications_${user.id}`;
   const local = safeJsonParse(localStorage.getItem(localKey), null);
   if (Array.isArray(local) && local.length > 0) return local;
 
@@ -543,26 +478,21 @@ export const getNotificationsForUser = (user, fallbackInitial = []) => {
     if (Array.isArray(cloudNotifs) && cloudNotifs.length > 0) {
       try {
         localStorage.setItem(`buyoh_notifications_${user.id}`, JSON.stringify(cloudNotifs));
-        localStorage.setItem('buyoh_notifications_v1', JSON.stringify(cloudNotifs));
       } catch (e) {}
       return cloudNotifs;
     }
   }
 
-  const legacy = safeJsonParse(localStorage.getItem('buyoh_notifications_v1'), null);
-  if (Array.isArray(legacy) && legacy.length > 0) return legacy;
-
   return fallbackInitial;
 };
 
 export const saveNotificationsForUser = async (user, notifications) => {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !user?.id) return;
   const sanitized = Array.isArray(notifications) ? notifications : [];
-  const localKey = user?.id ? `buyoh_notifications_${user.id}` : 'buyoh_notifications_v1';
+  const localKey = `buyoh_notifications_${user.id}`;
 
   try {
     localStorage.setItem(localKey, JSON.stringify(sanitized));
-    localStorage.setItem('buyoh_notifications_v1', JSON.stringify(sanitized));
 
     if (user && user.id) {
       if (user.user_metadata) {
@@ -583,9 +513,9 @@ export const saveNotificationsForUser = async (user, notifications) => {
 // --- FOLLOWED SELLERS SYNC ---
 
 export const getFollowedSellersForUser = (user) => {
-  if (typeof window === 'undefined') return [];
+  if (typeof window === 'undefined' || !user?.id) return [];
 
-  const localKey = user?.id ? `buyoh_followed_sellers_${user.id}` : 'buyoh_followed_sellers_v1';
+  const localKey = `buyoh_followed_sellers_${user.id}`;
   const local = safeJsonParse(localStorage.getItem(localKey), null);
   if (Array.isArray(local) && local.length > 0) return local;
 
@@ -594,26 +524,21 @@ export const getFollowedSellersForUser = (user) => {
     if (Array.isArray(cloudFollowed)) {
       try {
         localStorage.setItem(`buyoh_followed_sellers_${user.id}`, JSON.stringify(cloudFollowed));
-        localStorage.setItem('buyoh_followed_sellers_v1', JSON.stringify(cloudFollowed));
       } catch (e) {}
       return cloudFollowed;
     }
   }
 
-  const legacy = safeJsonParse(localStorage.getItem('buyoh_followed_sellers_v1'), null);
-  if (Array.isArray(legacy)) return legacy;
-
   return [];
 };
 
 export const saveFollowedSellersForUser = async (user, followedSellers) => {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !user?.id) return;
   const sanitized = Array.isArray(followedSellers) ? followedSellers : [];
-  const localKey = user?.id ? `buyoh_followed_sellers_${user.id}` : 'buyoh_followed_sellers_v1';
+  const localKey = `buyoh_followed_sellers_${user.id}`;
 
   try {
     localStorage.setItem(localKey, JSON.stringify(sanitized));
-    localStorage.setItem('buyoh_followed_sellers_v1', JSON.stringify(sanitized));
 
     if (user && user.id) {
       if (user.user_metadata) {
@@ -800,28 +725,23 @@ export const syncUserDataFromCloud = async (user) => {
       banner: 'linear-gradient(135deg, #ffa705 0%, #e67600 100%)'
     };
 
-    // Write to localStorage
+    // Write to localStorage (USER-SCOPED ONLY)
     const profileKey = `buyoh_user_profile_${user.id}`;
     localStorage.setItem(profileKey, JSON.stringify(cloudProfile));
     if (cloudProfile.name) {
       localStorage.setItem(`buyoh_user_name_${user.id}`, cloudProfile.name);
-      localStorage.setItem('buyoh_user_name_v1', cloudProfile.name);
     }
     if (cloudProfile.phone) {
       localStorage.setItem(`buyoh_user_phone_${user.id}`, cloudProfile.phone);
-      localStorage.setItem('buyoh_user_phone_v1', cloudProfile.phone);
     }
     if (cloudProfile.whatsapp) {
       localStorage.setItem(`buyoh_user_whatsapp_${user.id}`, cloudProfile.whatsapp);
-      localStorage.setItem('buyoh_user_whatsapp_v1', cloudProfile.whatsapp);
     }
     if (cloudProfile.location) {
       localStorage.setItem(`buyoh_user_location_${user.id}`, cloudProfile.location);
-      localStorage.setItem('buyoh_user_location_v1', cloudProfile.location);
     }
     if (cloudProfile.avatar) {
       localStorage.setItem(`buyoh_user_avatar_${user.id}`, cloudProfile.avatar);
-      localStorage.setItem('buyoh_user_avatar_v1', cloudProfile.avatar);
     }
 
     // Notify Profile view to re-render with fresh data
@@ -846,7 +766,6 @@ export const syncUserDataFromCloud = async (user) => {
 
     const listingsKey = `buyoh_my_listings_${user.id}`;
     localStorage.setItem(listingsKey, JSON.stringify(mergedListings));
-    localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(mergedListings));
 
     // Rebuild public pool
     try {
@@ -892,7 +811,6 @@ export const syncUserDataFromCloud = async (user) => {
 
     const savedKey = `buyoh_saved_items_${user.id}`;
     localStorage.setItem(savedKey, JSON.stringify(mergedSaved));
-    localStorage.setItem('buyoh_saved_items_v1', JSON.stringify(mergedSaved));
     window.dispatchEvent(new CustomEvent('buyoh_saved_updated'));
 
     if (savedNeedCloudPush && session?.access_token) {
@@ -919,7 +837,6 @@ export const syncUserDataFromCloud = async (user) => {
 
     const notifKey = `buyoh_notifications_${user.id}`;
     localStorage.setItem(notifKey, JSON.stringify(mergedNotifs));
-    localStorage.setItem('buyoh_notifications_v1', JSON.stringify(mergedNotifs));
     window.dispatchEvent(new CustomEvent('buyoh_notifications_updated'));
 
     if (notifsNeedCloudPush && session?.access_token) {
@@ -945,7 +862,6 @@ export const syncUserDataFromCloud = async (user) => {
     }
     const followedKey = `buyoh_followed_sellers_${user.id}`;
     localStorage.setItem(followedKey, JSON.stringify(mergedFollowed));
-    localStorage.setItem('buyoh_followed_sellers_v1', JSON.stringify(mergedFollowed));
 
   } catch (err) {
     console.warn('syncUserDataFromCloud error:', err);
@@ -1002,23 +918,18 @@ export const initUserRealtimeSync = (user) => {
         localStorage.setItem(`buyoh_user_profile_${user.id}`, JSON.stringify(updatedProfile));
         if (updatedProfile.name) {
           localStorage.setItem(`buyoh_user_name_${user.id}`, updatedProfile.name);
-          localStorage.setItem('buyoh_user_name_v1', updatedProfile.name);
         }
         if (updatedProfile.phone) {
           localStorage.setItem(`buyoh_user_phone_${user.id}`, updatedProfile.phone);
-          localStorage.setItem('buyoh_user_phone_v1', updatedProfile.phone);
         }
         if (updatedProfile.whatsapp) {
           localStorage.setItem(`buyoh_user_whatsapp_${user.id}`, updatedProfile.whatsapp);
-          localStorage.setItem('buyoh_user_whatsapp_v1', updatedProfile.whatsapp);
         }
         if (updatedProfile.location) {
           localStorage.setItem(`buyoh_user_location_${user.id}`, updatedProfile.location);
-          localStorage.setItem('buyoh_user_location_v1', updatedProfile.location);
         }
         if (updatedProfile.avatar) {
           localStorage.setItem(`buyoh_user_avatar_${user.id}`, updatedProfile.avatar);
-          localStorage.setItem('buyoh_user_avatar_v1', updatedProfile.avatar);
           window.dispatchEvent(new CustomEvent('buyoh_avatar_updated', { detail: updatedProfile.avatar }));
         }
         window.dispatchEvent(new CustomEvent('buyoh_profile_updated', { detail: updatedProfile }));
@@ -1026,7 +937,6 @@ export const initUserRealtimeSync = (user) => {
         // Update listings
         if (Array.isArray(row.my_listings)) {
           localStorage.setItem(`buyoh_my_listings_${user.id}`, JSON.stringify(row.my_listings));
-          localStorage.setItem('buyoh_my_listings_v1', JSON.stringify(row.my_listings));
           // Rebuild public pool
           try {
             const rawPublic = localStorage.getItem('buyoh_public_listings_v1');
@@ -1042,21 +952,18 @@ export const initUserRealtimeSync = (user) => {
         // Update saved items
         if (Array.isArray(row.saved_items)) {
           localStorage.setItem(`buyoh_saved_items_${user.id}`, JSON.stringify(row.saved_items));
-          localStorage.setItem('buyoh_saved_items_v1', JSON.stringify(row.saved_items));
           window.dispatchEvent(new CustomEvent('buyoh_saved_updated'));
         }
 
         // Update notifications
         if (Array.isArray(row.notifications)) {
           localStorage.setItem(`buyoh_notifications_${user.id}`, JSON.stringify(row.notifications));
-          localStorage.setItem('buyoh_notifications_v1', JSON.stringify(row.notifications));
           window.dispatchEvent(new CustomEvent('buyoh_notifications_updated'));
         }
 
         // Update followed sellers
         if (Array.isArray(row.followed_sellers)) {
           localStorage.setItem(`buyoh_followed_sellers_${user.id}`, JSON.stringify(row.followed_sellers));
-          localStorage.setItem('buyoh_followed_sellers_v1', JSON.stringify(row.followed_sellers));
         }
       }
     )

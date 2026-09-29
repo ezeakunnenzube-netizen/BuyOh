@@ -944,3 +944,112 @@
     justify-content: center;
   }
 }
+
+/* ── SKELETON PLACEHOLDERS ── */
+.profile-skeleton-bar {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 50%, #e2e8f0 100%);
+  background-size: 200% 200%;
+  animation: avatarShimmer 1.5s ease-in-out infinite;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.profile-skeleton-name {
+  width: 170px;
+  height: 24px;
+  margin: 4px auto;
+}
+
+.profile-skeleton-email {
+  width: 140px;
+  height: 14px;
+  margin: 6px auto 0;
+}
+
+.profile-skeleton-info {
+  width: 130px;
+  height: 16px;
+}
+
+/* ── AUTHENTICATION PROMPT CARD ── */
+.profile-auth-prompt-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1.5rem;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.profile-auth-card {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 3rem 2.25rem;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.03);
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.15rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.profile-auth-icon-circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.12);
+}
+
+.profile-auth-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.profile-auth-subtitle {
+  font-size: 0.94rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.55;
+}
+
+.profile-signin-btn {
+  background: linear-gradient(135deg, #ffa705 0%, #e67600 100%);
+  color: #ffffff;
+  border: none;
+  font-weight: 700;
+  font-size: 0.98rem;
+  padding: 0.9rem 2rem;
+  border-radius: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(230, 118, 0, 0.35);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.profile-signin-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(230, 118, 0, 0.45);
+}
+
+.profile-auth-home-link {
+  transition: color 0.15s ease;
+}
+
+.profile-auth-home-link:hover {
+  color: #2563eb !important;
+}
+
