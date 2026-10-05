@@ -1017,7 +1017,6 @@ export default function ProductDetails({ params: serverParams }) {
               </div>
 
               <div className="title-meta-row">
-                <span className="badge-promoted"><Smartphone size={11} /> Promoted</span>
                 <span className="meta-text"><MapPin size={13} /> {product.location}</span>
                 <span className="meta-text"><Clock size={13} /> {postedAgo}</span>
                 <span className="meta-text-views"><Eye size={13} /> {viewsCount} views</span>
@@ -1130,12 +1129,11 @@ export default function ProductDetails({ params: serverParams }) {
             <div className="detail-price-card">
               <h2 className="detail-price-text">{formatPrice(product.price)}</h2>
               <div className="price-labels-row">
-                <span className="price-tag-negotiable">Negotiable</span>
-                <span className="price-tag-history">Price History</span>
-              </div>
-              
-              <div className="market-trend-box">
-                <span>Market price: ₦ {(product.price * 0.95 / 1000).toFixed(2)} K ~ {(product.price * 1.08 / 1000).toFixed(2)} K</span>
+                {product.negotiable !== false ? (
+                  <span className="price-tag-negotiable">Negotiable</span>
+                ) : (
+                  <span className="price-tag-fixed">Fixed Price</span>
+                )}
               </div>
 
               <button 

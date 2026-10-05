@@ -1304,14 +1304,35 @@ export default function SellItem() {
               {price && <span className="price-preview">{currencySymbol} {formatPrice(price)}</span>}
               {errors.price && <span className="error-text"><AlertCircle size={12} /> {errors.price}</span>}
               
-              <label className="negotiable-toggle">
-                <input 
-                  type="checkbox" 
-                  checked={negotiable} 
-                  onChange={e => setNegotiable(e.target.checked)} 
-                />
-                <span className="toggle-label">Price is negotiable</span>
-              </label>
+              {/* Negotiable Choice Selector */}
+              <div className="negotiable-selection-block">
+                <span className="negotiable-selection-label">Pricing Mode</span>
+                <div className="negotiable-options-row">
+                  <button
+                    type="button"
+                    className={`negotiable-option-btn ${negotiable ? 'selected' : ''}`}
+                    onClick={() => setNegotiable(true)}
+                  >
+                    <span className="negotiable-radio-dot">{negotiable && <span className="dot-inner" />}</span>
+                    <span className="negotiable-option-text">
+                      <strong>Negotiable</strong>
+                      <small>Open to buyer counter-offers</small>
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`negotiable-option-btn ${!negotiable ? 'selected' : ''}`}
+                    onClick={() => setNegotiable(false)}
+                  >
+                    <span className="negotiable-radio-dot">{!negotiable && <span className="dot-inner" />}</span>
+                    <span className="negotiable-option-text">
+                      <strong>Fixed Price</strong>
+                      <small>Price is non-negotiable</small>
+                    </span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Description */}
@@ -1430,7 +1451,12 @@ export default function SellItem() {
                 )}
                 <div className="preview-info">
                   <h3 className="preview-title">{title || 'Your listing title'}</h3>
-                  <p className="preview-price">{currencySymbol} {formatPrice(price) || '0'} {negotiable && <span className="preview-negotiable">Negotiable</span>}</p>
+                  <p className="preview-price">
+                    {currencySymbol} {formatPrice(price) || '0'}{' '}
+                    <span className={negotiable ? "preview-negotiable" : "preview-fixed"}>
+                      {negotiable ? 'Negotiable' : 'Fixed Price'}
+                    </span>
+                  </p>
                   <div className="preview-meta">
                     <span><MapPin size={12} /> {location || 'Location'}</span>
                     <span><Layers size={12} /> {category || 'Category'} {subcategory ? `› ${subcategory}` : ''}</span>
@@ -1482,7 +1508,7 @@ export default function SellItem() {
               </div>
               <div className="summary-row">
                 <span>Price</span>
-                <strong>{currencySymbol} {formatPrice(price)} {negotiable ? '(Negotiable)' : ''}</strong>
+                <strong>{currencySymbol} {formatPrice(price)} ({negotiable ? 'Negotiable' : 'Fixed Price'})</strong>
               </div>
               {isConditionApplicable(category, subcategory) && condition && (
                 <div className="summary-row">
