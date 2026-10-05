@@ -9,7 +9,9 @@ body {
   color: #0f172a;
 }
 
-/* ── Sticky Desktop Navbar (User's Sleek Dark Palette, Human-Crafted) ── */
+/* ═════════════════════════════════════════════════════════════════
+   1. STICKY DESKTOP NAVBAR (Expert-Crafted Dark Navy Palette)
+   ═════════════════════════════════════════════════════════════════ */
 .home-nav-row {
   position: sticky;
   top: 0;
@@ -18,17 +20,17 @@ body {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  height: 68px;
+  height: 70px;
   padding: 0 32px;
   box-sizing: border-box;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.28);
 }
 
 .home-nav-brand {
   font-family: 'Poppins', system-ui, sans-serif;
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 900;
   letter-spacing: -0.04em;
   text-decoration: none;
@@ -60,10 +62,10 @@ body {
   gap: 12px;
 }
 
-/* ── Nav Routing Icon Buttons (High-Contrast, Guaranteed Visible) ── */
+/* ── Nav Routing Icon Buttons (High-Contrast, Guaranteed 100% Visible) ── */
 .home-nav-icon-btn {
   background: rgba(255, 255, 255, 0.12);
-  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
   position: relative;
   margin: 0;
   padding: 0;
@@ -90,7 +92,7 @@ body {
   transform: translateY(0);
 }
 
-/* Active Nav State */
+/* Active Nav Route State */
 .home-nav-item-active .home-nav-icon-btn {
   background: #ffffff;
   border-color: #ffffff;
@@ -100,12 +102,12 @@ body {
 .home-nav-icon {
   width: 20px;
   height: 20px;
-  color: #ffffff; /* High contrast fallback */
+  color: #ffffff; /* Bright white icon pops on dark button */
   transition: transform 0.2s ease;
 }
 
 .home-nav-icon-btn:hover .home-nav-icon {
-  transform: scale(1.06);
+  transform: scale(1.08);
 }
 
 .home-nav-unread-badge {
@@ -128,7 +130,7 @@ body {
   z-index: 10;
 }
 
-/* ── Sell Button (User's Gradient Blue) ── */
+/* Sell button (User's Blue Gradient) */
 .home-sell-btn {
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   border: none;
@@ -174,7 +176,7 @@ body {
   font-size: 13.5px;
   font-weight: 700;
   height: 42px;
-  padding: 0 20px;
+  padding: 0 22px;
   border-radius: 9999px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -193,13 +195,13 @@ body {
   background-color: #0f172a;
   color: #ffffff;
   white-space: nowrap;
-  padding: 5px 9px;
-  bottom: -36px;
+  padding: 5px 10px;
+  bottom: -38px;
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 500;
   font-family: inherit;
   pointer-events: none;
@@ -220,13 +222,15 @@ body {
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-/* ── Hero Header (User's Iconic Warm Orange Gradient) ── */
+/* ═════════════════════════════════════════════════════════════════
+   2. HERO HEADER (User's Warm Orange with Unified Master Search)
+   ═════════════════════════════════════════════════════════════════ */
 .home-header {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 44px 24px 48px;
+  padding: 48px 24px 52px;
   background: linear-gradient(135deg, #ffa705 0%, #ff8c00 60%, #e67600 100%);
   box-shadow: 0 4px 20px rgba(255, 167, 5, 0.25);
   box-sizing: border-box;
@@ -234,7 +238,7 @@ body {
 
 .home-header-content {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .home-header-text {
@@ -245,7 +249,7 @@ body {
   text-align: center;
   margin: 0 0 6px 0;
   padding: 0;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
@@ -257,21 +261,28 @@ body {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* ── Search Area Console (Solid, Crisp, Opaque — No Blurry Glass) ── */
+/* ── Unified Floating Master Search Console (Expert-Human Architecture) ── */
 .search-area {
   display: flex;
   align-items: center;
   align-self: center;
-  gap: 12px;
   position: relative;
-  max-width: 900px;
+  max-width: 880px;
   width: 100%;
+  background: #ffffff;
+  border-radius: 9999px;
+  padding: 5px 6px 5px 12px;
+  box-shadow: 0 16px 40px -4px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-sizing: border-box;
+  gap: 0;
 }
 
 .search-area-filters-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0;
+  flex-shrink: 0;
 }
 
 .filter-select-wrapper {
@@ -280,69 +291,77 @@ body {
   align-items: center;
 }
 
-/* Filter Pill Button (Solid, Crisp, High-Contrast) */
+/* Vertical Hairline Divider between segments */
+.country-select-wrapper::after,
+.region-select-wrapper::after {
+  content: '';
+  display: block;
+  width: 1px;
+  height: 26px;
+  background: #e2e8f0;
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* Segment Pill Buttons inside the Master Console */
 .filter-pill-button {
   display: flex;
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.25);
-  padding: 0 16px;
-  border-radius: 12px;
-  border: 1.5px solid rgba(255, 255, 255, 0.55);
-  height: 52px;
+  background-color: transparent;
+  padding: 0 12px;
+  border-radius: 9999px;
+  border: none;
+  height: 44px;
   box-sizing: border-box;
-  color: #ffffff;
+  color: #1e293b;
   cursor: pointer;
-  transition: all 0.18s ease;
-  gap: 8px;
+  transition: all 0.15s ease;
+  gap: 6px;
   font-family: inherit;
   user-select: none;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
 .filter-pill-button:hover {
-  background-color: rgba(255, 255, 255, 0.35);
-  border-color: #ffffff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  background-color: #f1f5f9;
+  color: #0f172a;
 }
 
 .filter-pill-button.pill-active {
-  background-color: rgba(255, 255, 255, 0.45);
-  border-color: #ffffff;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  background-color: #eff6ff;
+  color: #1d4ed8;
 }
 
 .pill-flag {
-  font-size: 17px;
+  font-size: 16px;
   line-height: 1;
   flex-shrink: 0;
 }
 
 .pill-pin-icon {
-  color: #ffffff;
+  color: #ffa705;
   flex-shrink: 0;
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
 }
 
 .pill-text {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   font-family: inherit;
-  max-width: 140px;
+  max-width: 120px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .pill-chevron, .pill-chevron-rotated {
-  color: rgba(255, 255, 255, 0.9);
+  color: #94a3b8;
   transition: transform 0.2s ease;
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .pill-chevron-rotated {
@@ -352,25 +371,19 @@ body {
 /* ── Filter Dropdown Menus (Crisp Solid Cards) ── */
 .filter-dropdown-menu {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 10px);
   left: 0;
   z-index: 999;
   background-color: #ffffff;
-  border-radius: 14px;
+  border-radius: 16px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.04);
-  animation: dropdownFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  animation: dropdownFadeIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes dropdownFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .country-dropdown-menu {
@@ -596,61 +609,59 @@ body {
   cursor: pointer;
 }
 
-/* ── Search Input & Icon Button (User's Colors) ── */
+/* ── Search Input & Circular Action Button ── */
 .search-right {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   flex: 1;
+  margin-left: 6px;
 }
 
 .search-input {
   flex: 1;
-  height: 52px;
-  background-color: #ffffff;
+  height: 44px;
+  background-color: transparent;
   border: none;
-  border-radius: 12px 0 0 12px;
-  padding: 0 18px;
+  padding: 0 14px;
   box-sizing: border-box;
   font-size: 15px;
   outline: none;
   font-family: inherit;
-  color: #1e293b;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
-}
-
-.search-input:focus {
-  box-shadow: inset 0 0 0 2px #ffa705, 0 4px 14px rgba(0, 0, 0, 0.12);
+  color: #0f172a;
 }
 
 .search-input::placeholder {
   color: #94a3b8;
   font-size: 14.5px;
+  font-weight: 400;
 }
 
 .search-icon-btn {
-  background-color: #ffa705;
-  height: 52px;
-  width: 56px;
-  min-width: 56px;
+  background: linear-gradient(135deg, #ffa705 0%, #e67600 100%);
+  height: 44px;
+  width: 44px;
+  min-width: 44px;
   box-sizing: border-box;
-  border-radius: 0 12px 12px 0;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
   border: none;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 3px 10px rgba(230, 118, 0, 0.35);
+  flex-shrink: 0;
 }
 
 .search-icon-btn:hover {
-  background-color: #e67600;
+  transform: scale(1.06);
+  box-shadow: 0 5px 14px rgba(230, 118, 0, 0.45);
 }
 
 .search-icon {
   color: #ffffff;
-  width: 20px;
-  height: 20px;
+  width: 19px;
+  height: 19px;
 }
 
 /* ── Hero Auth Prompt Bar ── */
@@ -659,10 +670,10 @@ body {
   align-items: center;
   justify-content: center;
   gap: 16px;
-  background: rgba(0, 0, 0, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: 10px 22px;
-  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  padding: 8px 22px;
+  border-radius: 9999px;
   max-width: 700px;
   width: 90%;
   box-sizing: border-box;
@@ -682,9 +693,9 @@ body {
   color: #e67600;
   border: none;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
-  padding: 7px 18px;
+  padding: 6px 18px;
   border-radius: 9999px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -698,21 +709,22 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* ── Products Section Container ── */
+/* ═════════════════════════════════════════════════════════════════
+   3. CATEGORIES SECTION (Modern Tactile Ribbon)
+   ═════════════════════════════════════════════════════════════════ */
 .products-section {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 32px 24px 64px;
+  padding: 36px 24px 64px;
   box-sizing: border-box;
   font-family: inherit;
   min-height: 60vh;
 }
 
-/* ── Categories Bar (User's Colors) ── */
 .categories-bar {
   display: flex;
   gap: 10px;
-  margin-bottom: 24px;
+  margin-bottom: 26px;
   flex-wrap: wrap;
   align-items: center;
 }
@@ -723,21 +735,21 @@ body {
   flex-direction: column;
 }
 
-/* Category Pill (Clean, Tactile) */
+/* Category Pill (Solid, Tactile) */
 .category-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 18px;
+  gap: 7px;
+  padding: 9px 18px;
   border-radius: 9999px;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid #eaecf0;
   background: #ffffff;
-  color: #4b5563;
+  color: #374151;
   font-size: 13.5px;
   font-family: inherit;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
   user-select: none;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -746,9 +758,9 @@ body {
 .category-pill:hover {
   border-color: #ffa705;
   color: #e67600;
-  background: #fff9ed;
-  box-shadow: 0 2px 10px rgba(255, 167, 5, 0.15);
-  transform: translateY(-1px);
+  background: #fffbf0;
+  box-shadow: 0 3px 10px rgba(255, 167, 5, 0.15);
+  transform: translateY(-2px);
 }
 
 .category-pill:active {
@@ -770,13 +782,13 @@ body {
 }
 
 .cat-emoji {
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1;
 }
 
 .cat-label {
   font-size: 13.5px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .cat-check {
@@ -799,7 +811,7 @@ body {
   transform: rotate(180deg);
 }
 
-/* ── Category Submenu Dropdown ── */
+/* Category Submenu Dropdown Popover */
 .vehicle-submenu {
   position: fixed;
   top: auto;
@@ -808,7 +820,7 @@ body {
   z-index: 500;
   background: #ffffff;
   border-radius: 16px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.14);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
   border: 1.5px solid #ffe0a0;
   padding: 20px;
   width: min(640px, 92vw);
@@ -948,7 +960,9 @@ body {
   color: #e67600;
 }
 
-/* ── Price Filter Bar (User's Colors) ── */
+/* ═════════════════════════════════════════════════════════════════
+   4. PRICE FILTER & ACTIVE CHIPS
+   ═════════════════════════════════════════════════════════════════ */
 .price-filter-bar {
   display: flex;
   align-items: center;
@@ -967,7 +981,7 @@ body {
 .price-input-group {
   display: flex;
   align-items: center;
-  background: #f8fafc;
+  background: #ffffff;
   border: 1.5px solid #e2e8f0;
   border-radius: 10px;
   padding: 6px 12px;
@@ -1038,13 +1052,13 @@ body {
   transform: scale(1.05);
 }
 
-/* ── Active Filter Chips (User's Colors) ── */
+/* Active Filter Chips */
 .active-filters {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
 
 .filter-chip {
@@ -1119,33 +1133,34 @@ body {
   color: #b91c1c;
 }
 
-/* ── Products Header Row ── */
+/* ═════════════════════════════════════════════════════════════════
+   5. PRODUCTS GRID & CARDS (E-Commerce Excellence)
+   ═════════════════════════════════════════════════════════════════ */
 .products-header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
 }
 
 .products-section-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #1a1a1a;
-  letter-spacing: -0.015em;
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
   margin: 0;
 }
 
 .products-count {
   font-size: 13px;
   font-weight: 600;
-  color: #64748b;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  padding: 4px 14px;
+  color: #475569;
+  background: #e2e8f0;
+  padding: 5px 14px;
   border-radius: 9999px;
 }
 
-/* ── Products Grid ── */
+/* ── 4-Column Grid Layout ── */
 .products-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1155,6 +1170,7 @@ body {
 @media (max-width: 1100px) {
   .products-grid {
     grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
   }
 }
 
@@ -1165,13 +1181,13 @@ body {
   }
 }
 
-/* ── Product Card (User's Colors & Solid Polish) ── */
+/* ── Product Card (Solid Surface, Refined Human Craft) ── */
 .product-card {
   background: #ffffff;
-  border-radius: 14px;
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
   cursor: pointer;
   border: 1px solid #eaecf0;
   display: flex;
@@ -1179,9 +1195,9 @@ body {
 }
 
 .product-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1);
-  border-color: #d1d5db;
+  transform: translateY(-5px);
+  box-shadow: 0 16px 32px -4px rgba(0, 0, 0, 0.1), 0 4px 12px -2px rgba(0, 0, 0, 0.05);
+  border-color: #cbd5e1;
 }
 
 .product-card-media-link,
@@ -1196,7 +1212,7 @@ body {
   width: 100%;
   padding-top: 72%;
   overflow: hidden;
-  background: #f5f5f5;
+  background: #f1f5f9;
 }
 
 .product-image {
@@ -1206,7 +1222,7 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .product-card:hover .product-image {
@@ -1227,30 +1243,31 @@ body {
 }
 
 .badge-new {
-  background: #dcfce7;
-  color: #16a34a;
-  border: 1px solid #bbf7d0;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
 }
 
 .badge-used {
-  background: #fef9c3;
-  color: #a16207;
-  border: 1px solid #fef08a;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
 }
 
-/* Category Tag on Image (Opaque, High-Contrast Tag) */
+/* Category Tag on Image */
 .product-category-tag {
   position: absolute;
   bottom: 10px;
   right: 10px;
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 10.5px;
+  font-weight: 600;
   padding: 3px 8px;
   border-radius: 6px;
   font-family: inherit;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(15, 23, 42, 0.75);
   color: #ffffff;
   z-index: 2;
+  letter-spacing: 0.02em;
 }
 
 /* Save Bookmark Button */
@@ -1259,7 +1276,7 @@ body {
   top: 10px;
   right: 10px;
   background: #ffffff;
-  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid #e2e8f0;
   border-radius: 50%;
   width: 34px;
   height: 34px;
@@ -1279,8 +1296,7 @@ body {
 
 .card-save-btn:hover {
   transform: scale(1.1);
-  background: #ffffff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-color: #cbd5e1;
 }
 
 .card-save-active {
@@ -1291,30 +1307,31 @@ body {
 
 /* Product Info Container */
 .product-info {
-  padding: 12px 14px 14px;
+  padding: 14px 16px 16px;
   display: flex;
   flex-direction: column;
   flex: 1;
 }
 
 .product-name {
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #0f172a;
   margin: 0 0 6px 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.4;
+  min-height: 40px;
 }
 
-/* Product Price (User's Signature Warm Amber) */
+/* Product Price (User's Warm Amber) */
 .product-price {
-  font-size: 17px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 800;
   color: #ffa705;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   margin: 0 0 10px 0;
 }
 
@@ -1332,7 +1349,8 @@ body {
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: #888;
+  color: #64748b;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1349,13 +1367,13 @@ body {
 .product-chat-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   background: linear-gradient(135deg, #ffa705 0%, #e67600 100%);
   color: #ffffff;
   text-decoration: none;
   font-size: 12px;
-  font-weight: 600;
-  padding: 5px 12px;
+  font-weight: 700;
+  padding: 6px 14px;
   border-radius: 8px;
   box-shadow: 0 2px 6px rgba(230, 118, 0, 0.25);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -1369,15 +1387,17 @@ body {
   box-shadow: 0 4px 12px rgba(230, 118, 0, 0.35);
 }
 
-/* ── Empty State / No Results ── */
+/* ═════════════════════════════════════════════════════════════════
+   6. EMPTY STATE / NO RESULTS
+   ═════════════════════════════════════════════════════════════════ */
 .no-results {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 20px;
-  gap: 10px;
-  color: #aaa;
+  padding: 64px 20px;
+  gap: 12px;
+  color: #64748b;
   text-align: center;
 }
 
@@ -1389,37 +1409,40 @@ body {
 
 .no-results-text {
   font-size: 20px;
-  font-weight: 700;
-  color: #888;
+  font-weight: 800;
+  color: #0f172a;
   margin: 0;
 }
 
 .no-results-sub {
   font-size: 14px;
-  color: #aaa;
+  color: #64748b;
   margin: 0;
 }
 
 .no-results-clear {
-  margin-top: 10px;
-  padding: 8px 24px;
+  margin-top: 12px;
+  padding: 10px 26px;
   border-radius: 9999px;
-  border: 2px solid #ffa705;
-  background: #ffffff;
-  color: #ffa705;
-  font-size: 13.5px;
+  border: none;
+  background: linear-gradient(135deg, #ffa705 0%, #e67600 100%);
+  color: #ffffff;
+  font-size: 14px;
   font-family: inherit;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 3px 10px rgba(230, 118, 0, 0.25);
 }
 
 .no-results-clear:hover {
-  background: #ffa705;
-  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(230, 118, 0, 0.35);
 }
 
-/* ── Responsive Mobile Optimizations (<= 768px) ── */
+/* ═════════════════════════════════════════════════════════════════
+   7. RESPONSIVE MOBILE OPTIMIZATIONS (<= 768px)
+   ═════════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
   .home-nav-row {
     display: none;
@@ -1430,7 +1453,7 @@ body {
   }
 
   .home-header-text {
-    font-size: 24px;
+    font-size: 26px;
   }
 
   .home-header-subtext {
@@ -1439,9 +1462,14 @@ body {
 
   .search-area {
     flex-direction: column;
-    padding: 0;
-    gap: 10px;
-    width: 100%;
+    padding: 10px;
+    gap: 8px;
+    border-radius: 18px;
+  }
+
+  .country-select-wrapper::after,
+  .region-select-wrapper::after {
+    display: none;
   }
 
   .search-area-filters-row {
@@ -1459,6 +1487,8 @@ body {
     justify-content: center;
     padding: 0 10px;
     font-size: 12.5px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
     border-radius: 10px;
   }
 
@@ -1469,12 +1499,15 @@ body {
 
   .search-right {
     width: 100%;
+    margin-left: 0;
   }
 
   .search-input {
     height: 44px;
     font-size: 14px;
     padding: 0 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
     border-radius: 10px 0 0 10px;
   }
 
@@ -1505,6 +1538,7 @@ body {
     text-align: center;
     margin-top: 14px;
     width: 100%;
+    border-radius: 14px;
   }
 
   .prompt-text {
@@ -1517,19 +1551,19 @@ body {
   }
 
   .products-section {
-    padding: 20px 16px 40px;
+    padding: 24px 16px 44px;
   }
 
   .products-section-title {
-    font-size: 18px;
+    font-size: 20px;
   }
 
   .product-name {
-    font-size: 13px;
+    font-size: 13.5px;
   }
 
   .product-price {
-    font-size: 15px;
+    font-size: 16px;
   }
 
   .card-save-btn {
