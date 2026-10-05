@@ -23,6 +23,55 @@ export const safeJsonParse = (val, fallback = []) => {
 };
 
 /**
+ * UUID verification and deterministic formatting helpers
+ */
+export const isUUID = (str) => {
+  if (!str || typeof str !== 'string') return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str.trim());
+};
+
+export const toValidUUID = (input) => {
+  if (!input) return '00000000-0000-4000-a000-000000000000';
+  const str = String(input).trim();
+  if (isUUID(str)) return str.toLowerCase();
+
+  // Deterministic 128-bit hash formatted as RFC4122 v4 UUID
+  let h1 = 0xdeadbeef, h2 = 0x41c64e6d, h3 = 0x12345678, h4 = 0x98765432;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+    h3 = Math.imul(h3 ^ ch, 3812015801);
+    h4 = Math.imul(h4 ^ ch, 2718281829);
+  }
+  const hex = (h) => (h >>> 0).toString(16).padStart(8, '0');
+  const part1 = hex(h1);
+  const part2 = hex(h2).slice(0, 4);
+  const part3 = '4' + hex(h3).slice(1, 4);
+  const part4 = 'a' + hex(h4).slice(1, 4);
+  const part5 = hex(h1 ^ h3) + hex(h2 ^ h4).slice(0, 4);
+  return `${part1}-${part2}-${part3}-${part4}-${part5}`.toLowerCase();
+};
+
+/**
+ * Robust product ID matcher handling original IDs, slugs, and deterministic UUID hashes
+ */
+export const isMatchingProductId = (listingId, targetId) => {
+  if (!listingId || !targetId) return false;
+  const s1 = String(listingId).trim();
+  const s2 = String(targetId).trim();
+  if (s1 === s2 || s1.toLowerCase() === s2.toLowerCase()) return true;
+  try {
+    const uuid1 = toValidUUID(s1);
+    const uuid2 = toValidUUID(s2);
+    if (uuid1 === s2.toLowerCase() || uuid2 === s1.toLowerCase() || uuid1 === uuid2) {
+      return true;
+    }
+  } catch (e) {}
+  return false;
+};
+
+/**
  * Image compression utility to convert user avatars into clean JPEG data URLs
  */
 export const compressImage = (fileOrDataUrl, maxWidth = 160, maxHeight = 160, quality = 0.8) => {
@@ -566,9 +615,9 @@ export const registerPublicListing = (newListing) => {
     let publicListings = safeJsonParse(raw, []);
     if (!Array.isArray(publicListings)) publicListings = [];
     
-    const existsIndex = publicListings.findIndex(p => String(p.id) === String(newListing.id));
+    const existsIndex = publicListings.findIndex(p => isMatchingProductId(p.id, newListing.id));
     if (existsIndex >= 0) {
-      publicListings[existsIndex] = newListing;
+      publicListings[existsIndex] = { ...publicListings[existsIndex], ...newListing };
     } else {
       publicListings = [newListing, ...publicListings];
     }
@@ -577,6 +626,68 @@ export const registerPublicListing = (newListing) => {
     window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
   } catch (e) {
     console.error("Error registering public listing:", e);
+  }
+};
+
+/**
+ * Enterprise cloud pull: Fetch public listings from all user profiles in Supabase
+ * Ensures Account B immediately sees ads posted by Account A across devices and browsers.
+ */
+export const syncAllPublicListingsFromCloud = async () => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const { data: profiles, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, name, phone, whatsapp, location, avatar_url, created_at, verified, my_listings')
+      .not('my_listings', 'is', null);
+
+    if (error) {
+      console.warn('[userSync] Error fetching public listings from profiles:', error.message);
+      return [];
+    }
+
+    if (!profiles || !Array.isArray(profiles)) return [];
+
+    const cloudAllListings = [];
+    profiles.forEach(prof => {
+      if (Array.isArray(prof.my_listings)) {
+        prof.my_listings.forEach(item => {
+          if (item && item.id) {
+            const enriched = {
+              ...item,
+              sellerId: item.sellerId || prof.id,
+              sellerName: item.sellerName || prof.full_name || prof.name || 'Seller',
+              sellerPhone: item.sellerPhone || prof.phone || prof.whatsapp || '',
+              sellerWhatsApp: item.sellerWhatsApp || prof.whatsapp || prof.phone || '',
+              sellerAvatar: item.sellerAvatar || prof.avatar_url || '',
+              sellerLocation: item.sellerLocation || prof.location || item.location || '',
+              sellerCreatedAt: item.sellerCreatedAt || prof.created_at || null,
+              sellerVerified: prof.verified ?? item.sellerVerified
+            };
+            cloudAllListings.push(enriched);
+          }
+        });
+      }
+    });
+
+    if (cloudAllListings.length > 0) {
+      const rawPublic = localStorage.getItem('buyoh_public_listings_v1');
+      let localPublic = safeJsonParse(rawPublic, []);
+      if (!Array.isArray(localPublic)) localPublic = [];
+
+      const cloudIds = new Set(cloudAllListings.map(c => String(c.id)));
+      const localOnly = localPublic.filter(p => p && p.id && !cloudIds.has(String(p.id)));
+      const merged = [...cloudAllListings, ...localOnly];
+
+      localStorage.setItem('buyoh_public_listings_v1', JSON.stringify(merged));
+      window.dispatchEvent(new CustomEvent('buyoh_listings_updated'));
+      return merged;
+    }
+
+    return cloudAllListings;
+  } catch (err) {
+    console.error('[userSync] syncAllPublicListingsFromCloud exception:', err);
+    return [];
   }
 };
 
@@ -863,6 +974,9 @@ export const syncUserDataFromCloud = async (user) => {
     const followedKey = `buyoh_followed_sellers_${user.id}`;
     localStorage.setItem(followedKey, JSON.stringify(mergedFollowed));
 
+    // --- 6. Sync all public marketplace listings from cloud profiles in background ---
+    syncAllPublicListingsFromCloud().catch(() => {});
+
   } catch (err) {
     console.warn('syncUserDataFromCloud error:', err);
   }
@@ -1018,6 +1132,7 @@ export const initWindowFocusSync = (user) => {
     clearTimeout(syncTimeout);
     syncTimeout = setTimeout(() => {
       syncUserDataFromCloud(user).catch(() => {});
+      syncAllPublicListingsFromCloud().catch(() => {});
     }, 500);
   };
 
@@ -1035,3 +1150,10 @@ export const initWindowFocusSync = (user) => {
     document.removeEventListener('visibilitychange', onVisibility);
   };
 };
+
+// Auto-trigger background public listings sync on startup in browser environment
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    syncAllPublicListingsFromCloud().catch(() => {});
+  }, 100);
+}

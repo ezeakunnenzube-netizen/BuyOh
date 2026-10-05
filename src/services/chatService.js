@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabaseClient.js';
-import { getGeneralProductPool } from '../utils/userSync';
+import { getGeneralProductPool, registerPublicListing, getMyListingsForUser, isMatchingProductId } from '../utils/userSync';
 import { formatMemberSince } from '../utils/productUtils';
 
 /**
@@ -461,7 +461,38 @@ export const fetchUserConversations = async (user) => {
         const isBuyer = String(row.buyer_id || '').toLowerCase() === userUidLower;
         const counterpartId = isBuyer ? row.seller_id : row.buyer_id;
         const profile = profileMap[String(counterpartId).toLowerCase()] || profileMap[counterpartId] || {};
-        const prod = productMap[String(row.product_id)] || productMap[toValidUUID(row.product_id)] || {};
+        let prod = productMap[String(row.product_id)] || productMap[toValidUUID(row.product_id)] || null;
+
+        // If not found in general pool, check counterpart's profile listings
+        if (!prod || !prod.name) {
+          if (Array.isArray(profile.my_listings)) {
+            const match = profile.my_listings.find(item => isMatchingProductId(item.id, row.product_id));
+            if (match) {
+              prod = {
+                ...match,
+                sellerId: match.sellerId || counterpartId,
+                sellerName: match.sellerName || profile.full_name || profile.name || 'Seller',
+                sellerPhone: match.sellerPhone || profile.phone || profile.whatsapp || '',
+                sellerWhatsApp: match.sellerWhatsApp || profile.whatsapp || profile.phone || '',
+                sellerAvatar: match.sellerAvatar || profile.avatar_url || '',
+                sellerLocation: match.sellerLocation || profile.location || match.location || ''
+              };
+              registerPublicListing(prod);
+            }
+          }
+        }
+
+        // Also check current user's listings (if user is the seller)
+        if (!prod || !prod.name) {
+          try {
+            const myListings = getMyListingsForUser(user);
+            const match = myListings.find(item => isMatchingProductId(item.id, row.product_id));
+            if (match) {
+              prod = match;
+              registerPublicListing(prod);
+            }
+          } catch (e) {}
+        }
 
         let memberDuration = formatMemberSince(null, profile.created_at);
 
@@ -470,6 +501,23 @@ export const fetchUserConversations = async (user) => {
         const localMatch = cached.find(c => c.id === row.id || toValidUUID(c.id) === toValidUUID(row.id));
         const localMsgs = localMatch ? localMatch.messages : [];
 
+        // Check if messages have productInfo
+        if (!prod || !prod.name) {
+          for (const m of [...localMsgs, ...dbMsgs]) {
+            if (m.productInfo && (isMatchingProductId(m.productInfo.id, row.product_id) || m.productInfo.name)) {
+              prod = m.productInfo;
+              registerPublicListing(prod);
+              break;
+            }
+          }
+        }
+
+        // If localMatch has product info
+        if ((!prod || !prod.name) && localMatch?.product?.name) {
+          prod = localMatch.product;
+          registerPublicListing(prod);
+        }
+
         // Union messages by ID
         const msgMap = new Map();
         [...localMsgs, ...dbMsgs].forEach(m => {
@@ -477,11 +525,14 @@ export const fetchUserConversations = async (user) => {
         });
         const combinedMsgs = Array.from(msgMap.values()).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
+        // Real listing ID: prefer original prod.id if available over the DB UUID hash
+        const resolvedProdId = prod?.id || localMatch?.product?.id || row.product_id;
+
         const rawObj = {
           id: row.id,
           buyer_id: row.buyer_id,
           seller_id: row.seller_id,
-          product_id: row.product_id,
+          product_id: resolvedProdId,
           unread_count: row.unread_count || 0,
           contact: {
             id: counterpartId,
@@ -499,11 +550,11 @@ export const fetchUserConversations = async (user) => {
             listings: Array.isArray(profile.my_listings) ? profile.my_listings : []
           },
           product: {
-            id: row.product_id,
-            name: prod.name || localMatch?.product?.name || 'Listing Item',
-            price: Number(prod.price || localMatch?.product?.price || 0),
-            image: prod.image || localMatch?.product?.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400&q=80',
-            condition: prod.condition || localMatch?.product?.condition || 'Used'
+            id: resolvedProdId,
+            name: prod?.name || prod?.title || localMatch?.product?.name || 'Listing Item',
+            price: Number(prod?.price ?? localMatch?.product?.price ?? 0),
+            image: prod?.image || (Array.isArray(prod?.images) ? prod.images[0] : null) || localMatch?.product?.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400&q=80',
+            condition: prod?.condition || localMatch?.product?.condition || 'Used'
           },
           messages: combinedMsgs
         };
@@ -538,6 +589,17 @@ export const getOrCreateConversation = async ({ user, sellerId, productId, produ
   // Prevent user from chatting with themselves
   if (sellerId && String(sellerId).toLowerCase() === String(user.id).toLowerCase()) {
     return { isSelf: true };
+  }
+
+  // Pre-register product details into public listings so resolution succeeds across all tabs & accounts
+  if (productDetails && productId) {
+    try {
+      registerPublicListing({
+        id: productId,
+        ...productDetails,
+        sellerId: sellerId || productDetails.sellerId
+      });
+    } catch (e) {}
   }
 
   const validBuyerId = toValidUUID(user.id);
@@ -668,6 +730,16 @@ export const sendMessage = async ({
     },
     product: productInfo || { name: 'Marketplace Item' }
   });
+
+  // Pre-register product info into public cache
+  if (productInfo && productInfo.id) {
+    try {
+      registerPublicListing({
+        ...productInfo,
+        sellerId: recipientId
+      });
+    } catch (e) {}
+  }
 
   // Pre-flight check / insert parent conversation in Supabase
   try {

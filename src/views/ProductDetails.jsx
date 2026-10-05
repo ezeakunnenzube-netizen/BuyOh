@@ -15,9 +15,21 @@ import { products } from '../data/productData';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { supabase } from '../lib/supabaseClient';
-import { getSavedItemsForUser, saveItemsForUser, getAllPublicListings, getGeneralProductPool, getMyListingsForUser, saveMyListingsForUser, getUserProfileData } from '../utils/userSync';
+import { 
+  getSavedItemsForUser, 
+  saveItemsForUser, 
+  getAllPublicListings, 
+  getGeneralProductPool, 
+  getMyListingsForUser, 
+  saveMyListingsForUser, 
+  getUserProfileData,
+  registerPublicListing,
+  syncAllPublicListingsFromCloud,
+  isMatchingProductId,
+  toValidUUID
+} from '../utils/userSync';
 import { isConditionApplicable, shouldShowConditionBadge, formatMemberSince } from '../utils/productUtils';
-import { getOrCreateConversation, sendMessage as sendCloudMessage } from '../services/chatService';
+import { getOrCreateConversation, sendMessage as sendCloudMessage, getCachedConversations } from '../services/chatService';
 import './ProductDetails.css';
 
 export default function ProductDetails({ params: serverParams }) {
@@ -37,7 +49,7 @@ export default function ProductDetails({ params: serverParams }) {
     if (!productId) return null;
     try {
       const pool = getGeneralProductPool(null);
-      const found = pool.find(p => String(p.id) === String(productId));
+      const found = pool.find(p => isMatchingProductId(p.id, productId));
       if (found) {
         const defaultPlaceholder = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
         let img = found.image;
@@ -87,139 +99,319 @@ export default function ProductDetails({ params: serverParams }) {
     if (product.sellerEmail && product.sellerEmail === user.email) return true;
     try {
       const myListings = getMyListingsForUser(user);
-      return myListings.some(item => String(item.id) === String(product.id));
+      return myListings.some(item => isMatchingProductId(item.id, product.id));
     } catch (e) {
       return false;
     }
   }, [user, product]);
 
-  // Find product details
+  // Sanitize specs and ensure consistent images
+  const sanitizeProductData = (item) => {
+    if (!item) return null;
+    const defaultPlaceholder = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
+    let img = item.image;
+    if (!img || img.startsWith('blob:')) img = defaultPlaceholder;
+    let imgs = Array.isArray(item.images) 
+      ? item.images.map(u => (!u || u.startsWith('blob:')) ? defaultPlaceholder : u) 
+      : [img];
+
+    let cleanSpecs = item.specs && typeof item.specs === 'object' ? { ...item.specs } : {};
+    const cat = item.category || '';
+    if (cat !== 'Vehicles') {
+      delete cleanSpecs.transmission;
+      delete cleanSpecs.mileage;
+      delete cleanSpecs.year;
+      delete cleanSpecs.fuelType;
+    }
+    if (cat !== 'Property') {
+      delete cleanSpecs.bedrooms;
+      delete cleanSpecs.bathrooms;
+      delete cleanSpecs.propertyType;
+      delete cleanSpecs.furnishing;
+    }
+    if (cat !== 'Fashion') {
+      delete cleanSpecs.gender;
+      delete cleanSpecs.size;
+      delete cleanSpecs.material;
+    }
+    if (cat !== 'Gaming') {
+      delete cleanSpecs.console;
+    }
+
+    return {
+      ...item,
+      image: img,
+      images: imgs,
+      specs: cleanSpecs
+    };
+  };
+
+  // Find product details with robust 5-tier async cloud & chat fallback
   useEffect(() => {
-    let found = null;
-    try {
-      const pool = getGeneralProductPool(user);
-      found = pool.find(p => String(p.id) === String(productId));
-    } catch (e) {
-      console.error("Error looking up product from general pool:", e);
+    if (!productId) {
+      setIsSearching(false);
+      return;
     }
 
-    if (found) {
-      const defaultPlaceholder = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80";
-      if (!found.image || found.image.startsWith('blob:')) {
-        found.image = defaultPlaceholder;
-      }
-      if (Array.isArray(found.images)) {
-        found.images = found.images.map(u => (!u || u.startsWith('blob:')) ? defaultPlaceholder : u);
-      } else {
-        found.images = [found.image];
-      }
+    let isMounted = true;
 
-      // Sanitize product.specs to scrub spurious historical keys
-      if (found.specs && typeof found.specs === 'object') {
-        const cat = found.category || '';
-        const cleanSpecs = { ...found.specs };
-
-        if (cat !== 'Vehicles') {
-          delete cleanSpecs.transmission;
-          delete cleanSpecs.mileage;
-          delete cleanSpecs.year;
-          delete cleanSpecs.fuelType;
+    const findProduct = async () => {
+      // Tier 1: Local general pool (instant cache)
+      try {
+        const pool = getGeneralProductPool(user);
+        const found = pool.find(p => isMatchingProductId(p.id, productId));
+        if (found) {
+          if (isMounted) {
+            setProduct(sanitizeProductData(found));
+            setIsSearching(false);
+          }
+          return;
         }
-        if (cat !== 'Property') {
-          delete cleanSpecs.bedrooms;
-          delete cleanSpecs.bathrooms;
-          delete cleanSpecs.propertyType;
-          delete cleanSpecs.furnishing;
-        }
-        if (cat !== 'Fashion') {
-          delete cleanSpecs.gender;
-          delete cleanSpecs.size;
-          delete cleanSpecs.material;
-        }
-        if (cat !== 'Gaming') {
-          delete cleanSpecs.console;
-        }
-        found = { ...found, specs: cleanSpecs };
+      } catch (e) {
+        console.warn('[ProductDetails] Tier 1 local pool error:', e);
       }
 
-      setProduct(found);
-      setIsSearching(false);
+      // If not found in memory pool, keep skeleton spinner active while querying cloud/chats
+      if (isMounted) setIsSearching(true);
 
-      // If product has a sellerId, fetch their latest WhatsApp number and profile from Supabase
-      if (found.sellerId) {
-        (async () => {
-          try {
-            const { data: sProfile, error } = await supabase
-              .from('profiles')
-              .select('full_name, name, phone, whatsapp, avatar_url, created_at, verified')
-              .eq('id', found.sellerId)
-              .maybeSingle();
-
-            if (sProfile && !error) {
-              setProduct(prev => {
-                if (!prev || String(prev.id) !== String(found.id)) return prev;
-                return {
-                  ...prev,
-                  sellerName: sProfile.full_name || sProfile.name || prev.sellerName,
-                  sellerWhatsApp: sProfile.whatsapp || sProfile.phone || prev.sellerWhatsApp,
-                  sellerPhone: sProfile.phone || sProfile.whatsapp || prev.sellerPhone,
-                  sellerAvatar: sProfile.avatar_url || prev.sellerAvatar,
-                  sellerVerified: sProfile.verified ?? prev.sellerVerified,
-                  sellerCreatedAt: sProfile.created_at || prev.sellerCreatedAt,
-                  sellerJoined: formatMemberSince(prev.sellerJoined, sProfile.created_at)
-                };
-              });
+      // Tier 2: Check cached conversations (chats about this product)
+      try {
+        const cachedConvs = getCachedConversations(user?.id);
+        for (const conv of cachedConvs) {
+          if (conv.product && isMatchingProductId(conv.product.id || conv.product_id, productId)) {
+            const enriched = sanitizeProductData({
+              ...conv.product,
+              sellerId: conv.seller_id || conv.contact?.id,
+              sellerName: conv.contact?.name,
+              sellerPhone: conv.contact?.phone,
+              sellerWhatsApp: conv.contact?.whatsapp,
+              sellerAvatar: conv.contact?.avatar,
+              sellerLocation: conv.contact?.location
+            });
+            registerPublicListing(enriched);
+            if (isMounted) {
+              setProduct(enriched);
+              setIsSearching(false);
             }
-          } catch (e) {}
-        })();
-      }
-
-      // Track real page views
-      const viewsKey = `buyoh_views_prod_${found.id}`;
-      let currentViews = 1;
-      try {
-        const savedViews = localStorage.getItem(viewsKey);
-        if (savedViews) {
-          currentViews = parseInt(savedViews, 10) + 1;
+            return;
+          }
+          if (Array.isArray(conv.contact?.listings)) {
+            const match = conv.contact.listings.find(item => isMatchingProductId(item.id, productId));
+            if (match) {
+              const enriched = sanitizeProductData({
+                ...match,
+                sellerId: conv.contact?.id || conv.seller_id,
+                sellerName: conv.contact?.name,
+                sellerPhone: conv.contact?.phone,
+                sellerWhatsApp: conv.contact?.whatsapp,
+                sellerAvatar: conv.contact?.avatar,
+                sellerLocation: conv.contact?.location
+              });
+              registerPublicListing(enriched);
+              if (isMounted) {
+                setProduct(enriched);
+                setIsSearching(false);
+              }
+              return;
+            }
+          }
         }
       } catch (e) {
-        currentViews = 1;
+        console.warn('[ProductDetails] Tier 2 cached chat search error:', e);
       }
-      localStorage.setItem(viewsKey, currentViews.toString());
-      setViewsCount(currentViews);
 
-      // Track real likes/saves
-      const likesKey = `buyoh_likes_count_${found.id}`;
-      const baseLikes = found.likes !== undefined ? Number(found.likes) : 5;
-      let currentLikes = baseLikes;
+      // Tier 3: Fetch all public listings fresh from Supabase profiles
       try {
-        const savedLikes = localStorage.getItem(likesKey);
-        if (savedLikes !== null) {
-          currentLikes = parseInt(savedLikes, 10);
+        const cloudListings = await syncAllPublicListingsFromCloud();
+        const cloudFound = cloudListings.find(p => isMatchingProductId(p.id, productId));
+        if (cloudFound) {
+          const enriched = sanitizeProductData(cloudFound);
+          registerPublicListing(enriched);
+          if (isMounted) {
+            setProduct(enriched);
+            setIsSearching(false);
+          }
+          return;
         }
       } catch (e) {
-        currentLikes = baseLikes;
+        console.warn('[ProductDetails] Tier 3 syncAllPublicListings error:', e);
       }
-      setLikesCount(isNaN(currentLikes) ? baseLikes : currentLikes);
 
-      // Real time elapsed
-      if (found.createdAt) {
-        const diffMs = Date.now() - new Date(found.createdAt).getTime();
-        const diffMins = Math.floor(diffMs / (1000 * 60));
-        const diffHours = Math.floor(diffMins / 60);
-        const diffDays = Math.floor(diffHours / 24);
+      // Tier 4: Direct query to Supabase profiles to locate the seller's my_listings
+      try {
+        const { data: profiles, error } = await supabase
+          .from('profiles')
+          .select('id, full_name, name, phone, whatsapp, location, avatar_url, created_at, verified, my_listings')
+          .not('my_listings', 'is', null);
 
-        if (diffMins < 1) setPostedAgo('Just now');
-        else if (diffMins < 60) setPostedAgo(`${diffMins} min ago`);
-        else if (diffHours < 24) setPostedAgo(`${diffHours} hour${diffHours > 1 ? 's' : ''} ago`);
-        else setPostedAgo(`${diffDays} day${diffDays > 1 ? 's' : ''} ago`);
-      } else {
-        setPostedAgo('Recently listed');
+        if (!error && Array.isArray(profiles)) {
+          for (const prof of profiles) {
+            if (Array.isArray(prof.my_listings)) {
+              const matchedListing = prof.my_listings.find(item => isMatchingProductId(item.id, productId));
+              if (matchedListing) {
+                const enriched = sanitizeProductData({
+                  ...matchedListing,
+                  sellerId: matchedListing.sellerId || prof.id,
+                  sellerName: matchedListing.sellerName || prof.full_name || prof.name || 'Seller',
+                  sellerPhone: matchedListing.sellerPhone || prof.phone || prof.whatsapp || '',
+                  sellerWhatsApp: matchedListing.sellerWhatsApp || prof.whatsapp || prof.phone || '',
+                  sellerAvatar: matchedListing.sellerAvatar || prof.avatar_url || '',
+                  sellerLocation: matchedListing.sellerLocation || prof.location || matchedListing.location || '',
+                  sellerCreatedAt: matchedListing.sellerCreatedAt || prof.created_at || null,
+                  sellerVerified: prof.verified ?? matchedListing.sellerVerified
+                });
+                registerPublicListing(enriched);
+                if (isMounted) {
+                  setProduct(enriched);
+                  setIsSearching(false);
+                }
+                return;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[ProductDetails] Tier 4 direct profiles search error:', e);
       }
-    } else {
-      setIsSearching(false);
-    }
+
+      // Tier 5: Direct query to Supabase conversations table for this product_id
+      try {
+        const targetUUID = toValidUUID(productId);
+        const { data: convRows } = await supabase
+          .from('conversations')
+          .select('seller_id, buyer_id, product_id')
+          .or(`product_id.eq.${targetUUID}`)
+          .limit(5);
+
+        if (convRows && convRows.length > 0) {
+          const sellerIds = [...new Set(convRows.map(c => c.seller_id).filter(Boolean))];
+          if (sellerIds.length > 0) {
+            const { data: sellerProfiles } = await supabase
+              .from('profiles')
+              .select('id, full_name, name, phone, whatsapp, location, avatar_url, created_at, verified, my_listings')
+              .in('id', sellerIds);
+
+            if (sellerProfiles) {
+              for (const prof of sellerProfiles) {
+                if (Array.isArray(prof.my_listings)) {
+                  const match = prof.my_listings.find(item => isMatchingProductId(item.id, productId));
+                  if (match) {
+                    const enriched = sanitizeProductData({
+                      ...match,
+                      sellerId: prof.id,
+                      sellerName: prof.full_name || prof.name || 'Seller',
+                      sellerPhone: prof.phone || prof.whatsapp || '',
+                      sellerWhatsApp: prof.whatsapp || prof.phone || '',
+                      sellerAvatar: prof.avatar_url || '',
+                      sellerLocation: prof.location || match.location || '',
+                      sellerCreatedAt: prof.created_at || null,
+                      sellerVerified: prof.verified ?? match.sellerVerified
+                    });
+                    registerPublicListing(enriched);
+                    if (isMounted) {
+                      setProduct(enriched);
+                      setIsSearching(false);
+                    }
+                    return;
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[ProductDetails] Tier 5 conversations query error:', e);
+      }
+
+      // If all tiers have completed without finding the product
+      if (isMounted) {
+        setIsSearching(false);
+      }
+    };
+
+    findProduct();
+
+    return () => {
+      isMounted = false;
+    };
   }, [productId, user]);
+
+  // Track page views, likes, elapsed time and fetch latest seller details from Supabase
+  useEffect(() => {
+    if (!product || !product.id) return;
+
+    // 1. Fetch latest seller profile details from Supabase if sellerId exists
+    if (product.sellerId) {
+      (async () => {
+        try {
+          const { data: sProfile, error } = await supabase
+            .from('profiles')
+            .select('full_name, name, phone, whatsapp, avatar_url, created_at, verified')
+            .eq('id', product.sellerId)
+            .maybeSingle();
+
+          if (sProfile && !error) {
+            setProduct(prev => {
+              if (!prev || !isMatchingProductId(prev.id, product.id)) return prev;
+              return {
+                ...prev,
+                sellerName: sProfile.full_name || sProfile.name || prev.sellerName,
+                sellerWhatsApp: sProfile.whatsapp || sProfile.phone || prev.sellerWhatsApp,
+                sellerPhone: sProfile.phone || sProfile.whatsapp || prev.sellerPhone,
+                sellerAvatar: sProfile.avatar_url || prev.sellerAvatar,
+                sellerVerified: sProfile.verified ?? prev.sellerVerified,
+                sellerCreatedAt: sProfile.created_at || prev.sellerCreatedAt,
+                sellerJoined: formatMemberSince(prev.sellerJoined, sProfile.created_at)
+              };
+            });
+          }
+        } catch (e) {}
+      })();
+    }
+
+    // 2. Track real page views
+    const viewsKey = `buyoh_views_prod_${product.id}`;
+    let currentViews = 1;
+    try {
+      const savedViews = localStorage.getItem(viewsKey);
+      if (savedViews) {
+        currentViews = parseInt(savedViews, 10) + 1;
+      }
+    } catch (e) {
+      currentViews = 1;
+    }
+    localStorage.setItem(viewsKey, currentViews.toString());
+    setViewsCount(currentViews);
+
+    // 3. Track real likes/saves
+    const likesKey = `buyoh_likes_count_${product.id}`;
+    const baseLikes = product.likes !== undefined ? Number(product.likes) : 5;
+    let currentLikes = baseLikes;
+    try {
+      const savedLikes = localStorage.getItem(likesKey);
+      if (savedLikes !== null) {
+        currentLikes = parseInt(savedLikes, 10);
+      }
+    } catch (e) {
+      currentLikes = baseLikes;
+    }
+    setLikesCount(isNaN(currentLikes) ? baseLikes : currentLikes);
+
+    // 4. Real time elapsed
+    if (product.createdAt) {
+      const diffMs = Date.now() - new Date(product.createdAt).getTime();
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      const diffHours = Math.floor(diffMins / 60);
+      const diffDays = Math.floor(diffHours / 24);
+
+      if (diffMins < 1) setPostedAgo('Just now');
+      else if (diffMins < 60) setPostedAgo(`${diffMins} min ago`);
+      else if (diffHours < 24) setPostedAgo(`${diffHours} hour${diffHours > 1 ? 's' : ''} ago`);
+      else setPostedAgo(`${diffDays} day${diffDays > 1 ? 's' : ''} ago`);
+    } else {
+      setPostedAgo('Recently listed');
+    }
+  }, [product?.id, product?.sellerId]);
 
   // Load saved item status and sync likes count listener
   useEffect(() => {
@@ -228,7 +420,7 @@ export default function ProductDetails({ params: serverParams }) {
         const saved = getSavedItemsForUser(user);
         const isItemSaved = saved.some(item => {
           const itemId = typeof item === 'object' ? item.id : item;
-          return String(itemId) === String(product.id);
+          return isMatchingProductId(itemId, product.id);
         });
         setIsSaved(isItemSaved);
 

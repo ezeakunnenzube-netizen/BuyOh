@@ -17,7 +17,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { supabase } from '../lib/supabaseClient';
-import { getFollowedSellersForUser, saveFollowedSellersForUser, getNotificationsForUser, saveNotificationsForUser, getUserProfileData, getMyListingsForUser } from '../utils/userSync';
+import { getFollowedSellersForUser, saveFollowedSellersForUser, getNotificationsForUser, saveNotificationsForUser, getUserProfileData, getMyListingsForUser, registerPublicListing, isMatchingProductId } from '../utils/userSync';
 import { formatMemberSince, formatAdPostedTime } from '../utils/productUtils';
 import { 
   fetchUserConversations, 
@@ -1943,7 +1943,39 @@ export default function Messages() {
                   className={`product-context-strip ${activeChat.product.id ? 'clickable-product-strip' : ''}`}
                   onClick={() => {
                     if (activeChat.product.id) {
-                      navigate(`/product/${activeChat.product.id}`);
+                      let targetId = activeChat.product.id;
+                      if (Array.isArray(activeChat.contact?.listings)) {
+                        const matchedAd = activeChat.contact.listings.find(ad => isMatchingProductId(ad.id, activeChat.product.id));
+                        if (matchedAd && matchedAd.id) {
+                          targetId = matchedAd.id;
+                          registerPublicListing({
+                            ...matchedAd,
+                            sellerId: activeChat.seller_id || activeChat.contact?.id,
+                            sellerName: activeChat.contact?.name,
+                            sellerPhone: activeChat.contact?.phone,
+                            sellerWhatsApp: activeChat.contact?.whatsapp,
+                            sellerAvatar: activeChat.contact?.avatar,
+                            sellerLocation: activeChat.contact?.location
+                          });
+                        }
+                      }
+
+                      if (activeChat.product.name) {
+                        try {
+                          registerPublicListing({
+                            ...activeChat.product,
+                            id: targetId,
+                            sellerId: activeChat.seller_id || activeChat.contact?.id,
+                            sellerName: activeChat.contact?.name,
+                            sellerPhone: activeChat.contact?.phone,
+                            sellerWhatsApp: activeChat.contact?.whatsapp,
+                            sellerAvatar: activeChat.contact?.avatar,
+                            sellerLocation: activeChat.contact?.location
+                          });
+                        } catch (e) {}
+                      }
+
+                      navigate(`/product/${targetId}`);
                     }
                   }}
                   role={activeChat.product.id ? "button" : undefined}
@@ -2900,6 +2932,17 @@ export default function Messages() {
                           className="jiji-ad-card"
                           onClick={() => {
                             if (ad.id) {
+                              try {
+                                registerPublicListing({
+                                  ...ad,
+                                  sellerId: activeChat.seller_id || activeChat.contact?.id,
+                                  sellerName: activeChat.contact?.name,
+                                  sellerPhone: activeChat.contact?.phone,
+                                  sellerWhatsApp: activeChat.contact?.whatsapp,
+                                  sellerAvatar: activeChat.contact?.avatar,
+                                  sellerLocation: activeChat.contact?.location
+                                });
+                              } catch (e) {}
                               setShowProfileModal(false);
                               router.push(`/product/${ad.id}?fromProfile=1&chatId=${activeChat.id}&sellerName=${encodeURIComponent(activeChat.contact?.name || '')}`);
                             }
