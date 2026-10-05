@@ -93,7 +93,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialError }) 
         {/* Top Header */}
         <div className="auth-modal-header">
           <div className="auth-brand">
-            <span className="logo-infi">Infi</span><span className="logo-buy">Buy</span>
+            <span className="logo-buy">Buy</span><span className="logo-oh">Oh</span>
           </div>
           <button className="auth-close-btn" onClick={onClose} title="Close">
             <X size={20} />

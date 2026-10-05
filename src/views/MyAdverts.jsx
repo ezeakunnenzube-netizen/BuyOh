@@ -196,6 +196,15 @@ export default function MyAdverts() {
       <div className="adverts-container">
         {/* Mobile Navigation Header Bar */}
         <div className="adverts-mobile-header">
+          <button 
+            type="button" 
+            onClick={() => navigate(-1)} 
+            className="adverts-back-btn"
+            title="Go back"
+            aria-label="Go back"
+          >
+            <ArrowLeft size={24} strokeWidth={2.5} />
+          </button>
           <h2 className="adverts-mobile-title">My Adverts</h2>
         </div>
 
@@ -217,11 +226,6 @@ export default function MyAdverts() {
                 <span className="adverts-count-chip">
                   {myAdverts.length} {myAdverts.length === 1 ? 'listing' : 'listings'}
                 </span>
-                {Boolean(user?.email_confirmed_at || user?.user_metadata?.verified) && (
-                  <span className="adverts-verified-badge">
-                    <ShieldCheck size={13} /> Verified Seller
-                  </span>
-                )}
               </div>
 
               <p className="adverts-hero-desc">

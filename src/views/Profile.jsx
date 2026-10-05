@@ -404,7 +404,7 @@ export default function Profile() {
               title="Go back"
               aria-label="Go back"
             >
-              <ArrowLeft size={20} />
+              <ArrowLeft size={22} strokeWidth={2.5} />
             </button>
             <h2 className="profile-page-title">My Account</h2>
           </div>
@@ -464,32 +464,32 @@ export default function Profile() {
           </div>
 
           {/* My Posted Adverts Shortcut Card */}
-          <div className="profile-shortcut-card shortcut-blue" onClick={() => navigate('/adverts')}>
-            <div className="shortcut-icon-col shortcut-icon-blue">
+          <div className="profile-shortcut-card" onClick={() => navigate('/adverts')}>
+            <div className="shortcut-icon-col">
               <PanelTop size={20} />
             </div>
             <div className="shortcut-text-col">
               <h4 className="shortcut-title">My Posted Adverts</h4>
               <p className="shortcut-sub">Manage your active marketplace listings, view stats, and delete ads</p>
             </div>
-            <span className="shortcut-count-badge badge-blue">{myListingsCount} Active</span>
+            <span className="shortcut-count-badge">{myListingsCount} Active</span>
           </div>
 
           {/* Saved Collection Shortcut Card */}
-          <div className="profile-shortcut-card shortcut-amber" onClick={() => navigate('/saved')}>
-            <div className="shortcut-icon-col shortcut-icon-amber">
+          <div className="profile-shortcut-card" onClick={() => navigate('/saved')}>
+            <div className="shortcut-icon-col">
               <Bookmark size={20} />
             </div>
             <div className="shortcut-text-col">
               <h4 className="shortcut-title">Saved Collection</h4>
               <p className="shortcut-sub">View your bookmarked marketplace listings and track price drops</p>
             </div>
-            <span className="shortcut-count-badge badge-amber">{savedCount} Saved</span>
+            <span className="shortcut-count-badge">{savedCount} Saved</span>
           </div>
 
           {/* Notifications Center Shortcut Card */}
-          <div className="profile-shortcut-card shortcut-purple" onClick={() => navigate('/notifications')}>
-            <div className="shortcut-icon-col shortcut-icon-purple" style={{ position: 'relative' }}>
+          <div className="profile-shortcut-card" onClick={() => navigate('/notifications')}>
+            <div className="shortcut-icon-col" style={{ position: 'relative' }}>
               <BellRing size={20} />
               {unreadNotifCount > 0 && <span className="shortcut-notif-dot" />}
             </div>
@@ -497,7 +497,7 @@ export default function Profile() {
               <h4 className="shortcut-title">Notification Centre</h4>
               <p className="shortcut-sub">View recent alerts, offers, price drops, and system messages</p>
             </div>
-            <span className="shortcut-count-badge badge-purple">{unreadNotifCount} New</span>
+            <span className="shortcut-count-badge">{unreadNotifCount} New</span>
           </div>
 
           {/* Settings Section split columns */}
