@@ -284,16 +284,6 @@ export default function MyAdverts() {
                 <span className="metric-tile-value">{formatPrice(avgPrice)}</span>
               </div>
             </div>
-
-            <div className="adverts-metric-tile">
-              <div className="metric-icon-wrap metric-icon-purple">
-                <ShieldCheck size={18} />
-              </div>
-              <div className="metric-details">
-                <span className="metric-tile-label">Seller Account</span>
-                <span className="metric-tile-value metric-highlight">Good Standing</span>
-              </div>
-            </div>
           </div>
 
           {/* Solid Filter & Search Toolbar */}

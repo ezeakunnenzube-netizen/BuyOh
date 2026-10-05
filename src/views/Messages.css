@@ -1508,28 +1508,48 @@ body {
     min-height: 0;
     height: 100%;
     max-height: 100%;
-    padding: 0;
-    margin: 0;
-    gap: 0;
-    max-width: 100%;
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
     overflow: hidden;
-    box-sizing: border-box;
+    box-sizing: border-box !important;
   }
 
   .chat-sidebar {
-    width: 100%;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
     height: 100%;
     border-radius: 0;
+    border-right: none !important;
+    padding-right: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .conversations-list {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding-right: 8px !important;
+    padding-bottom: calc(70px + env(safe-area-inset-bottom, 14px)) !important;
   }
 
   .chat-main-area {
-    width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
     height: 100%;
     display: flex;
     flex-direction: column;
     border-radius: 0;
     min-height: 0;
     overflow: hidden;
+    padding-right: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
   }
 
   .chat-main-area:not(.mobile-hidden) {
@@ -1538,7 +1558,8 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
     height: 100dvh;
     height: 100%;
     min-height: 0;
@@ -1548,8 +1569,10 @@ body {
     flex-direction: column;
     background: #ffffff;
     border-radius: 0;
-    box-sizing: border-box;
+    box-sizing: border-box !important;
     overflow: hidden;
+    padding-right: 0 !important;
+    margin-right: 0 !important;
   }
 
   .chat-main-header {
@@ -1591,9 +1614,34 @@ body {
   .chat-messages-thread {
     flex: 1 1 0px;
     min-height: 0;
-    padding: 0.75rem 0.85rem;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0.75rem 0.85rem !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
     overflow-y: auto;
     overscroll-behavior: contain;
+  }
+
+  .message-bubble-row {
+    max-width: 86% !important;
+    box-sizing: border-box !important;
+  }
+
+  .msg-bubble-wrapper {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .msg-hover-actions {
+    display: none !important;
+  }
+
+  .no-active-chat-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1.5rem 1rem !important;
+    box-sizing: border-box !important;
   }
 
   .quick-reply-bar {
