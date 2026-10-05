@@ -6,7 +6,7 @@ import DesktopNavbar from '../components/DesktopNavbar';
 import { useRouter } from 'next/navigation';
 import {
   Bookmark, MapPin, Tag, ArrowLeft, Eye, Trash2,
-  Search, X, ShoppingBag, TrendingUp, SlidersHorizontal
+  Search, X, ShoppingBag, SlidersHorizontal
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
@@ -92,10 +92,6 @@ export default function SavedAdverts() {
     return savedItems.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
   }, [savedItems]);
 
-  const avgPrice = useMemo(() => {
-    if (savedItems.length === 0) return 0;
-    return Math.round(totalValue / savedItems.length);
-  }, [savedItems, totalValue]);
 
   const categories = useMemo(() => {
     const set = new Set();
@@ -232,15 +228,6 @@ export default function SavedAdverts() {
               </div>
             </div>
 
-            <div className="saved-metric-tile">
-              <div className="metric-icon-wrap metric-icon-green">
-                <TrendingUp size={18} />
-              </div>
-              <div className="metric-details">
-                <span className="metric-tile-label">Average Price</span>
-                <span className="metric-tile-value">{formatPrice(avgPrice)}</span>
-              </div>
-            </div>
           </div>
 
           {/* Integrated Search & Filter Controls */}

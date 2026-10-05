@@ -109,16 +109,25 @@ export default function MyAdverts() {
     }
   };
 
-  const formatPrice = (val) => {
-    return new Intl.NumberFormat('en-NG', {
+  // Respects each ad's stored currency (GHS for Ghana, NGN for Nigeria)
+  const formatPrice = (val, currency) => {
+    const cur = currency === 'GHS' ? 'GHS' : 'NGN';
+    const locale = cur === 'GHS' ? 'en-GH' : 'en-NG';
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: 'NGN',
+      currency: cur,
       maximumFractionDigits: 0
     }).format(val || 0);
   };
 
   const totalValue = useMemo(() => {
     return myAdverts.reduce((acc, ad) => acc + (Number(ad.price) || 0), 0);
+  }, [myAdverts]);
+
+  // Detect the dominant currency for aggregate metrics
+  const dominantCurrency = useMemo(() => {
+    const ghsCount = myAdverts.filter(ad => ad.currency === 'GHS').length;
+    return ghsCount > myAdverts.length / 2 ? 'GHS' : 'NGN';
   }, [myAdverts]);
 
   const avgPrice = useMemo(() => {
@@ -271,7 +280,7 @@ export default function MyAdverts() {
               </div>
               <div className="metric-details">
                 <span className="metric-tile-label">Inventory Value</span>
-                <span className="metric-tile-value metric-accent">{formatPrice(totalValue)}</span>
+                <span className="metric-tile-value metric-accent">{formatPrice(totalValue, dominantCurrency)}</span>
               </div>
             </div>
 
@@ -281,7 +290,7 @@ export default function MyAdverts() {
               </div>
               <div className="metric-details">
                 <span className="metric-tile-label">Avg. Asking Price</span>
-                <span className="metric-tile-value">{formatPrice(avgPrice)}</span>
+                <span className="metric-tile-value">{formatPrice(avgPrice, dominantCurrency)}</span>
               </div>
             </div>
           </div>
@@ -392,7 +401,7 @@ export default function MyAdverts() {
 
                 <div className="advert-body">
                   <h3 className="advert-name" title={ad.name}>{ad.name}</h3>
-                  <p className="advert-price">{formatPrice(ad.price)}</p>
+                  <p className="advert-price">{formatPrice(ad.price, ad.currency)}</p>
                   
                   <div className="advert-meta-tags">
                     <span className="meta-tag"><MapPin size={12} /> {ad.location || 'Lagos'}</span>

@@ -441,9 +441,6 @@ export default function Profile() {
             <div className="profile-identity-info">
               <div className="profile-title-badges">
                 <h3 className="profile-name-title">{userData.name || 'Marketplace User'}</h3>
-                {Boolean(user?.email_confirmed_at || user?.user_metadata?.verified || userData?.verified) && (
-                  <span className="profile-badge-tag"><ShieldCheck size={13} /> Verified User</span>
-                )}
                 <span className="profile-badge-tag"><User size={13} /> {formatMemberSince(null, userData.createdAt || user?.created_at)}</span>
               </div>
               <p className="profile-email-sub">{userData.email || user?.email}</p>
@@ -467,52 +464,40 @@ export default function Profile() {
           </div>
 
           {/* My Posted Adverts Shortcut Card */}
-          <div className="profile-notifications-shortcut" style={{ marginTop: '1rem', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', borderColor: 'rgba(59, 130, 246, 0.3)', cursor: 'pointer' }} onClick={() => navigate('/adverts')}>
-            <div className="p-notif-left">
-              <div className="p-notif-icon-wrap" style={{ background: 'rgba(59, 130, 246, 0.2)', borderColor: 'rgba(59, 130, 246, 0.4)' }}>
-                <PanelTop size={20} color="#60a5fa" />
-              </div>
-              <div className="p-notif-text">
-                <h4 className="p-notif-title" style={{ color: '#ffffff' }}>My Posted Adverts</h4>
-                <p className="p-notif-sub" style={{ color: '#cbd5e1' }}>Manage your active marketplace listings, view stats, and delete ads</p>
-              </div>
+          <div className="profile-shortcut-card shortcut-blue" onClick={() => navigate('/adverts')}>
+            <div className="shortcut-icon-col shortcut-icon-blue">
+              <PanelTop size={20} />
             </div>
-            <div className="p-notif-right">
-              <span className="p-notif-badge" style={{ background: '#2563eb', color: '#ffffff' }}>{myListingsCount} Active</span>
+            <div className="shortcut-text-col">
+              <h4 className="shortcut-title">My Posted Adverts</h4>
+              <p className="shortcut-sub">Manage your active marketplace listings, view stats, and delete ads</p>
             </div>
+            <span className="shortcut-count-badge badge-blue">{myListingsCount} Active</span>
           </div>
 
           {/* Saved Collection Shortcut Card */}
-          <div className="profile-notifications-shortcut" style={{ marginTop: '1rem', background: 'linear-gradient(135deg, #1e1b4b 0%, #311b92 100%)', borderColor: 'rgba(245, 158, 11, 0.3)', cursor: 'pointer' }} onClick={() => navigate('/saved')}>
-            <div className="p-notif-left">
-              <div className="p-notif-icon-wrap" style={{ background: 'rgba(245, 158, 11, 0.2)', borderColor: 'rgba(245, 158, 11, 0.4)' }}>
-                <Bookmark size={20} color="#fbbf24" />
-              </div>
-              <div className="p-notif-text">
-                <h4 className="p-notif-title" style={{ color: '#ffffff' }}>Saved Collection</h4>
-                <p className="p-notif-sub" style={{ color: '#cbd5e1' }}>View your bookmarked marketplace listings and track price drops</p>
-              </div>
+          <div className="profile-shortcut-card shortcut-amber" onClick={() => navigate('/saved')}>
+            <div className="shortcut-icon-col shortcut-icon-amber">
+              <Bookmark size={20} />
             </div>
-            <div className="p-notif-right">
-              <span className="p-notif-badge" style={{ background: '#f59e0b', color: '#ffffff' }}>{savedCount} Saved</span>
+            <div className="shortcut-text-col">
+              <h4 className="shortcut-title">Saved Collection</h4>
+              <p className="shortcut-sub">View your bookmarked marketplace listings and track price drops</p>
             </div>
+            <span className="shortcut-count-badge badge-amber">{savedCount} Saved</span>
           </div>
 
-          {/* Notifications Shortcut Card — Locked for quick access */}
-          <div className="profile-notifications-shortcut" onClick={() => navigate('/notifications')}>
-            <div className="p-notif-left">
-              <div className="p-notif-icon-wrap">
-                <BellRing size={20} className="p-notif-bell" />
-                {unreadNotifCount > 0 && <span className="p-notif-dot" />}
-              </div>
-              <div className="p-notif-text">
-                <h4 className="p-notif-title">Notifications Center</h4>
-                <p className="p-notif-sub">View recent alerts, offers, price drops, and system messages</p>
-              </div>
+          {/* Notifications Center Shortcut Card */}
+          <div className="profile-shortcut-card shortcut-purple" onClick={() => navigate('/notifications')}>
+            <div className="shortcut-icon-col shortcut-icon-purple" style={{ position: 'relative' }}>
+              <BellRing size={20} />
+              {unreadNotifCount > 0 && <span className="shortcut-notif-dot" />}
             </div>
-            <div className="p-notif-right">
-              <span className="p-notif-badge">{unreadNotifCount} New</span>
+            <div className="shortcut-text-col">
+              <h4 className="shortcut-title">Notification Centre</h4>
+              <p className="shortcut-sub">View recent alerts, offers, price drops, and system messages</p>
             </div>
+            <span className="shortcut-count-badge badge-purple">{unreadNotifCount} New</span>
           </div>
 
           {/* Settings Section split columns */}

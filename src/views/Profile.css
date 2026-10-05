@@ -21,18 +21,17 @@
   box-sizing: border-box;
 }
 
-/* Glassmorphic settings container card */
+/* Solid white settings container card */
 .profile-card {
   width: 100%;
   max-width: 820px;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 24px;
-  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  backdrop-filter: blur(10px);
 }
 
 /* Gradient Cover banner */
@@ -223,109 +222,97 @@
   margin-top: 0.2rem;
 }
 
-/* Notifications Shortcut Card — Locked for quick access */
-.profile-notifications-shortcut {
-  margin: 1.5rem 2rem 0;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border-radius: 14px;
-  padding: 1rem 1.25rem;
+/* ─── Professional Shortcut Cards (white, left-accent border) ─── */
+.profile-shortcut-card {
+  margin: 0.75rem 2rem 0;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1rem 1.15rem;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 1rem;
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(22, 33, 62, 0.2);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid #e2e8f0;
+  border-left-width: 4px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  text-decoration: none;
 }
 
-.profile-notifications-shortcut:hover {
+.profile-shortcut-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(22, 33, 62, 0.35);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
 }
 
-.p-notif-left {
+/* Colour variants */
+.shortcut-blue  { border-left-color: #2563eb; }
+.shortcut-amber { border-left-color: #f59e0b; }
+.shortcut-purple{ border-left-color: #7c3aed; }
+
+/* Icon column */
+.shortcut-icon-col {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.shortcut-icon-blue   { background: #eff6ff; color: #2563eb; }
+.shortcut-icon-amber  { background: #fffbeb; color: #d97706; }
+.shortcut-icon-purple { background: #f5f3ff; color: #7c3aed; }
+
+/* Text column */
+.shortcut-text-col {
   flex: 1;
   min-width: 0;
 }
 
-.p-notif-icon-wrap {
-  position: relative;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(139, 92, 246, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  flex-shrink: 0;
-}
-
-.p-notif-bell {
-  color: #a78bfa;
-}
-
-.p-notif-dot {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #ef4444;
-  box-shadow: 0 0 8px #ef4444;
-}
-
-.p-notif-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.p-notif-title {
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: #ffffff;
+.shortcut-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0f172a;
   margin: 0 0 0.15rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.p-notif-sub {
+.shortcut-sub {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: #64748b;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.p-notif-right {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-shrink: 0;
-  margin-left: 0.75rem;
-}
-
-.p-notif-badge {
+/* Count badge */
+.shortcut-count-badge {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   white-space: nowrap;
-  word-break: keep-all;
-  background: linear-gradient(135deg, #ffa705, #e67600);
-  color: white;
-  font-size: 0.75rem;
-  font-weight: 800;
-  padding: 0.35rem 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
   border-radius: 99px;
-  box-shadow: 0 2px 8px rgba(230, 118, 0, 0.3);
-  line-height: 1;
+  flex-shrink: 0;
+}
+.badge-blue   { background: #dbeafe; color: #1d4ed8; }
+.badge-amber  { background: #fef3c7; color: #b45309; }
+.badge-purple { background: #ede9fe; color: #6d28d9; }
+
+/* Unread dot for notifications shortcut */
+.shortcut-notif-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: 2px solid #ffffff;
 }
 
 /* Multi-column app settings details */
@@ -699,9 +686,9 @@
 }
 
 .delete-account-action-btn {
-  background: transparent;
-  border: 1px solid #fca5a5;
-  color: #ef4444;
+  background: #dc2626;
+  border: none;
+  color: #ffffff;
   font-weight: 700;
   font-size: 0.88rem;
   padding: 0.65rem 1.25rem;
@@ -710,15 +697,11 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  transition: all 0.25s ease;
+  transition: background 0.2s ease;
 }
 
 .delete-account-action-btn:hover {
-  background: #fef2f2;
-  color: #dc2626;
-  border-color: #ef4444;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
+  background: #b91c1c;
 }
 
 .delete-card-icon {
