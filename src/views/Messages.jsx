@@ -10,7 +10,8 @@ import {
   ChevronRight, ExternalLink, ChevronUp, ChevronDown, X, User, Flag, Trash2,
   Smile, Paperclip, Mic, Square, Play, Pause, Volume2, FileText,
   BellOff, Bell, Video, UserPlus, UserMinus, Star, SlidersHorizontal,
-  Grid, List, MessageCircle, MapPin, CornerUpLeft, Copy, Download, Share2, Clock
+  Grid, List, MessageCircle, MapPin, CornerUpLeft, Copy, Download, Share2, Clock,
+  MoreHorizontal, Info, SquarePen
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
@@ -37,30 +38,26 @@ import './Messages.css';
 
 const ONE_DAY = 86400000;
 
-// Helper to format date display for the sidebar chat item card
+// Helper to format date display for the sidebar chat item card (Messenger format: 1y, 2w, 3d, 5h, 10m)
 const formatSidebarDate = (msg) => {
   if (!msg) return '';
   
   if (msg.timestamp) {
     const msgDate = new Date(msg.timestamp);
     const now = new Date();
-    const isToday = msgDate.toDateString() === now.toDateString();
-    
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const isYesterday = msgDate.toDateString() === yesterday.toDateString();
+    const diffMs = Math.max(0, now - msgDate);
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffYears = Math.floor(diffDays / 365);
 
-    if (isToday) {
-      return msg.time || msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-    if (isYesterday) {
-      return 'Yesterday';
-    }
-    const diffDays = Math.floor((now - msgDate) / ONE_DAY);
-    if (diffDays < 7) {
-      return msgDate.toLocaleDateString([], { weekday: 'short' });
-    }
-    return msgDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    if (diffYears >= 1) return `${diffYears}y`;
+    if (diffWeeks >= 1) return `${diffWeeks}w`;
+    if (diffDays >= 1) return `${diffDays}d`;
+    if (diffHours >= 1) return `${diffHours}h`;
+    if (diffMin >= 1) return `${diffMin}m`;
+    return '1m';
   }
 
   return msg.time || '';
@@ -105,24 +102,20 @@ const saveMutedChatIds = (userId, set) => {
   } catch {}
 };
 
-// Helper to format date divider headers inside message thread
+// Helper to format date divider headers inside message thread (e.g. 13/07/2024, 12:34)
 const formatDateDivider = (msg) => {
-  if (!msg) return 'Today';
+  if (!msg) return '';
   
   if (msg.timestamp) {
     const msgDate = new Date(msg.timestamp);
-    const now = new Date();
-    if (msgDate.toDateString() === now.toDateString()) return 'Today';
-
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (msgDate.toDateString() === yesterday.toDateString()) return 'Yesterday';
-
-    return msgDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+    const day = String(msgDate.getDate()).padStart(2, '0');
+    const month = String(msgDate.getMonth() + 1).padStart(2, '0');
+    const year = msgDate.getFullYear();
+    const timeStr = msg.time || msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    return `${day}/${month}/${year}, ${timeStr}`;
   }
 
-  if (msg.time === 'Yesterday' || msg.dateLabel === 'Yesterday') return 'Yesterday';
-  if (msg.time?.includes('ago')) return msg.time;
+  if (msg.time) return msg.time;
   return 'Today';
 };
 
@@ -1751,10 +1744,28 @@ export default function Messages() {
         <div className={`chat-sidebar ${isMobileDetailOpen ? 'mobile-hidden' : ''}`}>
           <div className="chat-sidebar-header">
             <div className="sidebar-title-row">
-              <h2 className="sidebar-title">Messages</h2>
-              <span className="unread-total-badge">
-                {conversations.reduce((acc, c) => acc + c.unreadCount, 0)} New
-              </span>
+              <h2 className="sidebar-title">Chats</h2>
+              <div className="sidebar-header-actions">
+                <button
+                  type="button"
+                  className="sidebar-round-btn"
+                  title="More chat options"
+                  onClick={() => setFilterTab(prev => prev === 'unread' ? 'all' : 'unread')}
+                >
+                  <MoreHorizontal size={20} />
+                </button>
+                <button
+                  type="button"
+                  className="sidebar-round-btn"
+                  title="Search / New message"
+                  onClick={() => {
+                    const searchInput = document.querySelector('.chat-search-input');
+                    if (searchInput) searchInput.focus();
+                  }}
+                >
+                  <SquarePen size={18} />
+                </button>
+              </div>
             </div>
 
             {/* Search conversations */}
@@ -1762,7 +1773,7 @@ export default function Messages() {
               <Search className="chat-search-icon" size={16} />
               <input
                 type="text"
-                placeholder="Search chats or items..."
+                placeholder="Search Messenger"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="chat-search-input"
@@ -1795,6 +1806,13 @@ export default function Messages() {
               >
                 Buyers
               </button>
+              <button
+                className="filter-tab filter-tab-dots"
+                onClick={() => setFilterTab(prev => prev === 'unread' ? 'all' : 'unread')}
+                title="More filters"
+              >
+                <MoreHorizontal size={14} />
+              </button>
             </div>
           </div>
 
@@ -1817,6 +1835,9 @@ export default function Messages() {
                 const msgs = Array.isArray(chat.messages) ? chat.messages : [];
                 const lastMsg = msgs[msgs.length - 1];
                 const isSelected = chat.id === activeChatId;
+                const isUnread = (chat?.unreadCount || 0) > 0;
+                const timeAgo = formatSidebarDate(lastMsg);
+                const snippetText = lastMsg?.text || (lastMsg?.image ? 'sent an attachment.' : lastMsg?.isVoiceNote ? 'sent a voice note.' : 'No messages yet');
 
                 return (
                   <div
@@ -1831,25 +1852,20 @@ export default function Messages() {
 
                     <div className="chat-item-content">
                       <div className="chat-item-top">
-                        <span className="contact-name">{chat?.contact?.name || 'User'}</span>
-                        <span className="chat-time">{formatSidebarDate(lastMsg)}</span>
-                      </div>
-
-                      <div className="product-mini-preview">
-                        <Tag size={12} className="tag-icon" />
-                        <span className="product-mini-name">{chat?.product?.name || 'Listing'}</span>
+                        <span className={`contact-name ${isUnread ? 'unread-bold' : ''}`}>
+                          {chat?.contact?.name || 'User'}
+                        </span>
                       </div>
 
                       <div className="chat-item-bottom">
-                        <p className="last-message-text">
+                        <p className={`last-message-text ${isUnread ? 'unread-bold' : ''}`}>
                           {lastMsg?.sender === 'me' && <span className="you-label">You: </span>}
-                          {lastMsg?.text || 'No messages yet'}
+                          {snippetText}
+                          {timeAgo ? ` · ${timeAgo}` : ''}
                         </p>
-                        <div className="chat-item-badges">
-                          {(chat?.unreadCount || 0) > 0 && (
-                            <span className="unread-badge">{chat.unreadCount}</span>
-                          )}
-                        </div>
+                        {isUnread && (
+                          <span className="unread-dot-badge" />
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1899,9 +1915,9 @@ export default function Messages() {
                           <span className="typing-label">typing...</span>
                         </span>
                       ) : isChatUserOnline(activeChat) ? (
-                        <span className="text-online">● Online</span>
+                        <span className="text-online">Active now</span>
                       ) : (
-                        <span className="text-offline">● {activeChat?.contact?.lastSeen && activeChat.contact.lastSeen !== 'Online' ? activeChat.contact.lastSeen : 'Offline'}{activeChat?.contact?.location ? ` · ${activeChat.contact.location}` : ''}</span>
+                        <span className="text-offline">{activeChat?.contact?.lastSeen && activeChat.contact.lastSeen !== 'Online' ? activeChat.contact.lastSeen : 'Offline'}</span>
                       )}
                     </p>
                   </div>
@@ -1909,17 +1925,40 @@ export default function Messages() {
 
                 {/* Right: Action Buttons */}
                 <div className="chat-header-actions">
-                  {/* Call button */}
-                  {activeChat?.contact?.phone && (
-                    <a
-                      href={`tel:${activeChat.contact.phone}`}
-                      className="header-call-btn"
-                      title={`Call ${activeChat.contact.name || 'User'}`}
-                    >
-                      <Phone size={18} />
-                      <span className="call-btn-text">Call</span>
-                    </a>
-                  )}
+                  {/* Phone Call button */}
+                  <a
+                    href={activeChat?.contact?.phone ? `tel:${activeChat.contact.phone}` : '#'}
+                    onClick={(e) => {
+                      if (!activeChat?.contact?.phone) {
+                        e.preventDefault();
+                        showToast('Phone number not provided by user');
+                      }
+                    }}
+                    className="messenger-action-icon-btn"
+                    title={`Call ${activeChat?.contact?.name || 'User'}`}
+                  >
+                    <Phone size={20} />
+                  </a>
+
+                  {/* Video Call button */}
+                  <button
+                    type="button"
+                    className="messenger-action-icon-btn"
+                    onClick={() => showToast('Video call is not supported in browser')}
+                    title="Start video call"
+                  >
+                    <Video size={20} />
+                  </button>
+
+                  {/* Info (i) button - Messenger signature profile button */}
+                  <button
+                    type="button"
+                    className="messenger-action-icon-btn messenger-info-btn"
+                    onClick={() => handleOpenProfileModal()}
+                    title="Conversation information"
+                  >
+                    <Info size={20} />
+                  </button>
 
                   {/* 3-dots Dropdown Menu */}
                   <div className="more-menu-wrapper" ref={menuRef}>
@@ -2233,19 +2272,27 @@ export default function Messages() {
                             )}
                             <div className="message-meta">
                               <span className="msg-time">{msg.time}</span>
-                              {isMe && (
-                                <span className="msg-status-indicator" title={msg.status === 'read' ? 'Read' : msg.status === 'delivered' ? 'Delivered' : 'Sent'}>
-                                  {msg.status === 'read' ? (
-                                    <CheckCheck size={14} className="status-icon status-read" />
-                                  ) : msg.status === 'delivered' ? (
-                                    <CheckCheck size={14} className="status-icon status-delivered" />
+                            </div>
+                          </div>
+
+                          {/* Seen Avatar / Status indicator for Outgoing messages */}
+                          {isMe && (
+                            <div className="msg-read-status-row">
+                              {msg.status === 'read' ? (
+                                <div className="seen-avatar-wrap" title={`Seen by ${activeChat?.contact?.name || 'User'}`}>
+                                  {renderContactAvatar(activeChat?.contact?.avatar, activeChat?.contact?.name, "seen-avatar-mini")}
+                                </div>
+                              ) : (
+                                <span className="msg-status-indicator" title={msg.status === 'delivered' ? 'Delivered' : 'Sent'}>
+                                  {msg.status === 'delivered' ? (
+                                    <CheckCheck size={12} className="status-icon status-delivered" />
                                   ) : (
-                                    <Check size={14} className="status-icon status-sent" />
+                                    <Check size={12} className="status-icon status-sent" />
                                   )}
                                 </span>
                               )}
                             </div>
-                          </div>
+                          )}
                           
                           {/* Hover Quick Actions */}
                           <div className="msg-hover-actions">
@@ -2599,7 +2646,7 @@ export default function Messages() {
                     onClick={() => fileInputRef.current?.click()}
                     title="Attach photo or document"
                   >
-                    <Paperclip size={20} />
+                    <ImageIcon size={20} />
                   </button>
 
                   <button
@@ -2611,9 +2658,18 @@ export default function Messages() {
                     <Smile size={20} />
                   </button>
 
+                  <button
+                    type="button"
+                    className="input-action-btn"
+                    onClick={startVoiceRecord}
+                    title="Record voice note"
+                  >
+                    <Mic size={20} />
+                  </button>
+
                   <input
                     type="text"
-                    placeholder="Type a message to seller..."
+                    placeholder="Aa"
                     value={inputMessage}
                     onChange={e => {
                       setInputMessage(e.target.value);
@@ -2628,24 +2684,14 @@ export default function Messages() {
                     className="chat-text-input"
                   />
 
-                  {!inputMessage.trim() && !selectedAttachment ? (
-                    <button
-                      type="button"
-                      className="mic-btn"
-                      onClick={startVoiceRecord}
-                      title="Record voice note"
-                    >
-                      <Mic size={20} />
-                    </button>
-                  ) : (
-                    <button
-                      type="submit"
-                      className="send-btn send-btn-active"
-                      title="Send message"
-                    >
-                      <Send size={18} />
-                    </button>
-                  )}
+                  <button
+                    type="submit"
+                    className={`send-btn ${inputMessage.trim() || selectedAttachment ? 'send-btn-active' : ''}`}
+                    title="Send message"
+                    disabled={!inputMessage.trim() && !selectedAttachment}
+                  >
+                    <Send size={18} />
+                  </button>
                 </form>
               )}
             </>
