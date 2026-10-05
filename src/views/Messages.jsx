@@ -276,6 +276,8 @@ export default function Messages() {
     }
     return null;
   });
+  const activeChat = conversations.find(c => c.id === activeChatId) || (conversations.length > 0 ? conversations[0] : null);
+  const [toastMessage, setToastMessage] = useState('');
   const [onlineUserIds, setOnlineUserIds] = useState(new Set());
 
   // Typing indicator state — maps conversation IDs to typing user info
@@ -523,9 +525,9 @@ export default function Messages() {
                 setIsMobileDetailOpen(true);
               }
 
-              const nextList = [autoCreatedConv, ...prev];
-              saveCachedConversations(user?.id, nextList);
-              return nextList;
+              const createdList = [autoCreatedConv, ...prev];
+              saveCachedConversations(user?.id, createdList);
+              return createdList;
             }
 
             const nextList = prev.map(c => {
@@ -645,34 +647,7 @@ export default function Messages() {
   const [sellerSearchQuery, setSellerSearchQuery] = useState('');
   const [showSellerContact, setShowSellerContact] = useState(false);
   const [isSellerGridView, setIsSellerGridView] = useState(true);
-  const [toastMessage, setToastMessage] = useState('');
   const menuRef = useRef(null);
-
-  // Intelligent deep link support for opening seller profile
-  useEffect(() => {
-    if (searchParams?.get('openProfile') === 'true' && activeChat?.contact && !showProfileModal && !isSellerDataFetched) {
-      handleOpenProfileModal(activeChat);
-      setIsMobileDetailOpen(true);
-    }
-  }, [searchParams, activeChat?.contact?.id, showProfileModal, isSellerDataFetched]);
-
-  // Intelligent history integration for seller profile modal (mobile gesture & desktop back)
-  useEffect(() => {
-    if (showProfileModal) {
-      try {
-        window.history.pushState({ sellerProfileOpen: true }, '');
-      } catch (e) {}
-
-      const handlePopState = () => {
-        setShowProfileModal(false);
-      };
-
-      window.addEventListener('popstate', handlePopState);
-      return () => {
-        window.removeEventListener('popstate', handlePopState);
-      };
-    }
-  }, [showProfileModal]);
 
   const handleOpenProfileModal = async (chat = activeChat) => {
     if (!chat?.contact) return;
@@ -745,6 +720,32 @@ export default function Messages() {
       window.history.back();
     }
   };
+
+  // Intelligent deep link support for opening seller profile
+  useEffect(() => {
+    if (searchParams?.get('openProfile') === 'true' && activeChat?.contact && !showProfileModal && !isSellerDataFetched) {
+      handleOpenProfileModal(activeChat);
+      setIsMobileDetailOpen(true);
+    }
+  }, [searchParams, activeChat?.contact?.id, showProfileModal, isSellerDataFetched]);
+
+  // Intelligent history integration for seller profile modal (mobile gesture & desktop back)
+  useEffect(() => {
+    if (showProfileModal) {
+      try {
+        window.history.pushState({ sellerProfileOpen: true }, '');
+      } catch (e) {}
+
+      const handlePopState = () => {
+        setShowProfileModal(false);
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
+    }
+  }, [showProfileModal]);
 
   const handleShareSellerProfile = async () => {
     const sellerName = activeChat?.contact?.name || 'Seller';
@@ -1249,8 +1250,6 @@ export default function Messages() {
       markConversationAsRead(activeChatId, user.id);
     }
   }, [activeChatId, user?.id]);
-
-  const activeChat = conversations.find(c => c.id === activeChatId) || (conversations.length > 0 ? conversations[0] : null);
 
   const isSellerInChat = Boolean(
     activeChat?.type === 'selling' ||
