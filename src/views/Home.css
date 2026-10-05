@@ -278,7 +278,7 @@ body {
 }
 @media (max-width: 768px) {
   .home-header{
-    padding-bottom:40px;
+    padding-bottom:100px;
   }
 }
 /* ── Unified Floating Master Search Console (Expert-Human Architecture) ── */
@@ -762,9 +762,9 @@ body {
   gap: 7px;
   padding: 9px 18px;
   border-radius: 9999px;
-  border: 1.5px solid #eaecf0;
+  border: 1.5px solid #c5cad4;   /* Noticeably defined border — no longer invisible */
   background: #ffffff;
-  color: #374151;
+  color: #1e293b;                /* Darker, bolder text for clear readability */
   font-size: 13.5px;
   font-family: inherit;
   font-weight: 600;
@@ -772,7 +772,7 @@ body {
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
   user-select: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 .category-pill:hover {
@@ -809,6 +809,7 @@ body {
 .cat-label {
   font-size: 13.5px;
   font-weight: 600;
+  color: inherit;
 }
 
 .cat-check {
