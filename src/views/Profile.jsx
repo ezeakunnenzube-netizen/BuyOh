@@ -504,7 +504,7 @@ export default function Profile() {
             <div className="settings-column-group">
               {/* Account Details Panel */}
               <div className="settings-panel">
-                <h3 className="panel-title"><UserRound size={18} className="panel-icon" /> Account Details</h3>
+                <h3 className="panel-title"><UserRound size={18} className="panel-icon" color="#000000" /> Account Details</h3>
                 
                 {!isEditing ? (
                   <div className="readonly-details">
@@ -584,7 +584,7 @@ export default function Profile() {
                   title={changePasswordExpanded ? "Collapse panel" : "Expand panel"}
                 >
                   <div className="panel-title-left">
-                    <KeyRound size={18} className="panel-icon" />
+                    <KeyRound size={18} className="panel-icon" color="#000000" />
                     <span>Change Password</span>
                   </div>
                   <ChevronDown 

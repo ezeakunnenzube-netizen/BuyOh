@@ -1290,6 +1290,7 @@ export default function ProductDetails({ params: serverParams }) {
               <div className="detail-bottom-actions">
                 <button 
                   className="btn-outline-action"
+                  style={{ color: '#000000', borderColor: '#000000' }}
                   onClick={() => {
                     if (!user) setIsAuthOpen(true);
                     else {
@@ -1303,6 +1304,7 @@ export default function ProductDetails({ params: serverParams }) {
                 </button>
                 <button 
                   className="btn-outline-action" 
+                  style={{ color: '#000000', borderColor: '#000000' }}
                   onClick={() => {
                     if (!user) setIsAuthOpen(true);
                     else {
@@ -1400,17 +1402,17 @@ export default function ProductDetails({ params: serverParams }) {
                   <NavLink 
                     to={`/messages?productId=${product.id}&sellerId=${product.sellerId || product.userId || ''}&seller=${encodeURIComponent(product.sellerName || '')}&prodName=${encodeURIComponent(product.name || '')}&prodPrice=${product.price || 0}`}
                     className="start-chat-link-btn"
-                    style={{ flex: (product.sellerPhone || product.contactPhone || product.phone) ? 1 : '1 1 100%' }}
+                    style={{ flex: (product.sellerPhone || product.contactPhone || product.phone) ? 1 : '1 1 100%', color: '#000000' }}
                   >
-                    <MessageSquareMore size={16} /> Start chat
+                    <MessageSquareMore size={16} color="#000000" /> Start chat
                   </NavLink>
                 ) : (
                   <button 
                     className="start-chat-link-btn"
                     onClick={() => setIsAuthOpen(true)}
-                    style={{ flex: (product.sellerPhone || product.contactPhone || product.phone) ? 1 : '1 1 100%' }}
+                    style={{ flex: (product.sellerPhone || product.contactPhone || product.phone) ? 1 : '1 1 100%', color: '#000000' }}
                   >
-                    <MessageSquareMore size={16} /> Start chat
+                    <MessageSquareMore size={16} color="#000000" /> Start chat
                   </button>
                 )}
               </div>
@@ -1437,8 +1439,8 @@ export default function ProductDetails({ params: serverParams }) {
                   </>
                 )}
               </div>
-              <button className="view-all-feedback-link">
-                view all <ChevronRight size={12} />
+              <button className="view-all-feedback-link" style={{ color: '#000000' }}>
+                view all <ChevronRight size={12} color="#000000" />
               </button>
             </div>
 
