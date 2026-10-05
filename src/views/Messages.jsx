@@ -268,15 +268,11 @@ export default function Messages() {
         const sp = new URLSearchParams(window.location.search);
         const paramChatId = sp.get('chatId');
         if (paramChatId) return paramChatId;
-        if (user?.id) {
-          const cached = getCachedConversations(user.id);
-          if (Array.isArray(cached) && cached.length > 0) return cached[0].id;
-        }
       } catch (e) {}
     }
     return null;
   });
-  const activeChat = conversations.find(c => c.id === activeChatId) || (conversations.length > 0 ? conversations[0] : null);
+  const activeChat = activeChatId ? (conversations.find(c => c.id === activeChatId) || null) : null;
   const [toastMessage, setToastMessage] = useState('');
   const [onlineUserIds, setOnlineUserIds] = useState(new Set());
 
@@ -376,8 +372,6 @@ export default function Messages() {
             if (shouldOpenProfile) {
               setIsMobileDetailOpen(true);
             }
-          } else if (syncedConvs.length > 0 && !activeChatId) {
-            setActiveChatId(syncedConvs[0].id);
           }
         }
       } catch (err) {
@@ -519,11 +513,6 @@ export default function Messages() {
                 messages: [formatted],
                 isMuted: isChatMuted
               }, user?.id);
-
-              if (!activeChatIdRef.current) {
-                setActiveChatId(autoCreatedConv.id);
-                setIsMobileDetailOpen(true);
-              }
 
               const createdList = [autoCreatedConv, ...prev];
               saveCachedConversations(user?.id, createdList);
@@ -1089,6 +1078,10 @@ export default function Messages() {
 
   const handleDeleteChat = (idToDelete) => {
     setConversations(prev => prev.filter(c => c.id !== idToDelete));
+    if (activeChatId === idToDelete) {
+      setActiveChatId(null);
+      router.replace('/messages');
+    }
     setToastMessage('Chat deleted');
     setTimeout(() => setToastMessage(''), 3000);
     setIsMobileDetailOpen(false);
@@ -1096,6 +1089,10 @@ export default function Messages() {
 
   const handleMoveToSpam = (id) => {
     setConversations(prev => prev.filter(c => c.id !== id));
+    if (activeChatId === id) {
+      setActiveChatId(null);
+      router.replace('/messages');
+    }
     setToastMessage('Conversation moved to spam');
     setTimeout(() => setToastMessage(''), 3000);
     setIsMobileDetailOpen(false);
@@ -1621,7 +1618,21 @@ export default function Messages() {
     setTimeout(() => setToastMessage(''), 2500);
   };
 
+  const handleCloseChat = () => {
+    setActiveChatId(null);
+    setIsMobileDetailOpen(false);
+    setIsChatSearchOpen(false);
+    setChatSearchQuery('');
+    setCurrentMatchIndex(0);
+    router.replace('/messages');
+  };
+
   const handleSelectChat = (id) => {
+    // On desktop, clicking the currently active chat deselects / closes it
+    if (activeChatId === id && typeof window !== 'undefined' && window.innerWidth >= 768) {
+      handleCloseChat();
+      return;
+    }
     setActiveChatId(id);
     setIsMobileDetailOpen(true);
     setIsChatSearchOpen(false);
@@ -1631,6 +1642,7 @@ export default function Messages() {
   };
 
   const handleMobileBack = () => {
+    setActiveChatId(null);
     setIsMobileDetailOpen(false);
     router.replace('/messages');
   };
@@ -1932,6 +1944,17 @@ export default function Messages() {
                           <span>View profile</span>
                         </button>
 
+                        <button
+                          className="dropdown-item"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            handleCloseChat();
+                          }}
+                        >
+                          <X size={17} className="dropdown-icon" />
+                          <span>Close chat</span>
+                        </button>
+
 
 
                         {activeChat?.contact?.name && (
@@ -1995,6 +2018,17 @@ export default function Messages() {
                       </div>
                     )}
                   </div>
+
+                  {/* Close conversation button (Desktop) */}
+                  <button
+                    type="button"
+                    className="desktop-close-chat-btn"
+                    onClick={handleCloseChat}
+                    title="Close conversation"
+                    aria-label="Close conversation"
+                  >
+                    <X size={18} />
+                  </button>
                 </div>
               </div>
 
@@ -2616,10 +2650,67 @@ export default function Messages() {
               )}
             </>
           ) : (
-            <div className="no-active-chat">
-              <MessageSquareMore size={48} className="no-chat-icon" />
-              <h3>Select a conversation</h3>
-              <p>Choose a chat from the sidebar to view messages and contact sellers.</p>
+            <div className="no-active-chat-wrapper">
+              <div className="no-active-chat-card">
+                <div className="no-chat-icon-container">
+                  <div className="no-chat-icon-glow" />
+                  <div className="no-chat-icon-badge">
+                    <MessageSquareMore size={38} strokeWidth={2.2} />
+                  </div>
+                  <div className="no-chat-mini-badge" title="Verified Marketplace Security">
+                    <ShieldCheck size={16} strokeWidth={2.4} />
+                  </div>
+                </div>
+
+                <div className="no-chat-tag-pill">
+                  <Sparkles size={13} />
+                  <span>InfiBuy Messenger</span>
+                </div>
+
+                <h2 className="no-chat-title">No conversation selected</h2>
+                <p className="no-chat-subtitle">
+                  Select a chat from your conversation list on the left to review messages, negotiate prices, or contact buyers and sellers securely.
+                </p>
+
+                <div className="no-chat-features-grid">
+                  <div className="no-chat-feature-card">
+                    <div className="no-chat-feature-icon-wrap feature-blue">
+                      <Tag size={20} />
+                    </div>
+                    <h4>Make Instant Offers</h4>
+                    <p>Propose counter-offers, accept bargains, and agree on item prices easily.</p>
+                  </div>
+
+                  <div className="no-chat-feature-card">
+                    <div className="no-chat-feature-icon-wrap feature-emerald">
+                      <ShieldCheck size={20} />
+                    </div>
+                    <h4>Verified & Protected</h4>
+                    <p>Verified seller profiles, trust scores, and anti-scam monitoring built-in.</p>
+                  </div>
+
+                  <div className="no-chat-feature-card">
+                    <div className="no-chat-feature-icon-wrap feature-purple">
+                      <Sparkles size={20} />
+                    </div>
+                    <h4>Rich Real-Time Chat</h4>
+                    <p>Live typing status, photo attachments, voice notes, and online presence.</p>
+                  </div>
+                </div>
+
+                <div className="no-chat-actions">
+                  <NavLink to="/" className="no-chat-browse-btn">
+                    <Search size={16} />
+                    <span>Explore Marketplace Deals</span>
+                    <ChevronRight size={16} />
+                  </NavLink>
+
+                  <div className="no-chat-hint-bar">
+                    <Circle size={8} fill="#22c55e" color="#22c55e" />
+                    <span>Tip: Click any chat to open · Click the ✕ or the active chat to close</span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
