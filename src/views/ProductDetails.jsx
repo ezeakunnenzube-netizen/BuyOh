@@ -1220,7 +1220,7 @@ export default function ProductDetails({ params: serverParams }) {
 
             {/* Specification grid */}
             <div className="detail-specs-card">
-              <h3 className="specs-section-header"><Tag size={16} /> Specifications</h3>
+              <h3 className="specs-section-header"><Tag size={16} color="#000000" /> Specifications</h3>
               <div className="specs-grid">
                 {getSpecs().map((spec, idx) => (
                   <div className="spec-item" key={idx}>
@@ -1233,14 +1233,14 @@ export default function ProductDetails({ params: serverParams }) {
 
             {/* Description Block */}
             <div className="detail-desc-card">
-              <h3 className="desc-title"><FileText size={18} /> Description</h3>
+              <h3 className="desc-title"><FileText size={18} color="#000000" /> Description</h3>
               <p className="desc-paragraph" style={{ whiteSpace: 'pre-line' }}>
                 {getFormattedDescription(product)}
               </p>
 
               {/* Form Details Breakdown matching the Ad Posting Form */}
               <div className="ad-form-attributes-card">
-                <h4 className="attributes-card-title"><Layers size={14} /> Ad Overview & Details</h4>
+                <h4 className="attributes-card-title"><Layers size={14} color="#000000" /> Ad Overview & Details</h4>
                 <div className="attributes-card-grid">
                   <div className="attr-cell">
                     <span className="attr-label">CATEGORY</span>
@@ -1361,12 +1361,14 @@ export default function ProductDetails({ params: serverParams }) {
                 <div className="seller-name-info" style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                     <h4 style={{ margin: 0 }}>{product.sellerName || 'Seller'}</h4>
-                    <span style={{ fontSize: '0.78rem', color: '#2563eb', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-                      Profile <ChevronRight size={13} />
+                    <span style={{ fontSize: '0.78rem', color: '#000000', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                      Profile <ChevronRight size={13} color="#000000" />
                     </span>
                   </div>
                   <div className="seller-badges">
-                    <span>👤 {formatMemberSince(product.sellerJoined, product.sellerCreatedAt)}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                      <UserRound size={13} color="#000000" strokeWidth={2.5} /> {formatMemberSince(product.sellerJoined, product.sellerCreatedAt)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1464,7 +1466,7 @@ export default function ProductDetails({ params: serverParams }) {
         {/* Seller Reviews & Feedback Section */}
         <div id="reviews-section" className="detail-reviews-card">
           <h3 className="specs-section-header">
-            <Star size={16} fill="#8b5cf6" color="#8b5cf6" style={{ marginRight: '0.25rem' }} />
+            <Star size={16} fill="#000000" color="#000000" style={{ marginRight: '0.25rem' }} />
             Seller Feedback & Reviews
           </h3>
           
