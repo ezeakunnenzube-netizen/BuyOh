@@ -7,7 +7,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   Search, MessageSquareMore, BellRing, PanelTop, UserRound, Bookmark, 
   Send, Phone, ShieldCheck, MoreVertical, ArrowLeft, CheckCheck, Check,
-  Tag, Image as ImageIcon, Sparkles, Filter, AlertCircle, Circle,
+  Tag, Image as ImageIcon, Sparkles, Filter, Circle,
   ChevronRight, ExternalLink, ChevronUp, ChevronDown, X, User, Flag, Trash2,
   Smile, Paperclip, Mic, Square, Play, Pause, Volume2, FileText,
   BellOff, Bell, UserPlus, UserMinus, Star, SlidersHorizontal,
@@ -591,7 +591,6 @@ export default function Messages() {
   // Advanced header state
   const [isTyping, setIsTyping] = useState(false);
   const [headerExpanded, setHeaderExpanded] = useState(false);
-  const [showSafetyAlert, setShowSafetyAlert] = useState(true);
 
   // Dropdown 3-dots menu & Jiji Profile modal state
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -1940,7 +1939,17 @@ export default function Messages() {
 
               {/* Product Context Strip - shown when chat has an associated product */}
               {activeChat?.product && (
-                <div className="product-context-strip">
+                <div 
+                  className={`product-context-strip ${activeChat.product.id ? 'clickable-product-strip' : ''}`}
+                  onClick={() => {
+                    if (activeChat.product.id) {
+                      navigate(`/product/${activeChat.product.id}`);
+                    }
+                  }}
+                  role={activeChat.product.id ? "button" : undefined}
+                  tabIndex={activeChat.product.id ? 0 : undefined}
+                  title={activeChat.product.id ? "Click to view listing details" : undefined}
+                >
                   {activeChat.product.image && (
                     <img
                       src={activeChat.product.image}
@@ -1953,7 +1962,22 @@ export default function Messages() {
                     <span className="product-strip-name">{activeChat.product.name || 'Listing'}</span>
                   </div>
                   {activeChat.product.price != null && (
-                    <span className="product-strip-price">₦{Number(activeChat.product.price).toLocaleString()}</span>
+                    <div className="product-strip-meta">
+                      <span className="product-strip-price">
+                        {(() => {
+                          const p = activeChat.product;
+                          const isGhana = p.currency === 'GHS' || p.currency === 'GH₵' || p.country === 'Ghana' || (typeof p.location === 'string' && (p.location.includes('Ghana') || p.location.includes('Accra') || p.location.includes('Ashanti')));
+                          const num = Number(p.price);
+                          if (isNaN(num)) return p.price;
+                          return isGhana ? `GH₵ ${num.toLocaleString()}` : `₦${num.toLocaleString()}`;
+                        })()}
+                      </span>
+                      {activeChat.product.id && (
+                        <span className="product-strip-view-badge">
+                          View Ad <ChevronRight size={13} strokeWidth={2.5} />
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
@@ -2012,32 +2036,6 @@ export default function Messages() {
                       <X size={16} />
                     </button>
                   </div>
-                </div>
-              )}
-
-
-
-              {/* Safety Alert Banner */}
-              {showSafetyAlert && (
-                <div className="safety-alert">
-                  <div className="safety-alert-content">
-                    <AlertCircle size={15} className="safety-icon" />
-                    <span>
-                      {isSellerInChat ? (
-                        <><strong>Seller Safety Tip:</strong> Verify buyer identity before sharing your address. Always collect payment before handing over the item.</>
-                      ) : (
-                        <><strong>Buyer Safety Tip:</strong> Meet in a public place. Do not make advance payments before physical inspection of the item.</>
-                      )}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className="close-safety-btn"
-                    onClick={() => setShowSafetyAlert(false)}
-                    title="Dismiss safety tip"
-                  >
-                    <X size={15} />
-                  </button>
                 </div>
               )}
 

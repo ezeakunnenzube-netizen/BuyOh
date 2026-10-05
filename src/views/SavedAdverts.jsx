@@ -177,15 +177,7 @@ export default function SavedAdverts() {
               </nav>
 
               <div className="saved-title-row">
-                <button 
-                  type="button" 
-                  onClick={() => navigate(-1)} 
-                  className="saved-back-arrow-btn"
-                  title="Go back"
-                  aria-label="Go back"
-                >
-                  <ArrowLeft size={24} strokeWidth={2.5} />
-                </button>
+                
                 <div className="saved-icon-badge">
                   <Bookmark size={22} className="saved-icon-svg" />
                 </div>

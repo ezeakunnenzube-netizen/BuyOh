@@ -40,15 +40,6 @@ const INITIAL_NOTIFICATIONS = [
     time: 'Yesterday',
     unread: false,
     actionLink: '/adverts'
-  },
-  {
-    id: 'notif-005',
-    type: 'alert',
-    title: 'Security Tip',
-    message: 'Never make payments before inspecting items in person. Stay safe with verified sellers.',
-    time: '2 days ago',
-    unread: false,
-    actionLink: '#'
   }
 ];
 

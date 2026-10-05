@@ -56,7 +56,6 @@ export default function ProductDetails({ params: serverParams }) {
   const [offerPrice, setOfferPrice] = useState('');
   const [viewsCount, setViewsCount] = useState(0);
   const [toastMessage, setToastMessage] = useState('');
-  const [showSafetyTips, setShowSafetyTips] = useState(true);
   const [likesCount, setLikesCount] = useState(0);
   const [postedAgo, setPostedAgo] = useState('');
 
@@ -1260,25 +1259,6 @@ export default function ProductDetails({ params: serverParams }) {
                 🚨 Report Abuse
               </button>
             </div>
-
-            {/* Safety Tips Card */}
-            {showSafetyTips && (
-              <div className="detail-safety-card">
-                <div className="safety-header-row">
-                  <h4>Safety tips</h4>
-                  <button className="safety-dismiss-btn" onClick={() => setShowSafetyTips(false)}>
-                    <X size={14} />
-                  </button>
-                </div>
-                <ul>
-                  <li>Avoid paying in advance, even for delivery</li>
-                  <li>Meet with the seller at a safe public place</li>
-                  <li>Inspect the item and ensure it's exactly what you want</li>
-                  <li>Make sure that the packed item is the one you've inspected</li>
-                  <li>Only pay if you're satisfied</li>
-                </ul>
-              </div>
-            )}
 
             {/* Post Ad Like This */}
             <button className="post-like-this-btn" onClick={() => navigate('/sell')}>
