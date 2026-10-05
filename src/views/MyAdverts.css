@@ -23,12 +23,14 @@
   margin-bottom: 1.25rem;
 }
 
+.adverts-back-arrow-btn,
+.adverts-mobile-back-btn,
 .adverts-back-btn {
   background: transparent !important;
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
-  color: #0f172a !important;
+  color: #ffffff !important;
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
@@ -39,10 +41,17 @@
   border-radius: 0 !important;
 }
 
+.adverts-back-arrow-btn:hover,
+.adverts-mobile-back-btn:hover,
 .adverts-back-btn:hover {
   background: transparent !important;
   opacity: 0.75;
   transform: translateX(-3px);
+}
+
+.adverts-mobile-header .adverts-mobile-back-btn,
+.adverts-mobile-header .adverts-back-btn {
+  color: #0f172a !important;
 }
 
 .adverts-mobile-title {
@@ -54,16 +63,15 @@
 }
 
 /* ═════════════════════════════════════════════════════════════════
-   1. HERO HEADER BANNER (Solid, Human-Crafted InfiBuy Brand Theme)
+   1. HERO HEADER BANNER (Solid, Human-Crafted Brand Theme)
    ═════════════════════════════════════════════════════════════════ */
 .adverts-hero-banner {
   background: linear-gradient(135deg, #16213e 0%, #1a1a2e 50%, #0f3460 100%);
-  border-radius: 16px;
+  border-radius: 18px;
   padding: 2rem 2.25rem;
   color: #ffffff;
   margin-bottom: 2rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-left: 5px solid #3b82f6;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15), 0 2px 6px rgba(0, 0, 0, 0.08);
   box-sizing: border-box;
 }
@@ -121,12 +129,12 @@
 }
 
 .adverts-icon-badge {
-  background: rgba(59, 130, 246, 0.15);
-  border: 1px solid rgba(59, 130, 246, 0.4);
-  color: #60a5fa;
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -254,7 +262,7 @@
   animation: adverts-spin 0.7s linear infinite;
 }
 
-/* ── KPI Metric Tiles ── */
+/* ── KPI Metric Tiles (Unicolor, Humanized & Bold) ── */
 .adverts-metrics-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -264,52 +272,36 @@
 
 .adverts-metric-tile {
   background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
   padding: 1rem 1.25rem;
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  gap: 1rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .adverts-metric-tile:hover {
-  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(15, 23, 42, 0.85);
+  border-color: rgba(255, 255, 255, 0.25);
   transform: translateY(-1px);
 }
 
-.metric-icon-wrap {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+.metric-icon-wrap,
+.metric-icon-blue,
+.metric-icon-orange,
+.metric-icon-green,
+.metric-icon-purple {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-
-.metric-icon-blue {
-  background: rgba(59, 130, 246, 0.15);
-  color: #60a5fa;
-  border: 1px solid rgba(59, 130, 246, 0.3);
-}
-
-.metric-icon-orange {
-  background: rgba(255, 167, 5, 0.15);
-  color: #ffa705;
-  border: 1px solid rgba(255, 167, 5, 0.3);
-}
-
-.metric-icon-green {
-  background: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
-  border: 1px solid rgba(34, 197, 94, 0.3);
-}
-
-.metric-icon-purple {
-  background: rgba(168, 85, 247, 0.15);
-  color: #c084fc;
-  border: 1px solid rgba(168, 85, 247, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
 }
 
 .metric-details {
@@ -319,16 +311,16 @@
 }
 
 .metric-tile-label {
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.74rem;
+  font-weight: 700;
   color: #94a3b8;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   margin-bottom: 0.2rem;
 }
 
 .metric-tile-value {
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: #ffffff;
   letter-spacing: -0.02em;
@@ -337,13 +329,9 @@
   text-overflow: ellipsis;
 }
 
-.metric-accent {
-  color: #ffa705;
-}
-
+.metric-accent,
 .metric-highlight {
-  color: #4ade80;
-  font-size: 0.95rem;
+  color: #ffffff;
 }
 
 /* ── Integrated Toolbar (Search, Filter Pills & Sort) ── */
@@ -433,27 +421,29 @@
 
 .category-pill {
   background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f1f5f9;
   font-family: inherit;
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 0.4rem 0.85rem;
-  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;       /* Bold font */
+  padding: 0.42rem 0.95rem;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .category-pill:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.16);
   color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .category-pill.active {
-  background: #3b82f6;
-  color: #ffffff;
-  border-color: #3b82f6;
-  font-weight: 700;
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #ffffff;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .adverts-sort-box {

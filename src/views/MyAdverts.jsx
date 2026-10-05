@@ -219,6 +219,15 @@ export default function MyAdverts() {
               </nav>
 
               <div className="adverts-title-row">
+                <button 
+                  type="button" 
+                  onClick={() => navigate(-1)} 
+                  className="adverts-back-arrow-btn"
+                  title="Go back"
+                  aria-label="Go back"
+                >
+                  <ArrowLeft size={24} strokeWidth={2.5} />
+                </button>
                 <div className="adverts-icon-badge">
                   <Store size={22} className="adverts-icon-svg" />
                 </div>
