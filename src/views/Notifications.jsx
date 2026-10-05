@@ -5,9 +5,8 @@ import NavLink from '../components/NavLink';
 import DesktopNavbar from '../components/DesktopNavbar';
 import { useRouter } from 'next/navigation';
 import { 
-  BellRing, BellOff, MessageSquare, Tag, AlertTriangle, ShieldCheck, 
-  Trash2, Check, ArrowLeft, MoreVertical, Search, MessageSquareMore, 
-  PanelTop, UserRound, Bookmark, Sparkles, ShoppingBag, Eye
+  BellRing, BellOff, Tag, ShieldCheck, 
+  Trash2, Check, ArrowLeft, Sparkles, Eye
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
@@ -60,7 +59,7 @@ export default function Notifications() {
   const { unreadCount, unreadNotifsCount } = useChat();
 
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
-  const [activeTab, setActiveTab] = useState('all'); // all, unread, offers, alerts
+  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'unread'
   const [toastMessage, setToastMessage] = useState('');
 
   // Sync notifications when user changes or logs in on a new device
@@ -105,6 +104,7 @@ export default function Notifications() {
   const handleMarkAllAsRead = () => {
     const next = notifications.map(n => ({ ...n, unread: false }));
     updateAndSyncNotifications(next);
+    setActiveTab('all');
     showToast('All notifications marked as read');
   };
 
@@ -117,6 +117,7 @@ export default function Notifications() {
   const handleClearAll = () => {
     if (window.confirm('Are you sure you want to delete all notifications?')) {
       updateAndSyncNotifications([]);
+      setActiveTab('all');
       showToast('All notifications cleared');
     }
   };
@@ -132,8 +133,6 @@ export default function Notifications() {
 
   const filteredNotifications = nonChatNotifications.filter(n => {
     if (activeTab === 'unread') return n.unread;
-    if (activeTab === 'offers') return n.type === 'offer';
-    if (activeTab === 'alerts') return n.type === 'alert' || n.type === 'system';
     return true;
   });
 
@@ -189,31 +188,21 @@ export default function Notifications() {
             )}
           </div>
 
-          {/* Filter tabs */}
+          {/* Filter tabs — All & Unread */}
           <div className="notif-tabs">
             <button 
+              type="button"
               className={`notif-tab ${activeTab === 'all' ? 'active' : ''}`}
               onClick={() => setActiveTab('all')}
             >
               All
             </button>
             <button 
+              type="button"
               className={`notif-tab ${activeTab === 'unread' ? 'active' : ''}`}
               onClick={() => setActiveTab('unread')}
             >
-              Unread {notifications.filter(n => n.unread).length > 0 ? `(${notifications.filter(n => n.unread).length})` : ''}
-            </button>
-            <button 
-              className={`notif-tab ${activeTab === 'offers' ? 'active' : ''}`}
-              onClick={() => setActiveTab('offers')}
-            >
-              Offers
-            </button>
-            <button 
-              className={`notif-tab ${activeTab === 'alerts' ? 'active' : ''}`}
-              onClick={() => setActiveTab('alerts')}
-            >
-              Alerts
+              Unread {unreadNotifsFiltered > 0 ? `(${unreadNotifsFiltered})` : ''}
             </button>
           </div>
 
@@ -224,12 +213,24 @@ export default function Notifications() {
                 <div className="empty-bell-icon-wrap">
                   <BellOff size={48} className="empty-bell-icon" />
                 </div>
-                <h3 className="empty-state-title">No notifications here</h3>
+                <h3 className="empty-state-title">
+                  {activeTab === 'unread' ? 'No unread notifications' : 'No notifications yet'}
+                </h3>
                 <p className="empty-state-text">
                   {activeTab === 'unread' 
-                    ? "You don't have any unread notifications at the moment."
-                    : "We will notify you here when you receive new offers, price drops, or safety alerts."}
+                    ? "You're all caught up! There are no unread notifications at the moment."
+                    : "Activity updates about your listings and account will appear here."}
                 </p>
+                {activeTab === 'unread' && nonChatNotifications.length > 0 && (
+                  <button 
+                    type="button"
+                    className="notif-secondary-pill"
+                    style={{ marginTop: '0.85rem' }}
+                    onClick={() => setActiveTab('all')}
+                  >
+                    View All Notifications
+                  </button>
+                )}
               </div>
             ) : (
               <div className="notif-list-grid">
@@ -270,7 +271,7 @@ export default function Notifications() {
                               navigate(n.actionLink);
                             }}
                           >
-                            <Eye size={12} /> {n.actionLabel || (n.type === 'offer' ? 'View Offer' : n.type === 'message' ? 'Reply in Chat' : 'View Details')}
+                            <Eye size={12} /> {n.actionLabel || (n.type === 'offer' ? 'View Offer' : 'View Details')}
                           </button>
                         )}
                         {n.unread && (

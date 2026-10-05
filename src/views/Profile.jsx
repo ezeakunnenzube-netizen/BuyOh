@@ -30,7 +30,11 @@ export default function Profile() {
     try { return getFollowedSellersForUser(user).length; } catch { return 0; }
   });
   const [unreadNotifCount, setUnreadNotifCount] = useState(() => {
-    try { return getNotificationsForUser(user).filter(n => n.unread || n.read === false).length; } catch { return 0; }
+    try { 
+      return getNotificationsForUser(user).filter(
+        n => (n.unread || n.read === false) && n.type !== 'message' && !String(n.id).startsWith('notif-chat-')
+      ).length; 
+    } catch { return 0; }
   });
   const [myListingsCount, setMyListingsCount] = useState(() => {
     try { return getMyListingsForUser(user).length; } catch { return 0; }
@@ -49,7 +53,9 @@ export default function Profile() {
         setFollowingCount(followed.length);
 
         const notifs = getNotificationsForUser(user);
-        const unread = notifs.filter(n => n.unread || n.read === false);
+        const unread = notifs.filter(
+          n => (n.unread || n.read === false) && n.type !== 'message' && !String(n.id).startsWith('notif-chat-')
+        );
         setUnreadNotifCount(unread.length);
 
         const userListings = getMyListingsForUser(user);
@@ -487,7 +493,7 @@ export default function Profile() {
             </div>
             <div className="shortcut-text-col">
               <h4 className="shortcut-title">Notification Centre</h4>
-              <p className="shortcut-sub">View recent alerts, offers, price drops, and system messages</p>
+              <p className="shortcut-sub">View recent updates, price drops, and account alerts</p>
             </div>
             <span className="shortcut-count-badge">{unreadNotifCount} New</span>
           </div>

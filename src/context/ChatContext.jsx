@@ -86,7 +86,9 @@ export function ChatProvider({ children }) {
       return;
     }
     const notifs = getNotificationsForUser(user);
-    const count = Array.isArray(notifs) ? notifs.filter(n => n.unread).length : 0;
+    const count = Array.isArray(notifs) ? notifs.filter(
+      n => n.unread && n.type !== 'message' && !String(n.id).startsWith('notif-chat-')
+    ).length : 0;
     setUnreadNotifsCount(count);
   };
 
