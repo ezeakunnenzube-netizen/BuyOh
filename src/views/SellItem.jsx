@@ -544,6 +544,11 @@ export default function SellItem() {
 
 
 
+  // While auth is resolving, render nothing to avoid flash of sign-in prompt
+  if (loading) {
+    return null;
+  }
+
   // If not logged in, show auth prompt
   if (!user) {
     return (

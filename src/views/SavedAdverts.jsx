@@ -103,6 +103,11 @@ export default function SavedAdverts() {
 
 
 
+  // While auth is resolving, render nothing to avoid flash of sign-in prompt
+  if (loading) {
+    return null;
+  }
+
   if (!user) {
     return (
       <div className="saved-page-wrapper">

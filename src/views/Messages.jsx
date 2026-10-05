@@ -342,7 +342,6 @@ export default function Messages() {
           if (matchedConv) {
             setActiveChatId(matchedConv.id);
             if (shouldOpenProfile) {
-              setShowProfileModal(true);
               setIsMobileDetailOpen(true);
             }
           } else if (paramSellerId || paramSellerName || paramProductId) {
@@ -373,7 +372,6 @@ export default function Messages() {
             setConversations(prev => [fallbackConv, ...prev.filter(c => c.id !== fallbackConv.id)]);
             setActiveChatId(fallbackConv.id);
             if (shouldOpenProfile) {
-              setShowProfileModal(true);
               setIsMobileDetailOpen(true);
             }
           } else if (syncedConvs.length > 0 && !activeChatId) {
@@ -638,13 +636,8 @@ export default function Messages() {
 
   // Dropdown 3-dots menu & Jiji Profile modal state
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const sp = new URLSearchParams(window.location.search);
-      return sp.get('openProfile') === 'true';
-    }
-    return false;
-  });
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [isSellerDataFetched, setIsSellerDataFetched] = useState(false);
   const [sellerProfileMeta, setSellerProfileMeta] = useState(null);
   const [sellerAdverts, setSellerAdverts] = useState([]);
   const [isLoadingSellerData, setIsLoadingSellerData] = useState(false);
@@ -657,11 +650,11 @@ export default function Messages() {
 
   // Intelligent deep link support for opening seller profile
   useEffect(() => {
-    if (searchParams?.get('openProfile') === 'true' && activeChatId) {
-      setShowProfileModal(true);
+    if (searchParams?.get('openProfile') === 'true' && activeChat?.contact && !showProfileModal && !isSellerDataFetched) {
+      handleOpenProfileModal(activeChat);
       setIsMobileDetailOpen(true);
     }
-  }, [searchParams, activeChatId]);
+  }, [searchParams, activeChat?.contact?.id, showProfileModal, isSellerDataFetched]);
 
   // Intelligent history integration for seller profile modal (mobile gesture & desktop back)
   useEffect(() => {
@@ -681,53 +674,75 @@ export default function Messages() {
     }
   }, [showProfileModal]);
 
-  const handleOpenProfileModal = (chat = activeChat) => {
+  const handleOpenProfileModal = async (chat = activeChat) => {
     if (!chat?.contact) return;
     const counterpartId = chat.contact.id;
-    setLoadedSellerContactId(counterpartId);
-    setSellerProfileMeta({
-      created_at: chat.contact.created_at || null,
-      verified: Boolean(chat.contact.verified),
-      rating: chat.contact.rating || null,
-      phone: chat.contact.phone || '',
-      whatsapp: chat.contact.whatsapp || chat.contact.phone || '',
-      location: chat.contact.location || ''
-    });
+    setIsLoadingSellerData(true);
+    setIsSellerDataFetched(false);
 
-    let initialListings = [];
-    if (counterpartId && typeof window !== 'undefined') {
-      try {
-        const localRaw = localStorage.getItem(`buyoh_my_listings_${counterpartId}`);
-        if (localRaw) {
-          const parsed = JSON.parse(localRaw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            initialListings = parsed.filter(item => item && (item.name || item.title) && !item.archived && !item.deleted);
+    try {
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('id, name, full_name, avatar_url, my_listings, phone, whatsapp, location, verified, rating, created_at')
+        .eq('id', counterpartId)
+        .maybeSingle();
+
+      const freshMeta = {
+        created_at: prof?.created_at || chat.contact.created_at || null,
+        verified: Boolean(prof?.verified ?? chat.contact.verified),
+        rating: prof?.rating || chat.contact.rating || null,
+        phone: prof?.phone || chat.contact.phone || '',
+        whatsapp: prof?.whatsapp || chat.contact.whatsapp || prof?.phone || chat.contact.phone || '',
+        location: prof?.location || chat.contact.location || ''
+      };
+
+      let listings = [];
+      if (prof?.my_listings && Array.isArray(prof.my_listings) && prof.my_listings.length > 0) {
+        listings = prof.my_listings.filter(item => item && (item.name || item.title) && !item.archived && !item.deleted);
+      }
+
+      if (listings.length === 0 && counterpartId && typeof window !== 'undefined') {
+        try {
+          const localRaw = localStorage.getItem(`buyoh_my_listings_${counterpartId}`);
+          if (localRaw) {
+            const parsed = JSON.parse(localRaw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              listings = parsed.filter(item => item && (item.name || item.title) && !item.archived && !item.deleted);
+            }
           }
-        }
-      } catch (e) {}
-    }
+        } catch (e) {}
+      }
 
-    if (initialListings.length === 0 && user?.id && counterpartId && String(user.id).toLowerCase() === String(counterpartId).toLowerCase()) {
-      try {
-        const myListings = getMyListingsForUser(user);
-        if (Array.isArray(myListings) && myListings.length > 0) {
-          initialListings = myListings.filter(item => item && (item.name || item.title) && !item.archived && !item.deleted);
-        }
-      } catch (e) {}
-    }
+      if (listings.length === 0 && user?.id && counterpartId && String(user.id).toLowerCase() === String(counterpartId).toLowerCase()) {
+        try {
+          const myListings = getMyListingsForUser(user);
+          if (Array.isArray(myListings) && myListings.length > 0) {
+            listings = myListings.filter(item => item && (item.name || item.title) && !item.archived && !item.deleted);
+          }
+        } catch (e) {}
+      }
 
-    setSellerAdverts(initialListings);
-    setIsLoadingSellerData(initialListings.length === 0);
-    setShowSellerContact(false);
-    setSellerSearchQuery('');
-    setShowProfileModal(true);
+      setLoadedSellerContactId(counterpartId);
+      setSellerProfileMeta(freshMeta);
+      setSellerAdverts(listings);
+      setIsLoadingSellerData(false);
+      setIsSellerDataFetched(true);
+      setShowSellerContact(false);
+      setSellerSearchQuery('');
+      setShowProfileModal(true);
+    } catch (err) {
+      console.warn('[Messages] handleOpenProfileModal error:', err);
+      setIsLoadingSellerData(false);
+      setIsSellerDataFetched(true);
+      setShowProfileModal(true);
+    }
   };
 
   const handleCloseProfileModal = () => {
+    setShowProfileModal(false);
+    setIsSellerDataFetched(false);
     if (typeof window !== 'undefined' && window.history.state?.sellerProfileOpen) {
       window.history.back();
-    } else {
-      setShowProfileModal(false);
     }
   };
 
@@ -2613,6 +2628,9 @@ export default function Messages() {
 
       {/* ── SELLER PROFILE PAGE MODAL ── */}
       {showProfileModal && activeChat && (() => {
+        if (!isSellerDataFetched || isLoadingSellerData || loadedSellerContactId !== activeChat.contact?.id) {
+          return null; // Display NOTHING if the data has not been fetched yet!
+        }
         const isMetaMatchingActiveChat = loadedSellerContactId === activeChat.contact?.id;
         const metaToUse = isMetaMatchingActiveChat ? sellerProfileMeta : null;
         const sellerYearsText = formatMemberSince(

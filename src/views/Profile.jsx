@@ -38,12 +38,8 @@ export default function Profile() {
     try { return getSavedItemsForUser(user).length; } catch { return 0; }
   });
 
-  const [isCloudLoading, setIsCloudLoading] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    const active = user || getCachedUserSync();
-    if (!active?.id) return false;
-    return !localStorage.getItem(`buyoh_user_profile_${active.id}`);
-  });
+  const [lastFetchedUserId, setLastFetchedUserId] = useState(null);
+  const isDataFetched = lastFetchedUserId === user?.id;
 
   useEffect(() => {
     const loadCounts = () => {
@@ -146,19 +142,17 @@ export default function Profile() {
               if (freshData.avatar) localStorage.setItem(`buyoh_user_avatar_${user.id}`, freshData.avatar);
             } catch (e) {}
             setUserData(freshData);
-            setIsCloudLoading(false);
             if (!isEditing) {
               setEditedName(freshData.name);
               setEditedPhone(freshData.phone);
               setEditedWhatsapp(freshData.whatsapp);
               setEditedLocation(freshData.location);
             }
-          } else {
-            setIsCloudLoading(false);
           }
         } catch (err) {
           console.warn("Profile cloud fetch notice:", err);
-          setIsCloudLoading(false);
+        } finally {
+          setLastFetchedUserId(user.id);
         }
       })();
 
@@ -389,6 +383,11 @@ export default function Profile() {
     );
   }
 
+  // Display NOTHING if the data has not been fetched yet
+  if (loading || (user && !isDataFetched)) {
+    return null;
+  }
+
 
 
   return (
@@ -462,9 +461,7 @@ export default function Profile() {
           {/* User Profile Card Summary */}
           <div className="profile-summary-section">
             <div className="avatar-holder">
-              {isCloudLoading && !userData.avatar && !userData.name ? (
-                <div className="profile-avatar-large profile-avatar-skeleton" />
-              ) : userData.avatar && !userData.avatar.includes('photo-1535713875002-d1d0cf377fde') ? (
+              {userData.avatar && !userData.avatar.includes('photo-1535713875002-d1d0cf377fde') ? (
                 <img 
                   src={userData.avatar} 
                   alt="User Avatar" 
@@ -492,21 +489,13 @@ export default function Profile() {
             
             <div className="profile-identity-info">
               <div className="profile-title-badges">
-                {isCloudLoading && !userData.name ? (
-                  <div className="profile-skeleton-bar profile-skeleton-name" />
-                ) : (
-                  <h3 className="profile-name-title">{userData.name || 'Marketplace User'}</h3>
-                )}
+                <h3 className="profile-name-title">{userData.name || 'Marketplace User'}</h3>
                 {Boolean(user?.email_confirmed_at || user?.user_metadata?.verified || userData?.verified) && (
                   <span className="profile-badge-tag"><ShieldCheck size={13} /> Verified User</span>
                 )}
                 <span className="profile-badge-tag"><User size={13} /> {formatMemberSince(null, userData.createdAt || user?.created_at)}</span>
               </div>
-              {isCloudLoading && !userData.email && !user?.email ? (
-                <div className="profile-skeleton-bar profile-skeleton-email" />
-              ) : (
-                <p className="profile-email-sub">{userData.email || user?.email}</p>
-              )}
+              <p className="profile-email-sub">{userData.email || user?.email}</p>
             </div>
 
             {/* Profile Statistics Grid */}
@@ -587,43 +576,19 @@ export default function Profile() {
                   <div className="readonly-details">
                     <div className="info-row">
                       <span className="info-label">Full Name</span>
-                      <span className="info-val">
-                        {isCloudLoading && !userData.name ? (
-                          <div className="profile-skeleton-bar profile-skeleton-info" />
-                        ) : (
-                          userData.name || 'User'
-                        )}
-                      </span>
+                      <span className="info-val">{userData.name || 'User'}</span>
                     </div>
                     <div className="info-row">
                       <span className="info-label">Phone Number</span>
-                      <span className="info-val">
-                        {isCloudLoading && !userData.phone ? (
-                          <div className="profile-skeleton-bar profile-skeleton-info" />
-                        ) : (
-                          userData.phone || 'Not provided'
-                        )}
-                      </span>
+                      <span className="info-val">{userData.phone || 'Not provided'}</span>
                     </div>
                     <div className="info-row">
                       <span className="info-label">WhatsApp Number</span>
-                      <span className="info-val">
-                        {isCloudLoading && !userData.whatsapp ? (
-                          <div className="profile-skeleton-bar profile-skeleton-info" />
-                        ) : (
-                          userData.whatsapp || 'Not provided'
-                        )}
-                      </span>
+                      <span className="info-val">{userData.whatsapp || 'Not provided'}</span>
                     </div>
                     <div className="info-row">
                       <span className="info-label">Location</span>
-                      <span className="info-val">
-                        {isCloudLoading && !userData.location ? (
-                          <div className="profile-skeleton-bar profile-skeleton-info" />
-                        ) : (
-                          userData.location || 'Not provided'
-                        )}
-                      </span>
+                      <span className="info-val">{userData.location || 'Not provided'}</span>
                     </div>
                     <button className="edit-details-btn" onClick={() => setIsEditing(true)}>
                       Edit Profile Details

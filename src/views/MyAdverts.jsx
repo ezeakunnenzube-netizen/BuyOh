@@ -137,6 +137,11 @@ export default function MyAdverts() {
 
 
 
+  // While auth is resolving, render nothing to avoid flash of sign-in prompt
+  if (loading) {
+    return null;
+  }
+
   if (!user) {
     return (
       <div className="adverts-page-wrapper">

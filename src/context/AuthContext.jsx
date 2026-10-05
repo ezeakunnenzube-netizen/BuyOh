@@ -40,7 +40,7 @@ function getCachedUser() {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => getCachedUser());
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   // Track the cleanup function returned by initUserRealtimeSync
   const realtimeCleanupRef = useRef(null);
