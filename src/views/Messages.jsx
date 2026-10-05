@@ -2676,64 +2676,100 @@ export default function Messages() {
             </>
           ) : (
             <div className="no-active-chat-wrapper">
-              <div className="no-active-chat-card">
-                <div className="no-chat-icon-container">
-                  <div className="no-chat-icon-glow" />
-                  <div className="no-chat-icon-badge">
-                    <MessageSquareMore size={38} strokeWidth={2.2} />
-                  </div>
-                  <div className="no-chat-mini-badge" title="Verified Marketplace Security">
-                    <ShieldCheck size={16} strokeWidth={2.4} />
-                  </div>
+              <div className="human-empty-container">
+                {/* Friendly SVG Illustration of human dialogue */}
+                <div className="human-empty-art-wrap">
+                  <svg
+                    width="112"
+                    height="112"
+                    viewBox="0 0 112 112"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="human-empty-svg"
+                    aria-hidden="true"
+                  >
+                    <circle cx="56" cy="56" r="50" fill="#f0f7ff" stroke="#e0edfd" strokeWidth="1.5" />
+                    
+                    <circle cx="86" cy="28" r="3.5" fill="#60a5fa" opacity="0.75" />
+                    <circle cx="24" cy="42" r="2.5" fill="#93c5fd" opacity="0.6" />
+                    <circle cx="84" cy="84" r="2" fill="#3b82f6" opacity="0.5" />
+
+                    {/* Sender speech bubble (brand blue) */}
+                    <g filter="url(#shadow-bubble-1)">
+                      <rect x="25" y="32" width="46" height="34" rx="12" fill="#1d4ed8" />
+                      <path d="M31 66 L25 73 L38 66 Z" fill="#1d4ed8" />
+                      <rect x="33" y="43" width="24" height="3.5" rx="1.75" fill="#ffffff" />
+                      <rect x="33" y="51" width="16" height="3.5" rx="1.75" fill="rgba(255,255,255,0.7)" />
+                    </g>
+
+                    {/* Recipient speech bubble (white with reply dots) */}
+                    <g filter="url(#shadow-bubble-2)">
+                      <rect x="46" y="50" width="44" height="32" rx="12" fill="#ffffff" stroke="#e5e7eb" strokeWidth="1" />
+                      <path d="M82 82 L88 89 L80 81 Z" fill="#ffffff" stroke="#e5e7eb" strokeWidth="1" />
+                      <circle cx="58" cy="66" r="2.75" fill="#1d4ed8" />
+                      <circle cx="68" cy="66" r="2.75" fill="#2563eb" opacity="0.8" />
+                      <circle cx="78" cy="66" r="2.75" fill="#60a5fa" opacity="0.65" />
+                    </g>
+
+                    <defs>
+                      <filter id="shadow-bubble-1" x="20" y="28" width="56" height="52" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
+                        <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#1d4ed8" floodOpacity="0.18" />
+                      </filter>
+                      <filter id="shadow-bubble-2" x="42" y="46" width="54" height="50" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
+                        <feDropShadow dx="0" dy="4" stdDeviation="5" floodColor="#000000" floodOpacity="0.08" />
+                      </filter>
+                    </defs>
+                  </svg>
                 </div>
 
-                <div className="no-chat-tag-pill">
-                  <Sparkles size={13} />
-                  <span>InfiBuy Messenger</span>
-                </div>
+                <h2 className="human-empty-title">
+                  {user?.user_metadata?.full_name 
+                    ? `Welcome back, ${user.user_metadata.full_name.trim().split(/\s+/)[0]}! 👋` 
+                    : (user?.user_metadata?.name 
+                        ? `Welcome back, ${user.user_metadata.name.trim().split(/\s+/)[0]}! 👋` 
+                        : 'Select a conversation')}
+                </h2>
 
-                <h2 className="no-chat-title">No conversation selected</h2>
-                <p className="no-chat-subtitle">
-                  Select a chat from your conversation list on the left to review messages, negotiate prices, or contact buyers and sellers securely.
+                <p className="human-empty-subtitle">
+                  Choose someone from your conversations on the left to discuss an item, ask questions, or agree on a deal.
                 </p>
 
-                <div className="no-chat-features-grid">
-                  <div className="no-chat-feature-card">
-                    <div className="no-chat-feature-icon-wrap feature-blue">
-                      <Tag size={20} />
+                <div className="human-tips-row">
+                  <div className="human-tip-card">
+                    <span className="human-tip-emoji" role="img" aria-label="Chat">💬</span>
+                    <div className="human-tip-text">
+                      <strong>Say hello</strong>
+                      <small>Ask about item condition & details</small>
                     </div>
-                    <h4>Make Instant Offers</h4>
-                    <p>Propose counter-offers, accept bargains, and agree on item prices easily.</p>
                   </div>
 
-                  <div className="no-chat-feature-card">
-                    <div className="no-chat-feature-icon-wrap feature-emerald">
-                      <ShieldCheck size={20} />
+                  <div className="human-tip-card">
+                    <span className="human-tip-emoji" role="img" aria-label="Handshake">🤝</span>
+                    <div className="human-tip-text">
+                      <strong>Make an offer</strong>
+                      <small>Bargain and agree on a fair price</small>
                     </div>
-                    <h4>Verified & Protected</h4>
-                    <p>Verified seller profiles, trust scores, and anti-scam monitoring built-in.</p>
                   </div>
 
-                  <div className="no-chat-feature-card">
-                    <div className="no-chat-feature-icon-wrap feature-purple">
-                      <Sparkles size={20} />
+                  <div className="human-tip-card">
+                    <span className="human-tip-emoji" role="img" aria-label="Pin">📍</span>
+                    <div className="human-tip-text">
+                      <strong>Meet safely</strong>
+                      <small>Pick public places for pickups</small>
                     </div>
-                    <h4>Rich Real-Time Chat</h4>
-                    <p>Live typing status, photo attachments, voice notes, and online presence.</p>
                   </div>
                 </div>
 
-                <div className="no-chat-actions">
-                  <NavLink to="/" className="no-chat-browse-btn">
+                <div className="human-empty-actions">
+                  <NavLink to="/" className="human-browse-btn">
                     <Search size={16} />
-                    <span>Explore Marketplace Deals</span>
-                    <ChevronRight size={16} />
+                    <span>Browse marketplace</span>
                   </NavLink>
+                </div>
 
-                  <div className="no-chat-hint-bar">
-                    <Circle size={8} fill="#22c55e" color="#22c55e" />
-                    <span>Tip: Click any chat to open · Click the ✕ or the active chat to close</span>
-                  </div>
+                <div className="human-trust-footer">
+                  <ShieldCheck size={14} className="human-trust-icon" />
+                  <span>Private and protected peer-to-peer messaging</span>
                 </div>
               </div>
             </div>
