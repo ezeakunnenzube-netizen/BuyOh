@@ -577,16 +577,34 @@ export default function SellItem() {
 
       <div className="sell-container">
         {/* Mobile Header */}
-        <div className="sell-mobile-header">         
+        <div className="sell-mobile-header">
+          <button 
+            type="button" 
+            onClick={() => currentStep > 1 ? prevStep() : navigate(-1)} 
+            className="sell-mobile-back-btn"
+            title="Go back"
+            aria-label="Go back"
+          >
+            <ArrowLeft size={24} strokeWidth={2.5} />
+          </button>
           <h2 className="sell-mobile-title">Post Ad</h2>
         </div>
 
         {/* Page Header */}
         <div className="sell-page-header">
-          <h1 className="sell-main-title">
-            <Sparkles size={24} className="sell-title-icon" /> Post Your Ad
-          </h1>
-          <p className="sell-subtitle">Fill in the details below to list your item on InfiBuy marketplace</p>
+          <div className="sell-title-row">
+            <button 
+              type="button" 
+              onClick={() => currentStep > 1 ? prevStep() : navigate(-1)} 
+              className="sell-back-arrow-btn"
+              title="Go back"
+              aria-label="Go back"
+            >
+              <ArrowLeft size={24} strokeWidth={2.5} />
+            </button>
+            <h1 className="sell-main-title">Post Your Ad</h1>
+          </div>
+          <p className="sell-subtitle">Fill in the details below to list your item on the marketplace</p>
         </div>
 
         {/* Progress Stepper */}
@@ -645,7 +663,10 @@ export default function SellItem() {
                     const newCat = e.target.value;
                     setCategory(newCat);
                     setSubcategory('');
-                    if (!isConditionApplicable(newCat, '')) setCondition('');
+                    if (!isConditionApplicable(newCat, '')) {
+                      setCondition('');
+                      setErrors(prev => { const n = { ...prev }; delete n.condition; return n; });
+                    }
                   }}
                 >
                   <option value="">Select a category</option>
@@ -669,7 +690,10 @@ export default function SellItem() {
                     onChange={e => {
                       const newSub = e.target.value;
                       setSubcategory(newSub);
-                      if (!isConditionApplicable(category, newSub)) setCondition('');
+                      if (!isConditionApplicable(category, newSub)) {
+                        setCondition('');
+                        setErrors(prev => { const n = { ...prev }; delete n.condition; return n; });
+                      }
                     }}
                   >
                     <option value="">Select subcategory</option>
@@ -683,8 +707,8 @@ export default function SellItem() {
               </div>
             )}
 
-            {/* Condition (Only for physical items, not Animals, Services, Property, Jobs, etc.) */}
-            {isConditionApplicable(category, subcategory) && (
+            {/* Condition (Only for physical goods, not Repair & Construction, Services, Property, Animals, Jobs, etc.) */}
+            {category && isConditionApplicable(category, subcategory) && (
               <div className="form-group">
                 <label className="form-label">Condition <span className="required">*</span></label>
                 <div className="condition-pills">
@@ -693,7 +717,12 @@ export default function SellItem() {
                       key={cond}
                       type="button"
                       className={`condition-pill ${condition === cond ? 'pill-active' : ''}`}
-                      onClick={() => setCondition(cond)}
+                      onClick={() => {
+                        setCondition(cond);
+                        if (errors.condition) {
+                          setErrors(prev => { const n = { ...prev }; delete n.condition; return n; });
+                        }
+                      }}
                     >
                       {cond}
                     </button>

@@ -34,15 +34,6 @@ const INITIAL_NOTIFICATIONS = [
     actionLink: '#'
   },
   {
-    id: 'notif-003',
-    type: 'message',
-    title: 'New Message from Chinedu',
-    message: 'Is the MacBook Pro 16" still available for inspection?',
-    time: '3 hours ago',
-    unread: false,
-    actionLink: '/messages'
-  },
-  {
     id: 'notif-004',
     type: 'system',
     title: 'Listing Approved',
@@ -75,7 +66,12 @@ export default function Notifications() {
   // Sync notifications when user changes or logs in on a new device
   useEffect(() => {
     const loadNotifications = () => {
-      setNotifications(getNotificationsForUser(user, INITIAL_NOTIFICATIONS));
+      const raw = getNotificationsForUser(user, INITIAL_NOTIFICATIONS);
+      // Strictly exclude any chat message notifications
+      const cleaned = (Array.isArray(raw) ? raw : []).filter(
+        n => n.type !== 'message' && !String(n.id).startsWith('notif-chat-')
+      );
+      setNotifications(cleaned);
     };
 
     loadNotifications();
@@ -94,8 +90,10 @@ export default function Notifications() {
   }, [user]);
 
   const updateAndSyncNotifications = (newNotifs) => {
-    setNotifications(newNotifs);
-    saveNotificationsForUser(user, newNotifs);
+    // Strictly ensure no chat message notifications are saved
+    const cleaned = newNotifs.filter(n => n.type !== 'message' && !String(n.id).startsWith('notif-chat-'));
+    setNotifications(cleaned);
+    saveNotificationsForUser(user, cleaned);
   };
 
   const handleMarkAsRead = (id) => {
@@ -128,7 +126,11 @@ export default function Notifications() {
     setTimeout(() => setToastMessage(''), 2500);
   };
 
-  const filteredNotifications = notifications.filter(n => {
+  const nonChatNotifications = notifications.filter(
+    n => n.type !== 'message' && !String(n.id).startsWith('notif-chat-')
+  );
+
+  const filteredNotifications = nonChatNotifications.filter(n => {
     if (activeTab === 'unread') return n.unread;
     if (activeTab === 'offers') return n.type === 'offer';
     if (activeTab === 'alerts') return n.type === 'alert' || n.type === 'system';
@@ -141,8 +143,6 @@ export default function Notifications() {
         return <Tag className="notif-type-icon icon-offer" size={18} />;
       case 'alert':
         return <Sparkles className="notif-type-icon icon-alert" size={18} />;
-      case 'message':
-        return <MessageSquare className="notif-type-icon icon-message" size={18} />;
       case 'system':
       default:
         return <ShieldCheck className="notif-type-icon icon-system" size={18} />;
@@ -150,8 +150,10 @@ export default function Notifications() {
   };
 
   const handleBack = () => {
-    navigate('/');
+    navigate(-1);
   };
+
+  const unreadNotifsFiltered = nonChatNotifications.filter(n => n.unread).length;
 
   return (
     <div className="notifications-page-wrapper">
@@ -164,13 +166,13 @@ export default function Notifications() {
           {/* Header Actions */}
           <div className="notif-header">
             <div className="notif-title-area">
-              <button className="back-arrow-btn" onClick={handleBack} title="Go Back">
-                <ArrowLeft size={20} />
+              <button className="back-arrow-btn" onClick={handleBack} title="Go Back" aria-label="Go Back">
+                <ArrowLeft size={24} strokeWidth={2.5} />
               </button>
               <h2 className="notif-page-title">Notifications</h2>
-              {notifications.some(n => n.unread) && (
+              {unreadNotifsFiltered > 0 && (
                 <span className="notif-badge-pill">
-                  {notifications.filter(n => n.unread).length} New
+                  {unreadNotifsFiltered} New
                 </span>
               )}
             </div>

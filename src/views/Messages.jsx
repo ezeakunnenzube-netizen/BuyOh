@@ -433,32 +433,6 @@ export default function Messages() {
             }
           }
 
-          // Generate in-app notification so Notifications view and bell update immediately
-          try {
-            const senderDisplayName = newMsg.sender_name || 'Buyer / Seller';
-            const notifTitle = formatted.isOffer ? 'New Offer Received' : `New Message from ${senderDisplayName}`;
-            const notifSnippet = formatted.isOffer 
-              ? `Offer of ₦${formatted.offerAmount.toLocaleString('en-NG')} on "${newMsg.product_info?.name || 'your listing'}"`
-              : (formatted.text || 'Sent you an attachment');
-
-            const currentNotifs = getNotificationsForUser(user);
-            const notifKey = `notif-chat-${formatted.id}`;
-            if (!currentNotifs.some(n => n.id === notifKey)) {
-              currentNotifs.unshift({
-                id: notifKey,
-                type: formatted.isOffer ? 'offer' : 'message',
-                title: notifTitle,
-                message: notifSnippet,
-                time: 'Just now',
-                unread: true,
-                actionLink: `/messages?chatId=${newMsg.conversation_id}`
-              });
-              saveNotificationsForUser(user, currentNotifs);
-              window.dispatchEvent(new CustomEvent('buyoh_notifications_updated'));
-            }
-          } catch (notifErr) {
-            console.warn('Error recording chat notification:', notifErr);
-          }
 
           setConversations(prev => {
             const convExists = prev.some(c => 
@@ -1081,16 +1055,6 @@ export default function Messages() {
     setIsMobileDetailOpen(false);
   };
 
-  const handleMoveToSpam = (id) => {
-    setConversations(prev => prev.filter(c => c.id !== id));
-    if (activeChatId === id) {
-      setActiveChatId(null);
-      router.replace('/messages');
-    }
-    setToastMessage('Conversation moved to spam');
-    setTimeout(() => setToastMessage(''), 3000);
-    setIsMobileDetailOpen(false);
-  };
 
   // Real typing indicator — derived from typingUsers state set by realtime
   useEffect(() => {
@@ -1931,16 +1895,6 @@ export default function Messages() {
                           </button>
                         )}
 
-                        <button
-                          className="dropdown-item"
-                          onClick={() => {
-                            setIsMenuOpen(false);
-                            handleMoveToSpam(activeChat.id);
-                          }}
-                        >
-                          <AlertCircle size={17} className="dropdown-icon" />
-                          <span>Move to spam</span>
-                        </button>
 
                         {activeChat?.contact?.name && (
                           <button

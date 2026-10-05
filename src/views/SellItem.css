@@ -73,30 +73,51 @@
   color: #0f172a;
 }
 
-/* ── Mobile Header ── */
 .sell-mobile-header {
   display: none;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
 
-.sell-mobile-back {
+.sell-back-arrow-btn,
+.sell-mobile-back-btn {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  color: #0f172a !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  margin-right: 0.5rem;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  flex-shrink: 0;
+  border-radius: 0 !important;
+}
+
+.sell-back-arrow-btn:hover,
+.sell-mobile-back-btn:hover {
+  background: transparent !important;
+  opacity: 0.75;
+  transform: translateX(-3px);
+}
+
+.sell-title-row {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  background: transparent;
-  border: none;
-  color: #8b5cf6;
-  font-weight: 700;
-  font-size: 0.9rem;
-  cursor: pointer;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .sell-mobile-title {
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   font-weight: 800;
   margin: 0;
+  color: #0f172a;
 }
 
 /* ── Page Header ── */
@@ -180,24 +201,26 @@
 }
 
 .step-active .step-circle {
-  border-color: #e67600;
-  background: linear-gradient(135deg, #ffa705, #e67600);
+  border-color: #0f172a;
+  background: #0f172a;
   color: white;
-  box-shadow: 0 0 0 4px rgba(230, 118, 0, 0.15);
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.12);
 }
 
 .step-active .step-label {
-  color: #e67600;
+  color: #0f172a;
+  font-weight: 800;
 }
 
 .step-done .step-circle {
-  border-color: #22c55e;
-  background: #22c55e;
+  border-color: #0f172a;
+  background: #0f172a;
   color: white;
 }
 
 .step-done .step-label {
-  color: #22c55e;
+  color: #0f172a;
+  font-weight: 700;
 }
 
 /* ── Form Card ── */

@@ -829,7 +829,7 @@ export default function ProductDetails({ params: serverParams }) {
         { label: 'PROPERTY TYPE', value: product.subcategory || 'Real Estate' },
         { label: 'LOCATION', value: product.location || 'Nigeria' },
         { label: 'LISTING TYPE', value: nameLower.includes('rent') ? 'For Rent' : nameLower.includes('short let') ? 'Short Let' : 'For Sale' },
-        { label: 'VERIFIED LISTING', value: 'Yes' }
+        { label: 'STATUS', value: 'Available' }
       ];
     }
 
@@ -946,6 +946,9 @@ export default function ProductDetails({ params: serverParams }) {
       <div className="detail-page-container">
         {/* Breadcrumb Navigation */}
         <nav className="detail-breadcrumb">
+          <button onClick={handleBack} className="detail-back-arrow-btn" title="Go back" aria-label="Go back">
+            <ArrowLeft size={22} strokeWidth={2.5} />
+          </button>
           <NavLink to="/" className="bread-link">Home</NavLink>
           <ChevronRight size={12} className="bread-sep" />
           <span className="bread-link bread-cat" onClick={() => navigate('/')}>{product.category}</span>
@@ -961,8 +964,9 @@ export default function ProductDetails({ params: serverParams }) {
 
         {/* Mobile back button */}
         <div className="detail-mobile-header">
-          <button onClick={handleBack} className="mobile-back-btn">
-            <ArrowLeft size={20} /> {fromProfile ? (profileSellerName ? `Back to ${profileSellerName}` : 'Back to Seller Profile') : 'Back'}
+          <button onClick={handleBack} className="mobile-back-btn" title="Go back" aria-label="Go back">
+            <ArrowLeft size={24} strokeWidth={2.5} />
+            <span>{fromProfile ? (profileSellerName ? `Back to ${profileSellerName}` : 'Back to Seller Profile') : 'Back'}</span>
           </button>
         </div>
 
@@ -1170,7 +1174,6 @@ export default function ProductDetails({ params: serverParams }) {
                   </div>
                   <div className="seller-badges">
                     <span>👤 {formatMemberSince(product.sellerJoined, product.sellerCreatedAt)}</span>
-                    {Boolean(product.sellerVerified) && <span>🛡️ Verified Seller</span>}
                   </div>
                 </div>
               </div>

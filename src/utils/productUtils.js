@@ -2,26 +2,65 @@
 
 /**
  * Categories that fundamentally do not have physical "Brand New" or "Used" conditions.
- * E.g., Animals (living pets/creatures), Services (intangible labor), Jobs (employment opportunities), Property (real estate/land/rentals).
+ * E.g., Repair & Construction, Services, Jobs, Animals, Property.
  */
 export const NO_CONDITION_CATEGORIES = [
   'Services',
   'Jobs',
   'Animals',
-  'Property'
+  'Property',
+  'Repair & Construction',
+  'Repair and Construction',
+  'Repairs & Construction',
+  'Repair',
+  'Construction'
 ];
 
 /**
  * Subcategories under physical or hybrid categories where "Brand New" / "Used" condition is inappropriate.
- * E.g., Livestock/produce/services in Agriculture, salon/spa services in Beauty, service trades in Repair.
+ * E.g., Live animals, farm produce, consumables, hygiene items, trade skills, and all intangible services.
  */
 export const NO_CONDITION_SUBCATEGORIES = [
+  // Agriculture non-machinery items
   'Farm Produce',
   'Livestock & Poultry',
   'Seeds & Seedlings',
+  'Fertilizers & Pesticides',
   'Agricultural Services',
+  'Livestock',
+  'Poultry',
+  'Seeds',
+
+  // Animals & Pets (living animals & pet services)
+  'Dogs',
+  'Cats',
+  'Birds',
+  'Fish & Aquarium',
+  'Reptiles',
+  'Pet Food & Supplies',
   'Veterinary Services',
+
+  // Repair & Construction trade work & materials
+  'Building Materials',
+  'Plumbing',
+  'Electrical Work',
+  'Painting & Decorating',
+  'Carpentry & Woodwork',
+  'HVAC & Air Conditioning',
+  'Roofing',
+  'Tiling & Flooring',
+
+  // Health, Beauty & Personal Care consumables & personal hygiene
   'Health & Beauty Services',
+  'Vitamins & Supplements',
+  'Makeup',
+  'Fragrance',
+  'Face Care',
+  'Body Care',
+  'Oral Care',
+  'Sexual Wellness',
+
+  // Services
   'Cleaning Services',
   'Home Services',
   'Tutoring & Lessons',
@@ -30,7 +69,14 @@ export const NO_CONDITION_SUBCATEGORIES = [
   'Legal Services',
   'IT & Tech Support',
   'Logistics & Delivery',
-  'Catering & Food'
+  'Catering & Food',
+
+  // Real estate & Rentals
+  'Houses & Apartments for Rent',
+  'Houses & Apartments for Sale',
+  'Land & Plots',
+  'Commercial Property',
+  'Short Let'
 ];
 
 /**
@@ -42,15 +88,49 @@ export const NO_CONDITION_SUBCATEGORIES = [
 export function isConditionApplicable(category, subcategory) {
   if (!category) return false;
   
-  const trimmedCat = category.trim();
-  if (NO_CONDITION_CATEGORIES.some(c => c.toLowerCase() === trimmedCat.toLowerCase())) {
+  const normCat = category.trim().toLowerCase();
+
+  // 1. Direct category match
+  if (NO_CONDITION_CATEGORIES.some(c => c.toLowerCase() === normCat)) {
+    return false;
+  }
+
+  // 2. Keyword heuristic on category (e.g. Repair, Construction, Service, Job, Property, Animal)
+  if (
+    normCat.includes('repair') ||
+    normCat.includes('construction') ||
+    normCat.includes('service') ||
+    normCat.includes('job') ||
+    normCat.includes('property') ||
+    normCat.includes('animal')
+  ) {
     return false;
   }
   
+  // 3. Subcategory match & heuristics
   if (subcategory) {
-    const trimmedSub = subcategory.trim().toLowerCase();
-    if (trimmedSub.includes('service')) return false;
-    if (NO_CONDITION_SUBCATEGORIES.some(s => s.toLowerCase() === trimmedSub)) {
+    const normSub = subcategory.trim().toLowerCase();
+    
+    if (NO_CONDITION_SUBCATEGORIES.some(s => s.toLowerCase() === normSub)) {
+      return false;
+    }
+
+    if (
+      normSub.includes('service') ||
+      normSub.includes('repair') ||
+      normSub.includes('construction') ||
+      normSub.includes('rent') ||
+      normSub.includes('produce') ||
+      normSub.includes('livestock') ||
+      normSub.includes('poultry') ||
+      normSub.includes('seed') ||
+      normSub.includes('fertilizer') ||
+      normSub.includes('supplement') ||
+      normSub.includes('tutoring') ||
+      normSub.includes('plumbing') ||
+      normSub.includes('roofing') ||
+      normSub.includes('tiling')
+    ) {
       return false;
     }
   }

@@ -397,15 +397,7 @@ export default function Profile() {
         <div className="profile-card">
           {/* Cover Banner */}
           <div className="profile-banner" style={{ background: userData.banner }}>
-            <button 
-              type="button" 
-              onClick={() => navigate(-1)} 
-              className="profile-mobile-back-btn"
-              title="Go back"
-              aria-label="Go back"
-            >
-              <ArrowLeft size={22} strokeWidth={2.5} />
-            </button>
+            
             <h2 className="profile-page-title">My Account</h2>
           </div>
 

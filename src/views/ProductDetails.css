@@ -89,16 +89,32 @@
   margin-bottom: 1rem;
 }
 
+.detail-back-arrow-btn,
 .mobile-back-btn {
-  display: flex;
+  display: inline-flex !important;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  background: transparent;
-  border: none;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
   font-size: 0.9rem;
   font-weight: 700;
-  color: #8b5cf6;
+  color: #0f172a !important;
   cursor: pointer;
+  padding: 4px;
+  margin-right: 0.4rem;
+  border-radius: 0 !important;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.detail-back-arrow-btn:hover,
+.mobile-back-btn:hover {
+  background: transparent !important;
+  opacity: 0.75;
+  transform: translateX(-3px);
 }
 
 /* ── Grid Layout ── */
@@ -130,16 +146,17 @@
 
 .carousel-badge {
   position: absolute;
-  top: 2rem;
-  left: 2rem;
-  background: linear-gradient(135deg, #ffa705, #e67600);
-  color: white;
-  font-size: 0.72rem;
+  top: 1.5rem;
+  left: 1.5rem;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 0.76rem;
   font-weight: 700;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
+  padding: 0.25rem 0.8rem;
+  border-radius: 99px;
   z-index: 10;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.01em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .carousel-main-image-wrap {
