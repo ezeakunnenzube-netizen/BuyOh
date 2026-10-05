@@ -219,11 +219,17 @@ export default function Home(){
   const [agricMenuOpen,     setAgricMenuOpen]     = useState(false)
   const [animalsMenuOpen,   setAnimalsMenuOpen]   = useState(false)
   const [jobsMenuOpen,      setJobsMenuOpen]      = useState(false)
-  const [allProducts, setAllProducts] = useState(products);
+  // Lazy initialiser: compute the correct pool *before* the first render so
+  // there is never a frame showing the wrong/stale listings.
+  const [allProducts, setAllProducts] = useState(() => {
+    try { return getGeneralProductPool(null); } catch { return products; }
+  });
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
 
-  const [savedItems, setSavedItems] = useState([]);
+  const [savedItems, setSavedItems] = useState(() => {
+    try { return getSavedItemsForUser(null); } catch { return []; }
+  });
 
   useEffect(() => {
     const reloadListings = () => {
