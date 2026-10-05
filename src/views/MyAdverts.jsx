@@ -6,8 +6,7 @@ import DesktopNavbar from '../components/DesktopNavbar';
 import { useRouter } from 'next/navigation';
 import { 
   PanelTop, Trash2, Eye, MapPin, Tag, Plus, ArrowLeft, 
-  Search, X, ShieldCheck, Store, RefreshCcw, TrendingUp,
-  Layers, CheckCircle, SlidersHorizontal, ShoppingBag
+  Search, X, Store, RefreshCcw
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
@@ -22,8 +21,6 @@ export default function MyAdverts() {
 
   const [myAdverts, setMyAdverts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [sortBy, setSortBy] = useState('newest');
   const [toastMessage, setToastMessage] = useState('');
   const [deleteId, setDeleteId] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -111,7 +108,7 @@ export default function MyAdverts() {
 
   // Respects each ad's stored currency (GHS for Ghana, NGN for Nigeria)
   const formatPrice = (val, currency) => {
-    const cur = currency === 'GHS' ? 'GHS' : 'NGN';
+    const cur = currency === 'GHS' || currency === 'GH₵' ? 'GHS' : 'NGN';
     const locale = cur === 'GHS' ? 'en-GH' : 'en-NG';
     return new Intl.NumberFormat(locale, {
       style: 'currency',
@@ -120,34 +117,8 @@ export default function MyAdverts() {
     }).format(val || 0);
   };
 
-  const totalValue = useMemo(() => {
-    return myAdverts.reduce((acc, ad) => acc + (Number(ad.price) || 0), 0);
-  }, [myAdverts]);
-
-  // Detect the dominant currency for aggregate metrics
-  const dominantCurrency = useMemo(() => {
-    const ghsCount = myAdverts.filter(ad => ad.currency === 'GHS').length;
-    return ghsCount > myAdverts.length / 2 ? 'GHS' : 'NGN';
-  }, [myAdverts]);
-
-  const avgPrice = useMemo(() => {
-    if (myAdverts.length === 0) return 0;
-    return Math.round(totalValue / myAdverts.length);
-  }, [myAdverts, totalValue]);
-
-  const categories = useMemo(() => {
-    const set = new Set();
-    myAdverts.forEach(ad => {
-      if (ad.category) set.add(ad.category);
-    });
-    return ['All', ...Array.from(set)];
-  }, [myAdverts]);
-
   const filteredAdverts = useMemo(() => {
     let list = [...myAdverts];
-    if (selectedCategory !== 'All') {
-      list = list.filter(ad => ad.category === selectedCategory);
-    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(ad =>
@@ -157,13 +128,8 @@ export default function MyAdverts() {
         (ad.location || '').toLowerCase().includes(q)
       );
     }
-    if (sortBy === 'price-low') {
-      list.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
-    } else if (sortBy === 'price-high') {
-      list.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
-    }
     return list;
-  }, [myAdverts, selectedCategory, searchQuery, sortBy]);
+  }, [myAdverts, searchQuery]);
 
   // While auth is resolving, render nothing to avoid flash of sign-in prompt
   if (loading) {
@@ -176,9 +142,9 @@ export default function MyAdverts() {
         <DesktopNavbar />
         <div className="adverts-auth-prompt">
           <div className="adverts-auth-icon-circle">
-            <Store size={36} color="#2563eb" />
+            <Store size={36} color="#0f172a" />
           </div>
-          <h2>Seller Studio</h2>
+          <h2>My Posted Adverts</h2>
           <p>Sign in to view, monitor, and manage your active marketplace listings.</p>
           <button className="adverts-signin-btn" onClick={() => setIsAuthOpen(true)}>
             Sign In / Register
@@ -194,203 +160,110 @@ export default function MyAdverts() {
       <DesktopNavbar />
 
       <div className="adverts-container">
-        {/* Mobile Navigation Header Bar */}
-        <div className="adverts-mobile-header">
-          <button 
-            type="button" 
-            onClick={() => navigate(-1)} 
-            className="adverts-back-btn"
-            title="Go back"
-            aria-label="Go back"
-          >
-            <ArrowLeft size={24} strokeWidth={2.5} />
-          </button>
-          <h2 className="adverts-mobile-title">My Adverts</h2>
+        {/* Simple Clean Header */}
+        <div className="adverts-header">
+          <div className="adverts-header-left">
+            <button 
+              type="button" 
+              onClick={() => navigate(-1)} 
+              className="back-arrow-btn"
+              title="Go back"
+              aria-label="Go back"
+            >
+              <ArrowLeft size={24} strokeWidth={2.5} />
+            </button>
+            <h1 className="adverts-page-title">My Adverts</h1>
+            {myAdverts.length > 0 && (
+              <span className="adverts-count-pill">
+                {myAdverts.length}
+              </span>
+            )}
+          </div>
+
+          <div className="adverts-header-actions">
+            <button 
+              type="button" 
+              className="adverts-post-btn" 
+              onClick={() => navigate('/sell')}
+            >
+              <Plus size={16} strokeWidth={2.5} />
+              <span>Post New Ad</span>
+            </button>
+
+            <button
+              type="button"
+              id="adverts-sync-btn"
+              className={`adverts-sync-btn adverts-sync-btn--${syncStatus}`}
+              onClick={handleManualSync}
+              disabled={isSyncing}
+              title={syncStatus === 'synced' ? 'Synced with cloud' : 'Sync listings with cloud'}
+            >
+              <RefreshCcw
+                size={14}
+                className={isSyncing ? 'adverts-sync-spin' : ''}
+              />
+              <span>
+                {syncStatus === 'syncing' && 'Syncing...'}
+                {syncStatus === 'synced' && 'Synced ✓'}
+                {syncStatus === 'error' && 'Retry'}
+                {syncStatus === 'idle' && 'Sync'}
+              </span>
+            </button>
+          </div>
         </div>
 
-        {/* ── Human-Crafted Hero Header Banner ── */}
-        <div className="adverts-hero-banner">
-          <div className="adverts-hero-top">
-            <div className="adverts-hero-left">
-              <nav className="adverts-breadcrumb" aria-label="Breadcrumb">
-                <span onClick={() => navigate('/')} className="crumb-link">Home</span>
-                <span className="crumb-sep">/</span>
-                <span className="crumb-current">Seller Studio</span>
-              </nav>
-
-              <div className="adverts-title-row">
-                <button 
-                  type="button" 
-                  onClick={() => navigate(-1)} 
-                  className="adverts-back-arrow-btn"
-                  title="Go back"
-                  aria-label="Go back"
-                >
-                  <ArrowLeft size={24} strokeWidth={2.5} />
-                </button>
-                <div className="adverts-icon-badge">
-                  <Store size={22} className="adverts-icon-svg" />
-                </div>
-                <h1 className="adverts-hero-title">My Adverts</h1>
-                <span className="adverts-count-chip">
-                  {myAdverts.length} {myAdverts.length === 1 ? 'listing' : 'listings'}
-                </span>
-              </div>
-
-              <p className="adverts-hero-desc">
-                Track your active listings, monitor inventory asking value, and publish new products to buyers.
-              </p>
-            </div>
-
-            <div className="adverts-hero-actions">
-              <button 
-                type="button" 
-                className="adverts-action-btn btn-post-new" 
-                onClick={() => navigate('/sell')}
-                title="Create a new marketplace listing"
-              >
-                <Plus size={16} />
-                <span>Post New Ad</span>
-              </button>
-
+        {/* Search input — ONLY rendered if there is an ad available */}
+        {myAdverts.length > 0 && (
+          <div className="adverts-search-wrapper">
+            <Search size={18} className="adverts-search-icon" />
+            <input
+              type="text"
+              placeholder="Search your adverts..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="adverts-search-input"
+              aria-label="Search your adverts"
+            />
+            {searchQuery && (
               <button
                 type="button"
-                id="adverts-sync-btn"
-                className={`adverts-action-btn btn-sync adverts-sync-btn--${syncStatus}`}
-                onClick={handleManualSync}
-                disabled={isSyncing}
-                title={syncStatus === 'synced' ? 'Synced with cloud' : 'Sync listings with cloud'}
+                className="adverts-search-clear-btn"
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search query"
               >
-                <RefreshCcw
-                  size={14}
-                  className={isSyncing ? 'adverts-sync-spin' : ''}
-                />
-                <span>
-                  {syncStatus === 'syncing' && 'Syncing...'}
-                  {syncStatus === 'synced' && 'Synced ✓'}
-                  {syncStatus === 'error' && 'Sync Failed'}
-                  {syncStatus === 'idle' && 'Sync Cloud'}
-                </span>
+                <X size={15} />
               </button>
-            </div>
+            )}
           </div>
-
-          {/* Solid KPI Metrics Tiles */}
-          <div className="adverts-metrics-row">
-            <div className="adverts-metric-tile">
-              <div className="metric-icon-wrap metric-icon-blue">
-                <Layers size={18} />
-              </div>
-              <div className="metric-details">
-                <span className="metric-tile-label">Active Listings</span>
-                <span className="metric-tile-value">{myAdverts.length}</span>
-              </div>
-            </div>
-
-            <div className="adverts-metric-tile">
-              <div className="metric-icon-wrap metric-icon-orange">
-                <Tag size={18} />
-              </div>
-              <div className="metric-details">
-                <span className="metric-tile-label">Inventory Value</span>
-                <span className="metric-tile-value metric-accent">{formatPrice(totalValue, dominantCurrency)}</span>
-              </div>
-            </div>
-
-            <div className="adverts-metric-tile">
-              <div className="metric-icon-wrap metric-icon-green">
-                <TrendingUp size={18} />
-              </div>
-              <div className="metric-details">
-                <span className="metric-tile-label">Avg. Asking Price</span>
-                <span className="metric-tile-value">{formatPrice(avgPrice, dominantCurrency)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Solid Filter & Search Toolbar */}
-          <div className="adverts-hero-toolbar">
-            <div className="adverts-search-box">
-              <Search size={16} className="adverts-search-icon" />
-              <input
-                type="text"
-                placeholder="Search listings by title, category, location..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="adverts-search-input"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  className="adverts-search-clear"
-                  onClick={() => setSearchQuery('')}
-                  aria-label="Clear search query"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-
-            <div className="adverts-filters-group">
-              {categories.length > 1 && (
-                <div className="adverts-category-pills">
-                  {categories.map(cat => (
-                    <button
-                      key={cat}
-                      type="button"
-                      className={`category-pill ${selectedCategory === cat ? 'active' : ''}`}
-                      onClick={() => setSelectedCategory(cat)}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className="adverts-sort-box">
-                <SlidersHorizontal size={14} className="sort-icon" />
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="adverts-sort-select"
-                  aria-label="Sort adverts"
-                >
-                  <option value="newest">Sort: Newest</option>
-                  <option value="price-low">Price: Low to High</option>
-                  <option value="price-high">Price: High to Low</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* ── Adverts Grid or Empty State ── */}
         {myAdverts.length === 0 ? (
-          <div className="adverts-empty-card">
-            <div className="adverts-empty-icon-circle">
-              <Store size={36} color="#2563eb" />
+          <div className="adverts-empty-state">
+            <div className="empty-icon-wrap">
+              <Store size={40} className="empty-icon" />
             </div>
-            <h3>No Active Listings Yet</h3>
-            <p>You haven't posted any listings on InfiBuy marketplace yet. Publish your first item to connect with verified buyers today.</p>
-            <button className="empty-post-btn" onClick={() => navigate('/sell')}>
-              <Plus size={16} /> Post Your First Ad
+            <h3 className="empty-state-title">No adverts posted yet</h3>
+            <p className="empty-state-desc">
+              You haven't posted any advertisements yet. Start selling today to connect with buyers across the marketplace.
+            </p>
+            <button className="empty-state-btn" onClick={() => navigate('/sell')}>
+              <Plus size={16} strokeWidth={2.5} />
+              <span>Post Your First Ad</span>
             </button>
           </div>
         ) : filteredAdverts.length === 0 ? (
-          <div className="adverts-empty-card">
-            <div className="adverts-empty-icon-circle">
-              <Search size={32} color="#64748b" />
+          <div className="adverts-empty-state">
+            <div className="empty-icon-wrap">
+              <Search size={36} className="empty-icon" />
             </div>
-            <h3>No matching listings found</h3>
-            <p>No active listings match your current search "{searchQuery}" in category "{selectedCategory}".</p>
+            <h3 className="empty-state-title">No matching adverts found</h3>
+            <p className="empty-state-desc">No adverts match your current search "{searchQuery}".</p>
             <button
-              className="empty-post-btn"
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedCategory('All');
-              }}
+              className="empty-state-btn"
+              onClick={() => setSearchQuery('')}
             >
-              Clear Search & Filters
+              Clear Search
             </button>
           </div>
         ) : (
@@ -417,13 +290,13 @@ export default function MyAdverts() {
                   <p className="advert-price">{formatPrice(ad.price, ad.currency)}</p>
                   
                   <div className="advert-meta-tags">
-                    <span className="meta-tag"><MapPin size={12} /> {ad.location || 'Lagos'}</span>
+                    <span className="meta-tag"><MapPin size={12} /> {ad.location || 'Nigeria'}</span>
                     <span className="meta-tag"><Tag size={12} /> {ad.subcategory || ad.category || 'General'}</span>
                   </div>
 
                   <div className="advert-actions">
                     <button className="btn-view-ad" onClick={() => navigate(`/product/${ad.id}`)}>
-                      <Eye size={14} /> View Listing
+                      <Eye size={14} /> View Advert
                     </button>
                     <button className="btn-delete-ad" onClick={() => setDeleteId(ad.id)}>
                       <Trash2 size={14} /> Delete
@@ -440,14 +313,11 @@ export default function MyAdverts() {
       {deleteId && (
         <div className="modal-backdrop" onClick={() => setDeleteId(null)}>
           <div className="delete-dialog-card" onClick={e => e.stopPropagation()}>
-            <div className="delete-icon-circle">
-              <Trash2 size={24} color="#ef4444" />
-            </div>
-            <h3>Delete Listing?</h3>
-            <p>Are you sure you want to remove this listing from InfiBuy marketplace? This action cannot be undone.</p>
+            <h3>Delete Advert?</h3>
+            <p>Are you sure you want to remove this advert from the marketplace? This action cannot be undone.</p>
             <div className="delete-modal-actions">
               <button className="btn-confirm-delete" onClick={() => handleDeleteAd(deleteId)}>
-                Delete Listing
+                Delete Advert
               </button>
               <button className="btn-cancel-delete" onClick={() => setDeleteId(null)}>
                 Cancel

@@ -6,7 +6,7 @@ import DesktopNavbar from '../components/DesktopNavbar';
 import { useRouter } from 'next/navigation';
 import {
   Bookmark, MapPin, Tag, ArrowLeft, Eye, Trash2,
-  Search, X, ShoppingBag, SlidersHorizontal
+  Search, X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
@@ -22,8 +22,6 @@ export default function SavedAdverts() {
 
   const [savedItems, setSavedItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [sortBy, setSortBy] = useState('newest');
   const [toastMessage, setToastMessage] = useState('');
   const [removeId, setRemoveId] = useState(null);
   const [showClearAllModal, setShowClearAllModal] = useState(false);
@@ -80,7 +78,11 @@ export default function SavedAdverts() {
     }
   };
 
-  const formatPrice = (val) => {
+  const formatPrice = (val, item) => {
+    const isGhana = item?.currency === 'GHS' || item?.currency === 'GH₵' || item?.country === 'Ghana' || (typeof item?.location === 'string' && (item.location.includes('Ghana') || item.location.includes('Accra') || item.location.includes('Ashanti')));
+    if (isGhana) {
+      return 'GH₵ ' + Number(val || 0).toLocaleString();
+    }
     return new Intl.NumberFormat('en-NG', {
       style: 'currency',
       currency: 'NGN',
@@ -88,24 +90,8 @@ export default function SavedAdverts() {
     }).format(val || 0);
   };
 
-  const totalValue = useMemo(() => {
-    return savedItems.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
-  }, [savedItems]);
-
-
-  const categories = useMemo(() => {
-    const set = new Set();
-    savedItems.forEach(item => {
-      if (item.category) set.add(item.category);
-    });
-    return ['All', ...Array.from(set)];
-  }, [savedItems]);
-
   const filteredItems = useMemo(() => {
     let list = [...savedItems];
-    if (selectedCategory !== 'All') {
-      list = list.filter(item => item.category === selectedCategory);
-    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(item =>
@@ -115,13 +101,8 @@ export default function SavedAdverts() {
         (item.location || '').toLowerCase().includes(q)
       );
     }
-    if (sortBy === 'price-low') {
-      list.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
-    } else if (sortBy === 'price-high') {
-      list.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
-    }
     return list;
-  }, [savedItems, selectedCategory, searchQuery, sortBy]);
+  }, [savedItems, searchQuery]);
 
   // While auth is resolving, render nothing to avoid flash of sign-in prompt
   if (loading) {
@@ -134,7 +115,7 @@ export default function SavedAdverts() {
         <DesktopNavbar />
         <div className="saved-auth-prompt">
           <div className="auth-icon-circle">
-            <Bookmark size={36} color="#ffa705" />
+            <Bookmark size={36} color="#0f172a" />
           </div>
           <h2>Saved Collection</h2>
           <p>Sign in to view, organize, and revisit your bookmarked marketplace listings.</p>
@@ -152,180 +133,92 @@ export default function SavedAdverts() {
       <DesktopNavbar />
 
       <div className="saved-container">
-        {/* Mobile Title */}
-        <div className="saved-mobile-header">
-          <button 
-            type="button" 
-            onClick={() => navigate(-1)} 
-            className="saved-mobile-back-btn"
-            title="Go back"
-            aria-label="Go back"
-          >
-            <ArrowLeft size={24} strokeWidth={2.5} />
-          </button>
-          <h2 className="saved-mobile-title">Saved Items</h2>
-        </div>
+        {/* Simple Clean Header */}
+        <div className="saved-header">
+          <div className="saved-header-left">
+            <button 
+              type="button" 
+              onClick={() => navigate(-1)} 
+              className="back-arrow-btn"
+              title="Go back"
+              aria-label="Go back"
+            >
+              <ArrowLeft size={24} strokeWidth={2.5} />
+            </button>
+            <h1 className="saved-page-title">Saved Adverts</h1>
+            {savedItems.length > 0 && (
+              <span className="saved-count-pill">
+                {savedItems.length}
+              </span>
+            )}
+          </div>
 
-        {/* ── Human-Crafted Hero Header Banner ── */}
-        <div className="saved-hero-banner">
-          <div className="saved-hero-top">
-            <div className="saved-hero-left">
-              <nav className="saved-breadcrumb" aria-label="Breadcrumb">
-                <span onClick={() => navigate('/')} className="crumb-link">Home</span>
-                <span className="crumb-sep">/</span>
-                <span className="crumb-current">Saved Adverts</span>
-              </nav>
-
-              <div className="saved-title-row">
-                
-                <div className="saved-icon-badge">
-                  <Bookmark size={22} className="saved-icon-svg" />
-                </div>
-                <h1 className="saved-hero-title">Saved Collection</h1>
-                <span className="saved-count-chip">
-                  {savedItems.length} {savedItems.length === 1 ? 'advert' : 'adverts'}
-                </span>
-              </div>
-
-              <p className="saved-hero-desc">
-                Review bookmarked listings, compare seller asking prices, and monitor items you intend to buy.
-              </p>
-            </div>
-
-            <div className="saved-hero-actions">
+          {savedItems.length > 0 && (
+            <div className="saved-header-actions">
               <button 
                 type="button" 
-                className="saved-action-btn btn-explore" 
-                onClick={() => navigate('/')}
-                title="Browse new marketplace items"
+                className="saved-clear-btn" 
+                onClick={() => setShowClearAllModal(true)}
+                title="Remove all saved adverts"
               >
-                <ShoppingBag size={15} />
-                <span>Explore Deals</span>
+                <Trash2 size={15} />
+                <span>Clear all</span>
               </button>
-              {savedItems.length > 0 && (
-                <button 
-                  type="button" 
-                  className="saved-action-btn btn-clear-all" 
-                  onClick={() => setShowClearAllModal(true)}
-                  title="Remove all items from saved"
-                >
-                  <Trash2 size={15} />
-                  <span>Clear All</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Solid KPI Metrics Tiles */}
-          <div className="saved-metrics-row">
-            <div className="saved-metric-tile">
-              <div className="metric-icon-wrap metric-icon-orange">
-                <Bookmark size={18} />
-              </div>
-              <div className="metric-details">
-                <span className="metric-tile-label">Saved Listings</span>
-                <span className="metric-tile-value">{savedItems.length}</span>
-              </div>
-            </div>
-
-            <div className="saved-metric-tile">
-              <div className="metric-icon-wrap metric-icon-blue">
-                <Tag size={18} />
-              </div>
-              <div className="metric-details">
-                <span className="metric-tile-label">Portfolio Value</span>
-                <span className="metric-tile-value metric-accent">{formatPrice(totalValue)}</span>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Integrated Search & Filter Controls */}
-          {savedItems.length > 0 && (
-            <div className="saved-toolbar-row">
-              <div className="saved-search-wrapper">
-                <Search size={16} className="saved-search-icon" />
-                <input
-                  type="text"
-                  placeholder="Search saved items by title, category, or location..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="saved-search-input"
-                  aria-label="Filter saved listings"
-                />
-                {searchQuery && (
-                  <button 
-                    type="button" 
-                    className="saved-clear-search-btn" 
-                    onClick={() => setSearchQuery('')}
-                    aria-label="Clear search text"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-
-              <div className="saved-filter-controls">
-                {categories.length > 2 && (
-                  <div className="saved-category-pills">
-                    {categories.map(cat => (
-                      <button
-                        key={cat}
-                        type="button"
-                        className={`category-pill-btn ${selectedCategory === cat ? 'active' : ''}`}
-                        onClick={() => setSelectedCategory(cat)}
-                      >
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                <div className="saved-sort-wrap">
-                  <SlidersHorizontal size={14} className="sort-icon" />
-                  <select
-                    value={sortBy}
-                    onChange={e => setSortBy(e.target.value)}
-                    className="saved-sort-select"
-                    aria-label="Sort saved listings"
-                  >
-                    <option value="newest">Recently Saved</option>
-                    <option value="price-low">Price: Low to High</option>
-                    <option value="price-high">Price: High to Low</option>
-                  </select>
-                </div>
-              </div>
             </div>
           )}
         </div>
 
+        {/* Search input — ONLY rendered if there is an ad available */}
+        {savedItems.length > 0 && (
+          <div className="saved-search-wrapper">
+            <Search size={18} className="saved-search-icon" />
+            <input
+              type="text"
+              placeholder="Search saved adverts..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="saved-search-input"
+              aria-label="Search saved adverts"
+            />
+            {searchQuery && (
+              <button 
+                type="button" 
+                className="saved-search-clear-btn" 
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search text"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+        )}
+
         {/* ── Saved Items Grid or Empty State ── */}
         {savedItems.length === 0 ? (
-          <div className="saved-empty-card">
-            <div className="empty-icon-circle">
-              <Bookmark size={36} color="#ffa705" />
+          <div className="saved-empty-state">
+            <div className="empty-icon-wrap">
+              <Bookmark size={40} className="empty-icon" />
             </div>
-            <h3>No Saved Adverts Yet</h3>
-            <p>
-              Spot something you like? Click the bookmark icon on any product card in the marketplace to save and compare them here.
+            <h3 className="empty-state-title">No saved adverts yet</h3>
+            <p className="empty-state-desc">
+              When you bookmark listings while browsing the marketplace, they will appear here.
             </p>
-            <button className="saved-browse-btn" onClick={() => navigate('/')}>
-              <ShoppingBag size={16} />
-              <span>Browse Marketplace Now</span>
+            <button className="empty-state-btn" onClick={() => navigate('/')}>
+              Explore Marketplace
             </button>
           </div>
         ) : filteredItems.length === 0 ? (
-          <div className="saved-empty-card">
-            <div className="empty-icon-circle">
-              <Search size={32} color="#64748b" />
+          <div className="saved-empty-state">
+            <div className="empty-icon-wrap">
+              <Search size={36} className="empty-icon" />
             </div>
-            <h3>No matching saved items found</h3>
-            <p>Try searching with another keyword or resetting the category filter.</p>
+            <h3 className="empty-state-title">No matching adverts found</h3>
+            <p className="empty-state-desc">We couldn't find any saved adverts matching "{searchQuery}".</p>
             <button 
-              className="saved-browse-btn" 
-              onClick={() => { setSearchQuery(''); setSelectedCategory('All'); }}
+              className="empty-state-btn" 
+              onClick={() => setSearchQuery('')}
             >
-              Reset Filters
+              Clear Search
             </button>
           </div>
         ) : (
@@ -356,7 +249,7 @@ export default function SavedAdverts() {
                   <NavLink to={`/product/${item.id}`} className="saved-card-link">
                     <h3 className="saved-name">{item.name}</h3>
                   </NavLink>
-                  <p className="saved-price">{formatPrice(item.price)}</p>
+                  <p className="saved-price">{formatPrice(item.price, item)}</p>
                   
                   <div className="saved-meta">
                     <span className="saved-meta-item">
