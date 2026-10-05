@@ -136,15 +136,7 @@ export default function SavedAdverts() {
         {/* Simple Clean Header */}
         <div className="saved-header">
           <div className="saved-header-left">
-            <button 
-              type="button" 
-              onClick={() => navigate(-1)} 
-              className="back-arrow-btn"
-              title="Go back"
-              aria-label="Go back"
-            >
-              <ArrowLeft size={24} strokeWidth={2.5} />
-            </button>
+            
             <h1 className="saved-page-title">Saved Adverts</h1>
             {savedItems.length > 0 && (
               <span className="saved-count-pill">
