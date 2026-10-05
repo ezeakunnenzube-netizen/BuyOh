@@ -9,9 +9,9 @@ import {
   Tag, Image as ImageIcon, Sparkles, Filter, AlertCircle, Circle,
   ChevronRight, ExternalLink, ChevronUp, ChevronDown, X, User, Flag, Trash2,
   Smile, Paperclip, Mic, Square, Play, Pause, Volume2, FileText,
-  BellOff, Bell, Video, UserPlus, UserMinus, Star, SlidersHorizontal,
+  BellOff, Bell, UserPlus, UserMinus, Star, SlidersHorizontal,
   Grid, List, MessageCircle, MapPin, CornerUpLeft, Copy, Download, Share2, Clock,
-  MoreHorizontal, Info, SquarePen
+  MoreHorizontal, Info
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
@@ -1754,17 +1754,6 @@ export default function Messages() {
                 >
                   <MoreHorizontal size={20} />
                 </button>
-                <button
-                  type="button"
-                  className="sidebar-round-btn"
-                  title="Search / New message"
-                  onClick={() => {
-                    const searchInput = document.querySelector('.chat-search-input');
-                    if (searchInput) searchInput.focus();
-                  }}
-                >
-                  <SquarePen size={18} />
-                </button>
               </div>
             </div>
 
@@ -1939,16 +1928,6 @@ export default function Messages() {
                   >
                     <Phone size={20} />
                   </a>
-
-                  {/* Video Call button */}
-                  <button
-                    type="button"
-                    className="messenger-action-icon-btn"
-                    onClick={() => showToast('Video call is not supported in browser')}
-                    title="Start video call"
-                  >
-                    <Video size={20} />
-                  </button>
 
                   {/* Info (i) button - Messenger signature profile button */}
                   <button
