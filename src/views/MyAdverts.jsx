@@ -6,8 +6,8 @@ import DesktopNavbar from '../components/DesktopNavbar';
 import { useRouter } from 'next/navigation';
 import { 
   PanelTop, Trash2, Eye, MapPin, Tag, Plus, ArrowLeft, 
-  MessageSquareMore, BellRing, Bookmark, UserRound, Sparkles, CheckCircle,
-  Search, X, ShieldCheck, Store, Clock, Layers, RefreshCcw, CloudUpload
+  Search, X, ShieldCheck, Store, RefreshCcw, TrendingUp,
+  Layers, CheckCircle, SlidersHorizontal, ShoppingBag
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
@@ -22,7 +22,8 @@ export default function MyAdverts() {
 
   const [myAdverts, setMyAdverts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState('All'); // 'All' | 'Active'
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [sortBy, setSortBy] = useState('newest');
   const [toastMessage, setToastMessage] = useState('');
   const [deleteId, setDeleteId] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -54,7 +55,7 @@ export default function MyAdverts() {
 
     loadAdverts();
 
-    // Pull latest from cloud in background; when done it fires buyoh_listings_updated
+    // Pull latest from cloud in background; fires buyoh_listings_updated when done
     if (user?.id) {
       setIsSyncing(true);
       setSyncStatus('syncing');
@@ -125,18 +126,35 @@ export default function MyAdverts() {
     return Math.round(totalValue / myAdverts.length);
   }, [myAdverts, totalValue]);
 
+  const categories = useMemo(() => {
+    const set = new Set();
+    myAdverts.forEach(ad => {
+      if (ad.category) set.add(ad.category);
+    });
+    return ['All', ...Array.from(set)];
+  }, [myAdverts]);
+
   const filteredAdverts = useMemo(() => {
-    if (!searchQuery.trim()) return myAdverts;
-    const q = searchQuery.toLowerCase();
-    return myAdverts.filter(ad =>
-      (ad.name || '').toLowerCase().includes(q) ||
-      (ad.category || '').toLowerCase().includes(q) ||
-      (ad.subcategory || '').toLowerCase().includes(q) ||
-      (ad.location || '').toLowerCase().includes(q)
-    );
-  }, [myAdverts, searchQuery]);
-
-
+    let list = [...myAdverts];
+    if (selectedCategory !== 'All') {
+      list = list.filter(ad => ad.category === selectedCategory);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(ad =>
+        (ad.name || '').toLowerCase().includes(q) ||
+        (ad.category || '').toLowerCase().includes(q) ||
+        (ad.subcategory || '').toLowerCase().includes(q) ||
+        (ad.location || '').toLowerCase().includes(q)
+      );
+    }
+    if (sortBy === 'price-low') {
+      list.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
+    } else if (sortBy === 'price-high') {
+      list.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
+    }
+    return list;
+  }, [myAdverts, selectedCategory, searchQuery, sortBy]);
 
   // While auth is resolving, render nothing to avoid flash of sign-in prompt
   if (loading) {
@@ -148,11 +166,11 @@ export default function MyAdverts() {
       <div className="adverts-page-wrapper">
         <DesktopNavbar />
         <div className="adverts-auth-prompt">
-          <div className="adverts-auth-icon-glow">
-            <PanelTop size={42} color="#1d4ed8" />
+          <div className="adverts-auth-icon-circle">
+            <Store size={36} color="#2563eb" />
           </div>
-          <h2>Seller Adverts Dashboard</h2>
-          <p>Sign in to view, edit, and manage your posted marketplace listings in real time.</p>
+          <h2>Seller Studio</h2>
+          <p>Sign in to view, monitor, and manage your active marketplace listings.</p>
           <button className="adverts-signin-btn" onClick={() => setIsAuthOpen(true)}>
             Sign In / Register
           </button>
@@ -160,10 +178,6 @@ export default function MyAdverts() {
       </div>
     );
   }
-
-  const handleBack = () => {
-    navigate('/');
-  };
 
   return (
     <div className="adverts-page-wrapper">
@@ -176,54 +190,54 @@ export default function MyAdverts() {
           <h2 className="adverts-mobile-title">My Adverts</h2>
         </div>
 
-        {/* ── Modern Hero Header Banner ── */}
+        {/* ── Human-Crafted Hero Header Banner ── */}
         <div className="adverts-hero-banner">
-          <div className="adverts-hero-content">
-            <div className="adverts-hero-title-group">
-              <div className="adverts-hero-icon-wrap">
-                <PanelTop size={28} color="#93c5fd" />
-              </div>
-              <div>
-                <div className="adverts-hero-badge-row">
-                  <span className="adverts-pill-badge">
-                    <Sparkles size={11} /> Seller Dashboard
-                  </span>
-                  {Boolean(user?.email_confirmed_at || user?.user_metadata?.verified) && (
-                    <span className="adverts-pill-badge badge-verified">
-                      <ShieldCheck size={11} /> Verified Seller
-                    </span>
-                  )}
+          <div className="adverts-hero-top">
+            <div className="adverts-hero-left">
+              <nav className="adverts-breadcrumb" aria-label="Breadcrumb">
+                <span onClick={() => navigate('/')} className="crumb-link">Home</span>
+                <span className="crumb-sep">/</span>
+                <span className="crumb-current">Seller Studio</span>
+              </nav>
+
+              <div className="adverts-title-row">
+                <div className="adverts-icon-badge">
+                  <Store size={22} className="adverts-icon-svg" />
                 </div>
-                <h1 className="adverts-hero-main-title">
-                  My Active Adverts <span className="adverts-hero-count">({myAdverts.length})</span>
-                </h1>
-                <p className="adverts-hero-subtext">
-                  Track performance, preview listings, and manage your marketplace offers.
-                </p>
+                <h1 className="adverts-hero-title">My Adverts</h1>
+                <span className="adverts-count-chip">
+                  {myAdverts.length} {myAdverts.length === 1 ? 'listing' : 'listings'}
+                </span>
+                {Boolean(user?.email_confirmed_at || user?.user_metadata?.verified) && (
+                  <span className="adverts-verified-badge">
+                    <ShieldCheck size={13} /> Verified Seller
+                  </span>
+                )}
               </div>
+
+              <p className="adverts-hero-desc">
+                Track your active listings, monitor inventory asking value, and publish new products to buyers.
+              </p>
             </div>
 
-            {/* Quick Stats Pill Widgets */}
-            <div className="adverts-hero-stats-row">
-              <div className="adverts-stat-card">
-                <span className="adverts-stat-label">Active Listings</span>
-                <span className="adverts-stat-value">{myAdverts.length} {myAdverts.length === 1 ? 'Ad' : 'Ads'}</span>
-              </div>
-              <div className="adverts-stat-card">
-                <span className="adverts-stat-label">Total Value</span>
-                <span className="adverts-stat-value adverts-stat-highlight">{formatPrice(totalValue)}</span>
-              </div>
-              <div className="adverts-stat-card desktop-only-stat">
-                <span className="adverts-stat-label">Avg. Price / Ad</span>
-                <span className="adverts-stat-value">{formatPrice(avgPrice)}</span>
-              </div>
-              {/* Sync Status Button */}
+            <div className="adverts-hero-actions">
+              <button 
+                type="button" 
+                className="adverts-action-btn btn-post-new" 
+                onClick={() => navigate('/sell')}
+                title="Create a new marketplace listing"
+              >
+                <Plus size={16} />
+                <span>Post New Ad</span>
+              </button>
+
               <button
+                type="button"
                 id="adverts-sync-btn"
-                className={`adverts-sync-btn adverts-sync-btn--${syncStatus}`}
+                className={`adverts-action-btn btn-sync adverts-sync-btn--${syncStatus}`}
                 onClick={handleManualSync}
                 disabled={isSyncing}
-                title={syncStatus === 'synced' ? 'Synced with cloud' : 'Tap to sync listings with cloud'}
+                title={syncStatus === 'synced' ? 'Synced with cloud' : 'Sync listings with cloud'}
               >
                 <RefreshCcw
                   size={14}
@@ -233,53 +247,138 @@ export default function MyAdverts() {
                   {syncStatus === 'syncing' && 'Syncing...'}
                   {syncStatus === 'synced' && 'Synced ✓'}
                   {syncStatus === 'error' && 'Sync Failed'}
-                  {syncStatus === 'idle' && 'Sync'}
+                  {syncStatus === 'idle' && 'Sync Cloud'}
                 </span>
               </button>
             </div>
           </div>
 
-          {/* Clean Search Bar Toolbar (Single search without redundant duplicate button) */}
-          {myAdverts.length > 0 && (
-            <div className="adverts-hero-toolbar">
-              <div className="adverts-search-box">
-                <Search size={17} className="adverts-search-icon" />
-                <input
-                  type="text"
-                  placeholder="Filter my adverts by title, category, location..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="adverts-search-input"
-                />
-                {searchQuery && (
-                  <button className="adverts-search-clear" onClick={() => setSearchQuery('')} aria-label="Clear search">
-                    <X size={14} />
-                  </button>
-                )}
+          {/* Solid KPI Metrics Tiles */}
+          <div className="adverts-metrics-row">
+            <div className="adverts-metric-tile">
+              <div className="metric-icon-wrap metric-icon-blue">
+                <Layers size={18} />
+              </div>
+              <div className="metric-details">
+                <span className="metric-tile-label">Active Listings</span>
+                <span className="metric-tile-value">{myAdverts.length}</span>
               </div>
             </div>
-          )}
+
+            <div className="adverts-metric-tile">
+              <div className="metric-icon-wrap metric-icon-orange">
+                <Tag size={18} />
+              </div>
+              <div className="metric-details">
+                <span className="metric-tile-label">Inventory Value</span>
+                <span className="metric-tile-value metric-accent">{formatPrice(totalValue)}</span>
+              </div>
+            </div>
+
+            <div className="adverts-metric-tile">
+              <div className="metric-icon-wrap metric-icon-green">
+                <TrendingUp size={18} />
+              </div>
+              <div className="metric-details">
+                <span className="metric-tile-label">Avg. Asking Price</span>
+                <span className="metric-tile-value">{formatPrice(avgPrice)}</span>
+              </div>
+            </div>
+
+            <div className="adverts-metric-tile">
+              <div className="metric-icon-wrap metric-icon-purple">
+                <ShieldCheck size={18} />
+              </div>
+              <div className="metric-details">
+                <span className="metric-tile-label">Seller Account</span>
+                <span className="metric-tile-value metric-highlight">Good Standing</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Solid Filter & Search Toolbar */}
+          <div className="adverts-hero-toolbar">
+            <div className="adverts-search-box">
+              <Search size={16} className="adverts-search-icon" />
+              <input
+                type="text"
+                placeholder="Search listings by title, category, location..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="adverts-search-input"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="adverts-search-clear"
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Clear search query"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            <div className="adverts-filters-group">
+              {categories.length > 1 && (
+                <div className="adverts-category-pills">
+                  {categories.map(cat => (
+                    <button
+                      key={cat}
+                      type="button"
+                      className={`category-pill ${selectedCategory === cat ? 'active' : ''}`}
+                      onClick={() => setSelectedCategory(cat)}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="adverts-sort-box">
+                <SlidersHorizontal size={14} className="sort-icon" />
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="adverts-sort-select"
+                  aria-label="Sort adverts"
+                >
+                  <option value="newest">Sort: Newest</option>
+                  <option value="price-low">Price: Low to High</option>
+                  <option value="price-high">Price: High to Low</option>
+                </select>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* ── Adverts Grid or Empty State ── */}
         {myAdverts.length === 0 ? (
           <div className="adverts-empty-card">
-            <div className="adverts-empty-icon-glow">
-              <Store size={44} color="#1d4ed8" />
+            <div className="adverts-empty-icon-circle">
+              <Store size={36} color="#2563eb" />
             </div>
-            <h3>No Active Adverts Yet</h3>
-            <p>You haven't posted any listings on InfiBuy marketplace yet. Create your first listing today to start receiving buyer offers.</p>
+            <h3>No Active Listings Yet</h3>
+            <p>You haven't posted any listings on InfiBuy marketplace yet. Publish your first item to connect with verified buyers today.</p>
             <button className="empty-post-btn" onClick={() => navigate('/sell')}>
               <Plus size={16} /> Post Your First Ad
             </button>
           </div>
         ) : filteredAdverts.length === 0 ? (
           <div className="adverts-empty-card">
-            <Search size={40} color="#94a3b8" />
-            <h3>No matching adverts found</h3>
-            <p>We couldn't find any of your adverts matching "{searchQuery}".</p>
-            <button className="empty-post-btn" onClick={() => setSearchQuery('')}>
-              Clear Search Query
+            <div className="adverts-empty-icon-circle">
+              <Search size={32} color="#64748b" />
+            </div>
+            <h3>No matching listings found</h3>
+            <p>No active listings match your current search "{searchQuery}" in category "{selectedCategory}".</p>
+            <button
+              className="empty-post-btn"
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedCategory('All');
+              }}
+            >
+              Clear Search & Filters
             </button>
           </div>
         ) : (
@@ -297,7 +396,7 @@ export default function MyAdverts() {
                     }}
                   />
                   <span className="advert-status-badge">
-                    <CheckCircle size={11} /> Active
+                    <span className="status-dot"></span> Active
                   </span>
                 </div>
 
