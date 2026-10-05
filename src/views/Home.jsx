@@ -710,7 +710,7 @@ export default function Home(){
             </NavLink>
             <NavLink to="/sell" replace className={({isActive})=>isActive?"home-nav-item home-nav-item-active":"home-nav-item"}>
               {({isActive})=>(<span className="home-sell-btn">
-                <span style={{color: isActive ? "#1d4ed8" : "#e67600"}} className="home-sell-btn-text">+ Sell</span>
+                <span className="home-sell-btn-text">+ Sell</span>
               </span>)}
             </NavLink>
           </>
@@ -724,7 +724,10 @@ export default function Home(){
 
     {/* ── Hero Header ── */}
     <section className="home-header">
-      <p className="home-header-text">Wetin you dey find?</p>
+      <div className="home-header-content">
+        <h1 className="home-header-text">Wetin you dey find?</h1>
+        <p className="home-header-subtext">Discover thousands of verified listings with safe direct messaging</p>
+      </div>
       <div className="search-area">
         <div className="search-area-filters-row">
           {/* 1. Country Filter Option */}
