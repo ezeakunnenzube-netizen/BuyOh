@@ -762,9 +762,9 @@ body {
   gap: 7px;
   padding: 9px 18px;
   border-radius: 9999px;
-  border: 1.5px solid #c5cad4;   /* Noticeably defined border — no longer invisible */
-  background: #ffffff;
-  color: #1e293b;                /* Darker, bolder text for clear readability */
+  border: 1.5px solid #c5cad4;
+  background: #eef0f4;           /* Tinted resting state — clearly visible on white page */
+  color: #1e293b;
   font-size: 13.5px;
   font-family: inherit;
   font-weight: 600;
@@ -791,7 +791,7 @@ body {
 .category-pill-open {
   background: linear-gradient(135deg, #ffa705 0%, #e67600 100%) !important;
   border-color: transparent !important;
-  color: #ffffff !important;
+  color: #090808 !important;
   box-shadow: 0 4px 14px rgba(255, 167, 5, 0.35) !important;
 }
 
