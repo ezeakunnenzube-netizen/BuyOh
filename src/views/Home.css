@@ -92,11 +92,26 @@ body {
   transform: translateY(0);
 }
 
+.home-nav-item {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
 /* Active Nav Route State */
 .home-nav-item-active .home-nav-icon-btn {
   background: #ffffff;
   border-color: #ffffff;
   box-shadow: 0 4px 14px rgba(255, 255, 255, 0.35);
+}
+
+.home-nav-item-active .home-sell-btn {
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.4);
+}
+
+.home-nav-item-active .home-sell-btn .home-sell-btn-text {
+  color: #1d4ed8;
 }
 
 .home-nav-icon {
@@ -1445,7 +1460,7 @@ body {
    ═════════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
   .home-nav-row {
-    display: none;
+    display: none !important;
   }
 
   .home-header {

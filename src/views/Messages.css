@@ -1503,11 +1503,6 @@ body {
     flex-direction: column;
   }
 
-  .home-nav-row {
-    flex-shrink: 0;
-    padding: 0.4rem 0.8rem;
-  }
-
   .messages-container {
     flex: 1;
     min-height: 0;

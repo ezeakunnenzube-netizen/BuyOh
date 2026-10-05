@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import NavLink from '../components/NavLink';
+import DesktopNavbar from '../components/DesktopNavbar';
 import { useRouter } from 'next/navigation';
 import { 
   BellRing, BellOff, MessageSquare, Tag, AlertTriangle, ShieldCheck, 
@@ -155,58 +156,7 @@ export default function Notifications() {
   return (
     <div className="notifications-page-wrapper">
       {/* Header bar */}
-      <header className="home-nav-row notif-desktop-nav">
-        <NavLink to="/" replace className="home-nav-brand">
-          <span className="logo-infi">Infi</span><span className="logo-buy">Buy</span>
-        </NavLink>
-        <div className="home-nav-links">
-          <NavLink to="/messages" replace className="home-nav-item">
-            <span className="home-nav-icon-btn">
-              <div className="home-nav-icon-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <MessageSquareMore className="home-nav-icon" color="white" />
-                {unreadCount > 0 && (
-                  <span className="home-nav-unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
-                )}
-              </div>
-              <div className="home-header-tooltip">My Messages</div>
-            </span>
-          </NavLink>
-          <NavLink to="/notifications" replace className="home-nav-item home-nav-item-active">
-            <span className="home-nav-icon-btn">
-              <div className="home-nav-icon-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <BellRing className="home-nav-icon" color="#1d4ed8" />
-                {unreadNotifsCount > 0 && (
-                  <span className="home-nav-unread-badge">{unreadNotifsCount > 99 ? '99+' : unreadNotifsCount}</span>
-                )}
-              </div>
-              <div className="home-header-tooltip">Notifications</div>
-            </span>
-          </NavLink>
-          <NavLink to="/saved" replace className="home-nav-item">
-            <span className="home-nav-icon-btn">
-              <Bookmark className="home-nav-icon" color="white" />
-              <div className="home-header-tooltip">Saved</div>
-            </span>
-          </NavLink>
-          <NavLink to="/adverts" replace className="home-nav-item">
-            <span className="home-nav-icon-btn">
-              <PanelTop className="home-nav-icon" color="white" />
-              <div className="home-header-tooltip">My Adverts</div>
-            </span>
-          </NavLink>
-          <NavLink to="/profile" replace className="home-nav-item">
-            <span className="home-nav-icon-btn">
-              <UserRound className="home-nav-icon" color="white" />
-              <div className="home-header-tooltip">My Profile</div>
-            </span>
-          </NavLink>
-          <NavLink to="/sell" replace className="home-nav-item">
-            <span className="home-sell-btn">
-              <span className="home-sell-btn-text">+ Sell</span>
-            </span>
-          </NavLink>
-        </div>
-      </header>
+      <DesktopNavbar />
 
       {/* Main container */}
       <div className="notifications-container">

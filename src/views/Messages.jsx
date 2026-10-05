@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import NavLink from '../components/NavLink';
+import DesktopNavbar from '../components/DesktopNavbar';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   Search, MessageSquareMore, BellRing, PanelTop, UserRound, Bookmark, 
@@ -1646,11 +1647,7 @@ export default function Messages() {
   if (!authLoading && !user) {
     return (
       <div className="messages-page-wrapper">
-        <header className="home-nav-row">
-          <NavLink to="/" replace className="home-nav-brand">
-            <span className="logo-infi">Infi</span><span className="logo-buy">Buy</span>
-          </NavLink>
-        </header>
+        <DesktopNavbar />
         <div className="messages-auth-prompt-container">
           <div className="messages-auth-card">
             <div className="messages-auth-icon-circle">
@@ -1673,70 +1670,7 @@ export default function Messages() {
   return (
     <div className="messages-page-wrapper">
       {/* ── Sticky Desktop Header Navbar ── */}
-      <header className="home-nav-row">
-        <NavLink to="/" replace className="home-nav-brand">
-          <span className="logo-infi">Infi</span><span className="logo-buy">Buy</span>
-        </NavLink>
-        <div className="home-nav-links">
-          <NavLink to="/messages" replace className={({ isActive }) => isActive ? "home-nav-item home-nav-item-active" : "home-nav-item"}>
-            {({ isActive }) => (
-              <span className="home-nav-icon-btn">
-                <div className="home-nav-icon-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <MessageSquareMore className="home-nav-icon" color={isActive ? "#1d4ed8" : "white"} />
-                  {unreadCount > 0 && (
-                    <span className="home-nav-unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
-                  )}
-                </div>
-                <div className="home-header-tooltip">My Messages</div>
-              </span>
-            )}
-          </NavLink>
-          <NavLink to="/notifications" replace className={({ isActive }) => isActive ? "home-nav-item home-nav-item-active" : "home-nav-item"}>
-            {({ isActive }) => (
-              <span className="home-nav-icon-btn">
-                <div className="home-nav-icon-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <BellRing className="home-nav-icon" color={isActive ? "#1d4ed8" : "white"} />
-                  {unreadNotifsCount > 0 && (
-                    <span className="home-nav-unread-badge">{unreadNotifsCount > 99 ? '99+' : unreadNotifsCount}</span>
-                  )}
-                </div>
-                <div className="home-header-tooltip">Notifications</div>
-              </span>
-            )}
-          </NavLink>
-          <NavLink to="/saved" replace className={({ isActive }) => isActive ? "home-nav-item home-nav-item-active" : "home-nav-item"}>
-            {({ isActive }) => (
-              <span className="home-nav-icon-btn">
-                <Bookmark className="home-nav-icon" color={isActive ? "#1d4ed8" : "white"} />
-                <div className="home-header-tooltip">Saved</div>
-              </span>
-            )}
-          </NavLink>
-          <NavLink to="/adverts" replace className={({ isActive }) => isActive ? "home-nav-item home-nav-item-active" : "home-nav-item"}>
-            {({ isActive }) => (
-              <span className="home-nav-icon-btn">
-                <PanelTop className="home-nav-icon" color={isActive ? "#1d4ed8" : "white"} />
-                <div className="home-header-tooltip">My Adverts</div>
-              </span>
-            )}
-          </NavLink>
-          <NavLink to="/profile" replace className={({ isActive }) => isActive ? "home-nav-item home-nav-item-active" : "home-nav-item"}>
-            {({ isActive }) => (
-              <span className="home-nav-icon-btn">
-                <UserRound className="home-nav-icon" color={isActive ? "#1d4ed8" : "white"} />
-                <div className="home-header-tooltip">My Profile</div>
-              </span>
-            )}
-          </NavLink>
-          <NavLink to="/sell" replace className={({ isActive }) => isActive ? "home-nav-item home-nav-item-active" : "home-nav-item"}>
-            {({ isActive }) => (
-              <span className="home-sell-btn">
-                <span style={{ color: isActive ? "#1d4ed8" : "#e67600" }} className="home-sell-btn-text">+ Sell</span>
-              </span>
-            )}
-          </NavLink>
-        </div>
-      </header>
+      <DesktopNavbar />
 
       {/* ── Messages Main Layout Container ── */}
       <div className="messages-container">

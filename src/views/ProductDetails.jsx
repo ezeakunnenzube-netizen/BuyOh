@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import NavLink from '../components/NavLink';
+import DesktopNavbar from '../components/DesktopNavbar';
 import { 
   MapPin, MessageSquareMore, Heart, 
   ArrowLeft, Phone, ShieldAlert, Eye, 
@@ -347,11 +348,7 @@ export default function ProductDetails({ params: serverParams }) {
   if (!product && isSearching) {
     return (
       <div className="detail-page-wrapper">
-        <header className="home-nav-row detail-desktop-nav">
-          <NavLink to="/" replace className="home-nav-brand">
-            <span className="logo-infi">Infi</span><span className="logo-buy">Buy</span>
-          </NavLink>
-        </header>
+        <DesktopNavbar />
         <div className="detail-page-container" style={{ padding: '3rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <div className="detail-loading-pulse">
             <div className="detail-skeleton-box detail-skeleton-carousel" />
@@ -366,11 +363,7 @@ export default function ProductDetails({ params: serverParams }) {
   if (!product) {
     return (
       <div className="detail-page-wrapper">
-        <header className="home-nav-row detail-desktop-nav">
-          <NavLink to="/" replace className="home-nav-brand">
-            <span className="logo-infi">Infi</span><span className="logo-buy">Buy</span>
-          </NavLink>
-        </header>
+        <DesktopNavbar />
         <div className="product-not-found" style={{ marginTop: '3rem' }}>
           <ShieldAlert size={48} color="#ef4444" />
           <h3>Product Not Found</h3>
@@ -948,61 +941,7 @@ export default function ProductDetails({ params: serverParams }) {
   return (
     <div className="detail-page-wrapper">
       {/* ── Sticky Desktop Navigation (same as Home) ── */}
-      <header className="home-nav-row detail-desktop-nav">
-        <NavLink to="/" replace className="home-nav-brand">
-          <span className="logo-infi">Infi</span><span className="logo-buy">Buy</span>
-        </NavLink>
-        <div className="home-nav-links">
-          {user ? (
-            <>
-              <NavLink to="/messages" replace className={({isActive})=>isActive?"home-nav-item home-nav-item-active":"home-nav-item"}>
-                {({isActive})=>(<span className="home-nav-icon-btn">
-                  <div className="home-nav-icon-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <MessageSquareMore className="home-nav-icon" color={isActive?"#1d4ed8":"white"}/>
-                    {unreadCount > 0 && (
-                      <span className="home-nav-unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
-                    )}
-                  </div>
-                  <div className="home-header-tooltip">My Messages</div>
-                </span>)}
-              </NavLink>
-              <NavLink to="/notifications" replace className={({isActive})=>isActive?"home-nav-item home-nav-item-active":"home-nav-item"}>
-                {({isActive})=>(<span className="home-nav-icon-btn">
-                  <BellRing className="home-nav-icon" color={isActive?"#1d4ed8":"white"}/>
-                  <div className="home-header-tooltip">Notifications</div>
-                </span>)}
-              </NavLink>
-              <NavLink to="/saved" replace className={({isActive})=>isActive?"home-nav-item home-nav-item-active":"home-nav-item"}>
-                {({isActive})=>(<span className="home-nav-icon-btn">
-                  <Bookmark className="home-nav-icon" color={isActive?"#1d4ed8":"white"}/>
-                  <div className="home-header-tooltip">Saved</div>
-                </span>)}
-              </NavLink>
-              <NavLink to="/adverts" replace className={({isActive})=>isActive?"home-nav-item home-nav-item-active":"home-nav-item"}>
-                {({isActive})=>(<span className="home-nav-icon-btn">
-                  <PanelTop className="home-nav-icon" color={isActive?"#1d4ed8":"white"}/>
-                  <div className="home-header-tooltip">My Adverts</div>
-                </span>)}
-              </NavLink>
-              <NavLink to="/profile" replace className={({isActive})=>isActive?"home-nav-item home-nav-item-active":"home-nav-item"}>
-                {({isActive})=>(<span className="home-nav-icon-btn">
-                  <UserRound className="home-nav-icon" color={isActive?"#1d4ed8":"white"}/>
-                  <div className="home-header-tooltip">My Profile</div>
-                </span>)}
-              </NavLink>
-              <NavLink to="/sell" replace className="home-nav-item">
-                <span className="home-sell-btn">
-                  <span className="home-sell-btn-text" style={{color: '#e67600'}}>+ Sell</span>
-                </span>
-              </NavLink>
-            </>
-          ) : loading ? null : (
-            <button className="nav-login-btn" onClick={() => setIsAuthOpen(true)}>
-              Sign In / Register
-            </button>
-          )}
-        </div>
-      </header>
+      <DesktopNavbar />
 
       <div className="detail-page-container">
         {/* Breadcrumb Navigation */}
