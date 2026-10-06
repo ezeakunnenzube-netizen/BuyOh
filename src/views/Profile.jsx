@@ -655,7 +655,7 @@ export default function Profile() {
           {/* Logout & Delete Section Action */}
           <div className="profile-footer-actions">
             <button className="owner-portal-access-btn" onClick={() => navigate('/admin')}>
-              <ShieldCheck size={16} /> Store Owner Portal
+              <ShieldCheck size={16} /> Admin Access
             </button>
             <div className="footer-right-actions">
               <button className="delete-account-action-btn" onClick={() => setShowDeleteConfirm(true)}>
