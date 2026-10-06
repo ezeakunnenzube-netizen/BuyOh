@@ -515,29 +515,49 @@ export const saveMyListingsForUser = async (user, listings) => {
 
 // --- NOTIFICATIONS SYNC ---
 
+const MOCK_NOTIFICATION_IDS = new Set(['notif-001', 'notif-002', 'notif-003', 'notif-004']);
+
+export const sanitizeNotifications = (list) => {
+  if (!Array.isArray(list)) return [];
+  return list.filter(n => {
+    if (!n || !n.id) return false;
+    if (MOCK_NOTIFICATION_IDS.has(String(n.id))) return false;
+    if (n.type === 'message' || String(n.id).startsWith('notif-chat-')) return false;
+    return true;
+  });
+};
+
 export const getNotificationsForUser = (user, fallbackInitial = []) => {
-  if (typeof window === 'undefined' || !user?.id) return fallbackInitial;
+  if (typeof window === 'undefined' || !user?.id) return [];
 
   const localKey = `buyoh_notifications_${user.id}`;
-  const local = safeJsonParse(localStorage.getItem(localKey), null);
-  if (Array.isArray(local) && local.length > 0) return local;
+  try {
+    const raw = localStorage.getItem(localKey);
+    if (raw !== null && raw !== undefined) {
+      const local = safeJsonParse(raw, null);
+      if (Array.isArray(local)) {
+        return sanitizeNotifications(local);
+      }
+    }
+  } catch (e) {}
 
   if (user && user.user_metadata?.notifications) {
     const cloudNotifs = user.user_metadata.notifications;
-    if (Array.isArray(cloudNotifs) && cloudNotifs.length > 0) {
+    if (Array.isArray(cloudNotifs)) {
+      const sanitized = sanitizeNotifications(cloudNotifs);
       try {
-        localStorage.setItem(`buyoh_notifications_${user.id}`, JSON.stringify(cloudNotifs));
+        localStorage.setItem(`buyoh_notifications_${user.id}`, JSON.stringify(sanitized));
       } catch (e) {}
-      return cloudNotifs;
+      return sanitized;
     }
   }
 
-  return fallbackInitial;
+  return [];
 };
 
 export const saveNotificationsForUser = async (user, notifications) => {
   if (typeof window === 'undefined' || !user?.id) return;
-  const sanitized = Array.isArray(notifications) ? notifications : [];
+  const sanitized = sanitizeNotifications(notifications);
   const localKey = `buyoh_notifications_${user.id}`;
 
   try {
@@ -934,8 +954,8 @@ export const syncUserDataFromCloud = async (user) => {
     }
 
     // --- 4. Merge & sync notifications ---
-    const cloudNotifs = Array.isArray(dbProfile.notifications) ? dbProfile.notifications : [];
-    const localNotifs = getNotificationsForUser(user);
+    const cloudNotifs = sanitizeNotifications(Array.isArray(dbProfile.notifications) ? dbProfile.notifications : []);
+    const localNotifs = sanitizeNotifications(getNotificationsForUser(user));
     const cloudNotifIds = new Set(cloudNotifs.map(n => String(n.id)));
     const onlyLocalNotifs = localNotifs.filter(n => n.id && !cloudNotifIds.has(String(n.id)));
 
@@ -943,6 +963,10 @@ export const syncUserDataFromCloud = async (user) => {
     let notifsNeedCloudPush = false;
     if (onlyLocalNotifs.length > 0) {
       mergedNotifs = [...onlyLocalNotifs, ...cloudNotifs];
+      notifsNeedCloudPush = true;
+    }
+    // Also push if mock notifications were stripped from cloud
+    if (Array.isArray(dbProfile.notifications) && dbProfile.notifications.length !== cloudNotifs.length) {
       notifsNeedCloudPush = true;
     }
 

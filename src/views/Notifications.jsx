@@ -13,35 +13,78 @@ import { useChat } from '../context/ChatContext';
 import { getNotificationsForUser, saveNotificationsForUser, syncUserDataFromCloud } from '../utils/userSync';
 import './Notifications.css';
 
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: 'notif-001',
-    type: 'offer',
-    title: 'New Offer Received',
-    message: 'Blessing Adebayo offered ₦550,000 for your Sony PlayStation 5 Disc Edition.',
-    time: '2 mins ago',
-    unread: true,
-    actionLink: '/messages'
-  },
-  {
-    id: 'notif-002',
-    type: 'alert',
-    title: 'Price Drop Alert',
-    message: 'Toyota Corolla 2018 is now ₦7,500,000 (12% off original price).',
-    time: '1 hour ago',
-    unread: true,
-    actionLink: '#'
-  },
-  {
-    id: 'notif-004',
-    type: 'system',
-    title: 'Listing Approved',
-    message: 'Your advert "Apple iPhone 15 Pro Max 256GB" is now live on InfiBuy marketplace.',
-    time: 'Yesterday',
-    unread: false,
-    actionLink: '/adverts'
+// Format notification date & time functionally
+const formatNotificationDateTime = (n) => {
+  let date = null;
+  if (n.createdAt) {
+    const d = new Date(n.createdAt);
+    if (!isNaN(d.getTime())) date = d;
   }
-];
+  if (!date && n.timestamp) {
+    const d = new Date(Number(n.timestamp));
+    if (!isNaN(d.getTime())) date = d;
+  }
+  if (!date && typeof n.id === 'string' && /^notif-(\d{10,})/.test(n.id)) {
+    const match = n.id.match(/^notif-(\d{10,})/);
+    if (match) {
+      const d = new Date(Number(match[1]));
+      if (!isNaN(d.getTime())) date = d;
+    }
+  }
+
+  if (!date) {
+    return n.time || 'Recently';
+  }
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+
+  const timeStr = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+
+  const isToday = now.toDateString() === date.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = yesterday.toDateString() === date.toDateString();
+
+  if (diffSecs >= 0 && diffSecs < 60) {
+    return `Just now • ${timeStr}`;
+  } else if (diffMins < 60 && diffMins > 0) {
+    return `${diffMins}m ago • ${timeStr}`;
+  } else if (isToday) {
+    return `Today at ${timeStr}`;
+  } else if (isYesterday) {
+    return `Yesterday at ${timeStr}`;
+  } else {
+    const dateStr = date.toLocaleDateString([], { 
+      month: 'short', 
+      day: 'numeric', 
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined 
+    });
+    return `${dateStr} at ${timeStr}`;
+  }
+};
+
+const getFullDateTimeTooltip = (n) => {
+  let date = null;
+  if (n.createdAt) {
+    const d = new Date(n.createdAt);
+    if (!isNaN(d.getTime())) date = d;
+  }
+  if (!date && n.timestamp) {
+    const d = new Date(Number(n.timestamp));
+    if (!isNaN(d.getTime())) date = d;
+  }
+  if (!date && typeof n.id === 'string' && /^notif-(\d{10,})/.test(n.id)) {
+    const match = n.id.match(/^notif-(\d{10,})/);
+    if (match) {
+      const d = new Date(Number(match[1]));
+      if (!isNaN(d.getTime())) date = d;
+    }
+  }
+  return date ? date.toLocaleString() : (n.time || '');
+};
 
 export default function Notifications() {
   const router = useRouter();
@@ -49,17 +92,17 @@ export default function Notifications() {
   const { user } = useAuth();
   const { unreadCount, unreadNotifsCount } = useChat();
 
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'unread'
   const [toastMessage, setToastMessage] = useState('');
 
   // Sync notifications when user changes or logs in on a new device
   useEffect(() => {
     const loadNotifications = () => {
-      const raw = getNotificationsForUser(user, INITIAL_NOTIFICATIONS);
-      // Strictly exclude any chat message notifications
+      const raw = getNotificationsForUser(user, []);
+      // Strictly exclude any chat message notifications and mock IDs
       const cleaned = (Array.isArray(raw) ? raw : []).filter(
-        n => n.type !== 'message' && !String(n.id).startsWith('notif-chat-')
+        n => n && n.type !== 'message' && !String(n.id).startsWith('notif-chat-') && !['notif-001', 'notif-002', 'notif-003', 'notif-004'].includes(String(n.id))
       );
       setNotifications(cleaned);
     };
@@ -169,7 +212,7 @@ export default function Notifications() {
 
             {notifications.length > 0 && (
               <div className="notif-actions">
-                <button className="text-action-btn" onClick={handleMarkAllAsRead}>
+                <button className="text-action-btn notif-mark-all-read-btn" onClick={handleMarkAllAsRead}>
                   <Check size={14} /> Mark all read
                 </button>
                 <button className="text-action-btn btn-danger-text" onClick={handleClearAll}>
@@ -228,7 +271,7 @@ export default function Notifications() {
                 {filteredNotifications.map(n => (
                   <div 
                     key={n.id} 
-                    className={`notif-item-row ${n.unread ? 'notif-unread' : ''}`}
+                    className={`notif-item-row ${n.unread ? 'notif-unread' : 'notif-read'}`}
                     onClick={() => {
                       if (n.unread) handleMarkAsRead(n.id);
                       if (n.actionLink && n.actionLink !== '#') {
@@ -237,16 +280,20 @@ export default function Notifications() {
                     }}
                     style={{ cursor: n.actionLink && n.actionLink !== '#' ? 'pointer' : 'default' }}
                   >
-                    {/* Left Icon */}
+                    {/* Orange Dot at the top for Unread only */}
+                    {n.unread && <span className="notif-orange-top-dot" title="Unread notification" />}
+
+                    {/* Left Icon — Clean without dots */}
                     <div className="notif-icon-container">
                       {getIcon(n.type)}
-                      {n.unread && <span className="unread-pulse-dot" />}
                     </div>
 
                     {/* Middle details */}
                     <div className="notif-details">
                       <div className="notif-meta-row">
-                        <span className="notif-time-label">{n.time}</span>
+                        <span className="notif-time-label" title={getFullDateTimeTooltip(n)}>
+                          {formatNotificationDateTime(n)}
+                        </span>
                       </div>
                       <h4 className="notif-item-title">{n.title}</h4>
                       <p className="notif-item-desc">{n.message}</p>
@@ -267,7 +314,7 @@ export default function Notifications() {
                         )}
                         {n.unread && (
                           <button 
-                            className="notif-secondary-pill"
+                            className="notif-secondary-pill notif-mark-card-read-btn"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleMarkAsRead(n.id);

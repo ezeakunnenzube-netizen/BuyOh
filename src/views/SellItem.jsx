@@ -511,14 +511,20 @@ export default function SellItem() {
 
       // Also add to in-app notification list
       const notifications = getNotificationsForUser(user);
+      const nowIso = new Date().toISOString();
+      const nowTs = Date.now();
       notifications.unshift({
-        id: `notif-${Date.now()}`,
+        id: `notif-${nowTs}`,
         type: 'system',
         title: 'Ad Published Successfully!',
         message: `Your listing "${title}" is now live and visible to buyers on InfiBuy.`,
+        createdAt: nowIso,
+        timestamp: nowTs,
         time: 'Just now',
         unread: true,
-        actionLink: '/adverts'
+        actionLink: `/product/${listing.id}`,
+        actionLabel: 'View Details',
+        itemImg: listing.images?.[0] || listing.image || null
       });
       await saveNotificationsForUser(user, notifications);
     } catch (e) {
