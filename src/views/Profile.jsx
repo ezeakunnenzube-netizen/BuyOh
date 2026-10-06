@@ -654,12 +654,17 @@ export default function Profile() {
 
           {/* Logout & Delete Section Action */}
           <div className="profile-footer-actions">
-            <button className="delete-account-action-btn" onClick={() => setShowDeleteConfirm(true)}>
-              <Trash2 size={16} /> Delete Account
+            <button className="owner-portal-access-btn" onClick={() => navigate('/admin')}>
+              <ShieldCheck size={16} /> Store Owner Portal
             </button>
-            <button className="logout-action-btn" onClick={() => setShowLogoutConfirm(true)}>
-              <LogOut size={16} /> Log Out Account
-            </button>
+            <div className="footer-right-actions">
+              <button className="delete-account-action-btn" onClick={() => setShowDeleteConfirm(true)}>
+                <Trash2 size={16} /> Delete Account
+              </button>
+              <button className="logout-action-btn" onClick={() => setShowLogoutConfirm(true)}>
+                <LogOut size={16} /> Log Out
+              </button>
+            </div>
           </div>
         </div>
       </div>

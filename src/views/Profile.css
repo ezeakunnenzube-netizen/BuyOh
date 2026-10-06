@@ -666,6 +666,34 @@
   align-items: center;
   border-top: 1px solid #f1f5f9;
   background: white;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.owner-portal-access-btn {
+  background: #0f172a;
+  border: 1.5px solid #0f172a;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+.owner-portal-access-btn:hover {
+  background: #262626;
+  border-color: #262626;
+  transform: translateY(-1px);
+}
+
+.footer-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .logout-action-btn {
